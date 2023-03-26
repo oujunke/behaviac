@@ -148,7 +148,17 @@ namespace PluginBehaviac.NodeExporters
                     }
                     else
                     {
-                        stream.WriteLine("{0}\t\t\t{1} = {2};", indent, property, oprStr);
+                        var errorGetStr = "AgentMetaVisitor.GetProperty";
+                        var index = property.IndexOf(errorGetStr);
+                        if (index>=0)
+                        {
+                            var code = $"AgentMetaVisitor.SetProperty{property.Substring(index+errorGetStr.Length, property.Length- index- errorGetStr.Length-1)},{oprStr});";
+                            stream.WriteLine(code);
+                        }
+                        else
+                        {
+                            stream.WriteLine("{0}\t\t\t{1} = {2};", indent, property, oprStr);
+                        }
                     }
                 }
 

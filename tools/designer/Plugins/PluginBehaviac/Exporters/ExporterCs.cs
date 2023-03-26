@@ -64,7 +64,7 @@ namespace PluginBehaviac.Exporters
             string behaviacTypesDir = GetBehaviacTypesDir();
             string tmpFilename = Path.Combine(behaviacTypesDir, agent.BasicName + ".cs");
 
-            ExportAgentCsFile(agent, tmpFilename, true);
+            ExportAgentCsFileInterface(agent, tmpFilename, true);
 
             PreviewFile(tmpFilename);
         }
@@ -489,8 +489,8 @@ namespace PluginBehaviac.Exporters
 
                     if (!File.Exists(filename))
                     {
-                        ExportAgentCsFile(agent, filename, false);
-
+                        var interfaceString = ExportAgentCsFileInterface(agent, filename, false);
+                        File.WriteAllText($"{agentFolder}\\I{agent.BasicName}Imp.cs", interfaceString);
                         if (File.Exists(oldFilename))
                         {
                             MergeFiles(oldFilename, filename, filename);
@@ -503,8 +503,8 @@ namespace PluginBehaviac.Exporters
                         newFilename = Path.ChangeExtension(newFilename, ".new.cs");
                         newFilename = Path.Combine(behaviacAgentDir, newFilename);
 
-                        ExportAgentCsFile(agent, newFilename, false);
-                        Debug.Check(File.Exists(newFilename));
+                        var interfaceString = ExportAgentCsFileInterface(agent, newFilename, false);
+                        File.WriteAllText($"{agentFolder}\\I{agent.BasicName}Imp.cs", interfaceString);
 
                         MergeFiles(filename, newFilename, filename);
                     }
@@ -705,8 +705,7 @@ namespace PluginBehaviac.Exporters
         }
         private string ExportAgentCsFileInterface(AgentType agent, string filename, bool preview)
         {
-            bool isInterface = true;
-            StringBuilder methodImpSb = new StringBuilder("using System;\r\nusing System.Collections;\r\nusing System.Collections.Generic;");
+            StringBuilder methodImpSb = new StringBuilder("using System;\r\nusing System.Collections;\r\nusing System.Collections.Generic;\r\n");
             using (StringWriter file = new StringWriter())
             {
                 string indent = "";
@@ -748,7 +747,7 @@ namespace PluginBehaviac.Exporters
                 //file.WriteLine("{0}[behaviac.TypeMetaInfo(\"{1}\", \"{2}\")]", indent, agentDisplayName, agentDescription);
                 string baseClassStr = (agent.Base != null) ? string.Format(" : {0}", agent.Base.Name.Replace("::", ".")) : "";
                 file.WriteLine("{0}public class {1}{2}", indent, agent.BasicName, baseClassStr);
-                methodImpSb.AppendLine($"{indent}public interface I{agent.BasicName}Imp\r\n{indent}{{");
+                methodImpSb.AppendLine($"{indent}public interface I{agent.BasicName}Imp{(agent.Base.BasicName=="Agent"?"":$" : I{agent.Base.BasicName}Imp")}\r\n{indent}{{");
                 if (!preview)
                 {
                     ExportBeginComment(file, indent, agent.BasicName);
@@ -756,10 +755,7 @@ namespace PluginBehaviac.Exporters
                 }
 
                 file.WriteLine("{0}{{", indent);
-                if (isInterface)
-                {
-                    file.WriteLine($"private I{agent.BasicName}Imp _methodImp;\r\npublic {agent.BasicName}(I{agent.BasicName}Imp methodImp)\r\n{{\r\n\t_methodImp=methodImp;\r\n}}");
-                }
+                file.WriteLine($"\tprivate I{agent.BasicName}Imp _methodImp;\r\n\tpublic {agent.BasicName}(I{agent.BasicName}Imp methodImp){(agent.Base.BasicName == "Agent" ? "" : $" : base(methodImp)")}\r\n\t{{\r\n\t    _methodImp=methodImp;\r\n\t}}");
                 IList<PropertyDef> properties = agent.GetProperties(true);
 
                 foreach (PropertyDef prop in properties)
@@ -834,31 +830,10 @@ namespace PluginBehaviac.Exporters
 
                         //file.WriteLine("{0}\t[behaviac.MethodMetaInfo(\"{1}\", \"{2}\")]", indent, method.DisplayName, method.BasicDescription);
                         ExportMethodComment(file, "\t" + indent);
-                        methodImpSb.AppendLine($"{returnType} {method.BasicName}({allParams});");
+                        methodImpSb.AppendLine($"\t{returnType} {method.BasicName}({allParams});");
                         file.WriteLine("{0}\t{1}{2}{3} {4}({5})", indent, publicStr, staticStr, returnType, method.BasicName, allParams);
                         file.WriteLine("{0}\t{{", indent);
-                        if (isInterface)
-                        {
-                            methodImpSb.AppendLine($"{indent}\t\t{(returnValue != null ? "return" : "")} _methodImp.{method.BasicName}({parNames});");
-                        }
-                        else
-                        {
-                            if (!preview)
-                            {
-                                ExportBeginComment(file, "\t\t" + indent, method.BasicName);
-                            }
-
-                            if (returnValue != null)
-                            {
-                                //file.WriteLine();
-                                file.WriteLine("{0}\t\treturn {1};", indent, returnValue);
-                            }
-
-                            if (!preview)
-                            {
-                                ExportEndComment(file, "\t\t" + indent);
-                            }
-                        }
+                        file.WriteLine($"{indent}\t\t{(returnValue != null ? "return" : "")} _methodImp.{method.BasicName}({parNames});");
                         file.WriteLine("{0}\t}}", indent);
                         file.WriteLine();
                     }
@@ -873,7 +848,7 @@ namespace PluginBehaviac.Exporters
                 }
 
                 file.WriteLine("{0}}}", indent);
-                methodImpSb.AppendLine($"{indent}}}\r\n}}");
+                methodImpSb.AppendLine($"{indent}}}");
                 if (!string.IsNullOrEmpty(agent.Namespace))
                 {
                     if (!preview)
@@ -886,6 +861,7 @@ namespace PluginBehaviac.Exporters
 
                     //end of namespace
                     file.WriteLine("}");
+                    methodImpSb.AppendLine("}");
                 }
 
                 file.WriteLine();
