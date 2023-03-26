@@ -6,3 +6,5 @@ lib/**
 **/out/**
 !**/out/config.xml
 *.suo
+/tools/designer/.vs/BehaviacDesigner
+/tutorials/CsTutorials/.vs/CsTutorials/FileContentIndex
