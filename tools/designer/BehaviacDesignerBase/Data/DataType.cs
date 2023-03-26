@@ -597,7 +597,7 @@ namespace Behaviac.Design
 
                 if (obj == null)
                 {
-                    return this._value.ToString();
+                    return this._value?.ToString();
                 }
 
                 return this._attribute.GetExportValue(obj, this._value);

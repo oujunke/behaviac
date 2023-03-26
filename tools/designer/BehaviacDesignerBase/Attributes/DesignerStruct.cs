@@ -186,7 +186,7 @@ namespace Behaviac.Design.Attributes
                                             bStructProperty = true;
                                             string s = param.GetExportValue(null);
 
-                                            if (Plugin.IsStringType(param.Value.GetType()))
+                                            if (param.Value != null&& Plugin.IsStringType(param.Value.GetType()))
                                             {
                                                 str += string.Format("\"{0}\"", s);
 

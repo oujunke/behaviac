@@ -520,7 +520,6 @@ namespace PluginBehaviac.Exporters
                 }
             }
         }
-
         private void ExportAgentCsFile(AgentType agent, string filename, bool preview)
         {
             using (StringWriter file = new StringWriter())
@@ -549,7 +548,6 @@ namespace PluginBehaviac.Exporters
 
                     file.WriteLine("namespace {0}", agent.Namespace.Replace("::", "."));
                     file.WriteLine("{");
-
                     if (!preview)
                     {
                         ExportBeginComment(file, "", Behaviac.Design.Exporters.Exporter.namespace_init_part);
@@ -564,7 +562,6 @@ namespace PluginBehaviac.Exporters
                 //file.WriteLine("{0}[behaviac.TypeMetaInfo(\"{1}\", \"{2}\")]", indent, agentDisplayName, agentDescription);
                 string baseClassStr = (agent.Base != null) ? string.Format(" : {0}", agent.Base.Name.Replace("::", ".")) : "";
                 file.WriteLine("{0}public class {1}{2}", indent, agent.BasicName, baseClassStr);
-
                 if (!preview)
                 {
                     ExportBeginComment(file, indent, agent.BasicName);
@@ -572,7 +569,6 @@ namespace PluginBehaviac.Exporters
                 }
 
                 file.WriteLine("{0}{{", indent);
-
                 IList<PropertyDef> properties = agent.GetProperties(true);
 
                 foreach (PropertyDef prop in properties)
@@ -621,12 +617,13 @@ namespace PluginBehaviac.Exporters
                         string staticStr = method.IsStatic ? "static " : "";
 
                         string allParams = "";
-
+                        string parNames = "";
                         foreach (MethodDef.Param param in method.Params)
                         {
                             if (!string.IsNullOrEmpty(allParams))
                             {
                                 allParams += ", ";
+                                parNames += ", ";
                             }
 
                             string paramType = DataCsExporter.GetGeneratedNativeType(param.NativeType);
@@ -634,9 +631,11 @@ namespace PluginBehaviac.Exporters
                             if (param.IsRef)
                             {
                                 paramType = "ref " + paramType;
+                                parNames += "ref ";
                             }
 
                             allParams += paramType + " " + param.Name;
+                            parNames += param.Name;
                         }
 
                         string returnType = DataCsExporter.GetGeneratedNativeType(method.ReturnType);
@@ -644,7 +643,6 @@ namespace PluginBehaviac.Exporters
 
                         //file.WriteLine("{0}\t[behaviac.MethodMetaInfo(\"{1}\", \"{2}\")]", indent, method.DisplayName, method.BasicDescription);
                         ExportMethodComment(file, "\t" + indent);
-
                         file.WriteLine("{0}\t{1}{2}{3} {4}({5})", indent, publicStr, staticStr, returnType, method.BasicName, allParams);
                         file.WriteLine("{0}\t{{", indent);
 
@@ -663,7 +661,6 @@ namespace PluginBehaviac.Exporters
                         {
                             ExportEndComment(file, "\t\t" + indent);
                         }
-
                         file.WriteLine("{0}\t}}", indent);
                         file.WriteLine();
                     }
@@ -678,7 +675,6 @@ namespace PluginBehaviac.Exporters
                 }
 
                 file.WriteLine("{0}}}", indent);
-
                 if (!string.IsNullOrEmpty(agent.Namespace))
                 {
                     if (!preview)
@@ -706,6 +702,206 @@ namespace PluginBehaviac.Exporters
 
                 UpdateFile(file, filename);
             }
+        }
+        private string ExportAgentCsFileInterface(AgentType agent, string filename, bool preview)
+        {
+            bool isInterface = true;
+            StringBuilder methodImpSb = new StringBuilder("using System;\r\nusing System.Collections;\r\nusing System.Collections.Generic;");
+            using (StringWriter file = new StringWriter())
+            {
+                string indent = "";
+
+                ExportFileWarningHeader(file);
+
+                file.WriteLine("using System;");
+                file.WriteLine("using System.Collections;");
+                file.WriteLine("using System.Collections.Generic;");
+                file.WriteLine();
+
+                if (!preview)
+                {
+                    ExportBeginComment(file, indent, Behaviac.Design.Exporters.Exporter.file_init_part);
+                    file.WriteLine();
+                    ExportEndComment(file, indent);
+                }
+
+                file.WriteLine();
+
+                if (!string.IsNullOrEmpty(agent.Namespace))
+                {
+                    indent = "\t";
+
+                    file.WriteLine("namespace {0}", agent.Namespace.Replace("::", "."));
+                    file.WriteLine("{");
+                    methodImpSb.AppendLine($"namespace {agent.Namespace.Replace("::", ".")}\r\n{{");
+                    if (!preview)
+                    {
+                        ExportBeginComment(file, "", Behaviac.Design.Exporters.Exporter.namespace_init_part);
+                        file.WriteLine();
+                        ExportEndComment(file, "");
+                        file.WriteLine();
+                    }
+                }
+
+                string agentDisplayName = string.IsNullOrEmpty(agent.DisplayName) ? agent.BasicName : agent.DisplayName;
+                string agentDescription = string.IsNullOrEmpty(agent.Description) ? "" : agent.Description;
+                //file.WriteLine("{0}[behaviac.TypeMetaInfo(\"{1}\", \"{2}\")]", indent, agentDisplayName, agentDescription);
+                string baseClassStr = (agent.Base != null) ? string.Format(" : {0}", agent.Base.Name.Replace("::", ".")) : "";
+                file.WriteLine("{0}public class {1}{2}", indent, agent.BasicName, baseClassStr);
+                methodImpSb.AppendLine($"{indent}public interface I{agent.BasicName}Imp\r\n{indent}{{");
+                if (!preview)
+                {
+                    ExportBeginComment(file, indent, agent.BasicName);
+                    ExportEndComment(file, indent);
+                }
+
+                file.WriteLine("{0}{{", indent);
+                if (isInterface)
+                {
+                    file.WriteLine($"private I{agent.BasicName}Imp _methodImp;\r\npublic {agent.BasicName}(I{agent.BasicName}Imp methodImp)\r\n{{\r\n\t_methodImp=methodImp;\r\n}}");
+                }
+                IList<PropertyDef> properties = agent.GetProperties(true);
+
+                foreach (PropertyDef prop in properties)
+                {
+                    if ((preview || !agent.IsImplemented) && !prop.IsInherited && !prop.IsPar && !prop.IsArrayElement)
+                    {
+                        string staticStr = prop.IsStatic ? "static " : "";
+                        string propType = DataCsExporter.GetGeneratedNativeType(prop.Type);
+                        //string defaultValue = DataCsExporter.GetGeneratedPropertyDefaultValue(prop, propType);
+                        string defaultValue = DataCsExporter.GetGeneratedPropertyDefaultValue(prop);
+
+                        if (defaultValue != null)
+                        {
+                            defaultValue = " = " + defaultValue;
+                        }
+
+                        //file.WriteLine("{0}\t[behaviac.MemberMetaInfo(\"{1}\", \"{2}\")]", indent, prop.DisplayName, prop.BasicDescription);
+                        if (prop.IsPublic)
+                        {
+                            file.WriteLine("{0}\tpublic {1}{2} {3}{4};", indent, staticStr, propType, prop.BasicName, defaultValue);
+                        }
+                        else
+                        {
+                            file.WriteLine("{0}\tprivate {1}{2} {3}{4};", indent, staticStr, propType, prop.BasicName, defaultValue);
+                            file.WriteLine("{0}\tpublic {1}void _set_{2}({3} value)", indent, staticStr, prop.BasicName, propType);
+                            file.WriteLine("{0}\t{{", indent);
+                            file.WriteLine("{0}\t\t{1} = value;", indent, prop.BasicName);
+                            file.WriteLine("{0}\t}}", indent);
+                            file.WriteLine("{0}\tpublic {1}{2} _get_{3}()", indent, staticStr, propType, prop.BasicName);
+                            file.WriteLine("{0}\t{{", indent);
+                            file.WriteLine("{0}\t\treturn {1};", indent, prop.BasicName);
+                            file.WriteLine("{0}\t}}", indent);
+                        }
+
+                        file.WriteLine();
+                    }
+                }
+
+                IList<MethodDef> methods = agent.GetMethods(true);
+
+                foreach (MethodDef method in methods)
+                {
+                    if ((preview || !agent.IsImplemented) && !method.IsInherited && !method.IsNamedEvent)
+                    {
+                        string publicStr = method.IsPublic ? "public " : "private ";
+                        string staticStr = method.IsStatic ? "static " : "";
+
+                        string allParams = "";
+                        string parNames = "";
+                        foreach (MethodDef.Param param in method.Params)
+                        {
+                            if (!string.IsNullOrEmpty(allParams))
+                            {
+                                allParams += ", ";
+                                parNames += ", ";
+                            }
+
+                            string paramType = DataCsExporter.GetGeneratedNativeType(param.NativeType);
+
+                            if (param.IsRef)
+                            {
+                                paramType = "ref " + paramType;
+                                parNames += "ref ";
+                            }
+
+                            allParams += paramType + " " + param.Name;
+                            parNames += param.Name;
+                        }
+
+                        string returnType = DataCsExporter.GetGeneratedNativeType(method.ReturnType);
+                        string returnValue = DataCsExporter.GetGeneratedDefaultValue(method.ReturnType, returnType);
+
+                        //file.WriteLine("{0}\t[behaviac.MethodMetaInfo(\"{1}\", \"{2}\")]", indent, method.DisplayName, method.BasicDescription);
+                        ExportMethodComment(file, "\t" + indent);
+                        methodImpSb.AppendLine($"{returnType} {method.BasicName}({allParams});");
+                        file.WriteLine("{0}\t{1}{2}{3} {4}({5})", indent, publicStr, staticStr, returnType, method.BasicName, allParams);
+                        file.WriteLine("{0}\t{{", indent);
+                        if (isInterface)
+                        {
+                            methodImpSb.AppendLine($"{indent}\t\t{(returnValue != null ? "return" : "")} _methodImp.{method.BasicName}({parNames});");
+                        }
+                        else
+                        {
+                            if (!preview)
+                            {
+                                ExportBeginComment(file, "\t\t" + indent, method.BasicName);
+                            }
+
+                            if (returnValue != null)
+                            {
+                                //file.WriteLine();
+                                file.WriteLine("{0}\t\treturn {1};", indent, returnValue);
+                            }
+
+                            if (!preview)
+                            {
+                                ExportEndComment(file, "\t\t" + indent);
+                            }
+                        }
+                        file.WriteLine("{0}\t}}", indent);
+                        file.WriteLine();
+                    }
+                }
+
+                if (!preview)
+                {
+                    ExportBeginComment(file, indent + "\t", Behaviac.Design.Exporters.Exporter.class_part);
+                    file.WriteLine();
+                    ExportEndComment(file, indent + "\t");
+                    file.WriteLine();
+                }
+
+                file.WriteLine("{0}}}", indent);
+                methodImpSb.AppendLine($"{indent}}}\r\n}}");
+                if (!string.IsNullOrEmpty(agent.Namespace))
+                {
+                    if (!preview)
+                    {
+                        file.WriteLine();
+                        ExportBeginComment(file, indent, Behaviac.Design.Exporters.Exporter.namespace_uninit_part);
+                        file.WriteLine();
+                        ExportEndComment(file, indent);
+                    }
+
+                    //end of namespace
+                    file.WriteLine("}");
+                }
+
+                file.WriteLine();
+
+                if (!preview)
+                {
+                    ExportBeginComment(file, indent, Behaviac.Design.Exporters.Exporter.file_uninit_part);
+                    file.WriteLine();
+                    ExportEndComment(file, indent);
+                }
+
+                file.WriteLine();
+
+                UpdateFile(file, filename);
+            }
+            return methodImpSb.ToString();
         }
 
         private void ExportCustomizedTypes(string agentFolder)
@@ -1270,7 +1466,7 @@ namespace PluginBehaviac.Exporters
                 file.WriteLine("\t\t\t{");
 
                 file.WriteLine("\t\t\t\tList<string> paramStrs = behaviac.StringUtils.SplitTokensForStruct(valueStr);");
-                
+
                 int validPropCount = 0;
                 foreach (PropertyDef prop in structType.Properties)
                 {
