@@ -17,17 +17,15 @@ namespace ExamplePlugin.NodeExporters
             return true;
         }
 
-        protected override void GenerateConstructor(Node node, StreamWriter stream, string indent, string className)
+        protected override void GenerateConstructor(Node node, StringWriter stream, string indent, string className)
         {
             base.GenerateConstructor(node, stream, indent, className);
-
             ExampleNode wait = node as ExampleNode;
             Debug.Check(wait != null);
 
             stream.WriteLine("{0}\t\t\tm_ignoreTimeScale = {1};", indent, wait.IgnoreTimeScale ? "true" : "false");
         }
-
-        protected override void GenerateMethod(Node node, StreamWriter stream, string indent)
+        protected override void GenerateMethod(Node node, StringWriter stream, string indent)
         {
             base.GenerateMethod(node, stream, indent);
 
@@ -39,9 +37,7 @@ namespace ExamplePlugin.NodeExporters
                 stream.WriteLine("{0}\t\tvirtual float GetTime(Agent* pAgent) const", indent);
                 stream.WriteLine("{0}\t\t{{", indent);
                 stream.WriteLine("{0}\t\t\tBEHAVIAC_UNUSED_VAR(pAgent);", indent);
-
-                string retStr = VariableCppExporter.GenerateCode(wait.Time, stream, indent + "\t\t\t", string.Empty, string.Empty, string.Empty);
-
+               var retStr = VariableCppExporter.GenerateCode(node, wait.Time, false, stream, indent + "\t\t\t", string.Empty, string.Empty, string.Empty);
                 stream.WriteLine("{0}\t\t\treturn {1};", indent, retStr);
                 stream.WriteLine("{0}\t\t}}", indent);
             }

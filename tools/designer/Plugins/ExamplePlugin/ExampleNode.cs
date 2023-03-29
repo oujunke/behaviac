@@ -69,7 +69,7 @@ namespace ExamplePlugin.Nodes
 
         public override void CheckForErrors(BehaviorNode rootBehavior, List<ErrorCheck> result)
         {
-            Type valueType = (this._time != null) ? this._time.GetValueType() : null;
+            Type valueType = (this._time != null) ? this._time.ValueType : null;
 
             if (valueType == null)
             {

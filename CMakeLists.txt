@@ -80,6 +80,7 @@ endmacro()
 if (MSVC)
 	GroupSources("${PROJECT_SOURCE_DIR}/inc/" "inc")
 	GroupSources("${PROJECT_SOURCE_DIR}/src/" "src")
+	add_compile_options("/W3")
 endif()
 
 
