@@ -6,3 +6,7 @@ lib/**
 **/out/**
 !**/out/config.xml
 *.suo
+/.vs
+/build
+/tools/designer/.vs/BehaviacDesigner
+/tools/designer/Plugins/ExamplePlugin/.vs/ExamplePlugin/FileContentIndex
