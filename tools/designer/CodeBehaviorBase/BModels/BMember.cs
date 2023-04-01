@@ -4,9 +4,9 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace CodeBehaviacDesigner.Models
+namespace CodeBehaviorBase.BModels
 {
-    internal class BMember
+    public class BMember
     {
         public string Name { set; get; }
         public bool Public { set; get; }

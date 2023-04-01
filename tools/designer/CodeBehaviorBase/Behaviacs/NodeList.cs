@@ -17,8 +17,7 @@ namespace CodeBehaviorBase.Behaviacs
         }
         public NodeList(params Node[] genericChildrens)
         {
-            Condition = condition;
-            GenericChildren = genericChildren;
+            GenericChildren = new List<Node>(genericChildrens);
         }
     }
 }

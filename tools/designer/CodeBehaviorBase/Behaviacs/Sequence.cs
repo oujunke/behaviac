@@ -1,6 +1,6 @@
-﻿namespace CodeBehaviorBase
+﻿namespace CodeBehaviorBase.Behaviacs
 {
-    public class Sequence: NodeList
+    public class Sequence : NodeList
     {
 
     }

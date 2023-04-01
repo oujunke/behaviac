@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace CodeBehaviacDesigner.Models
+namespace CodeBehaviorBase.BModels
 {
     public class BEnumTypes
     {
