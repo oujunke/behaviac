@@ -22,6 +22,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ExpandPlugin", "Plugins\Exp
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ExamplePlugin", "Plugins\ExamplePlugin\ExamplePlugin.csproj", "{3795DC04-56C3-4D01-BDA4-6AB8011E4EEC}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CodeBehaviacDesigner", "CodeBehaviacDesigner\CodeBehaviacDesigner.csproj", "{9E72D38F-FB46-4CBB-9843-CF4ED21FC9E1}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -96,6 +98,18 @@ Global
 		{3795DC04-56C3-4D01-BDA4-6AB8011E4EEC}.Release|Mixed Platforms.Build.0 = Release|Any CPU
 		{3795DC04-56C3-4D01-BDA4-6AB8011E4EEC}.Release|x86.ActiveCfg = Release|Any CPU
 		{3795DC04-56C3-4D01-BDA4-6AB8011E4EEC}.Release|x86.Build.0 = Release|Any CPU
+		{9E72D38F-FB46-4CBB-9843-CF4ED21FC9E1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9E72D38F-FB46-4CBB-9843-CF4ED21FC9E1}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9E72D38F-FB46-4CBB-9843-CF4ED21FC9E1}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
+		{9E72D38F-FB46-4CBB-9843-CF4ED21FC9E1}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
+		{9E72D38F-FB46-4CBB-9843-CF4ED21FC9E1}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{9E72D38F-FB46-4CBB-9843-CF4ED21FC9E1}.Debug|x86.Build.0 = Debug|Any CPU
+		{9E72D38F-FB46-4CBB-9843-CF4ED21FC9E1}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9E72D38F-FB46-4CBB-9843-CF4ED21FC9E1}.Release|Any CPU.Build.0 = Release|Any CPU
+		{9E72D38F-FB46-4CBB-9843-CF4ED21FC9E1}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
+		{9E72D38F-FB46-4CBB-9843-CF4ED21FC9E1}.Release|Mixed Platforms.Build.0 = Release|Any CPU
+		{9E72D38F-FB46-4CBB-9843-CF4ED21FC9E1}.Release|x86.ActiveCfg = Release|Any CPU
+		{9E72D38F-FB46-4CBB-9843-CF4ED21FC9E1}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
