@@ -861,5 +861,19 @@ namespace Behaviac.Design
                 NetworkManager.Instance.SendLogFilter(this.comboBoxLogFilter.Text);
             }
         }
+
+        private void promptLabel_Click(object sender, EventArgs e)
+        {
+            if (MessageQueue.IsConnected)
+            {
+                HighlightBreakPoint breakPoint = HighlightBreakPoint.Instance;
+                if (breakPoint == null)
+                {
+                    return;
+                }
+                UIUtilities.SetCenter(breakPoint);
+                //breakPoint.
+            }
+        }
     }
 }

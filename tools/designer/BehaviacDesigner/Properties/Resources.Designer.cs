@@ -1566,6 +1566,15 @@ namespace Behaviac.Design.Properties {
         }
         
         /// <summary>
+        ///   查找类似 Refresh Connect Server 的本地化字符串。
+        /// </summary>
+        internal static string ReConnectServer {
+            get {
+                return ResourceManager.GetString("ReConnectServer", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   查找类似 Are you sure remove all selected parameters? 的本地化字符串。
         /// </summary>
         internal static string RemoveParametersInfo {

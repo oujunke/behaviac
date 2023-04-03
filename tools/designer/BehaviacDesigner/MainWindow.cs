@@ -48,6 +48,7 @@ using Behaviac.Design.Nodes;
 using Behaviac.Design.Properties;
 
 using System.Configuration;
+using Behaviac.Design.Network;
 
 namespace Behaviac.Design
 {
@@ -243,7 +244,7 @@ namespace Behaviac.Design
             this.showProfilingToolStripMenuItem.Enabled = !enabled;
             this.showProfilingToolStripMenuItem.Checked = Settings.Default.ShowProfilingInfo;
             this.showNodeIdToolStripMenuItem.Checked = NodeViewData.ShowNodeId;
-
+            this.reConnectMenuItem.Text = Resources.ReConnectServer;
             switch (editMode)
             {
                 case EditModes.Design:
@@ -251,6 +252,7 @@ namespace Behaviac.Design
                     this.connectMenuItem.Image = Resources.connect;
                     this.analyzeDumpMenuItem.Text = Resources.AnalyzeDump;
                     this.connectMenuItem.Enabled = true;
+                    this.reConnectMenuItem.Enabled = false;
                     this.analyzeDumpMenuItem.Enabled = true;
                     this.connectMenuItem.Image = Resources.connect;
                     break;
@@ -259,6 +261,7 @@ namespace Behaviac.Design
                     this.connectMenuItem.Image = Resources.disconnect;
                     this.connectMenuItem.Text = Resources.DisconnectServer;
                     this.connectMenuItem.Enabled = true;
+                    this.reConnectMenuItem.Enabled = true;
                     this.analyzeDumpMenuItem.Enabled = false;
                     break;
 
@@ -1861,6 +1864,7 @@ namespace Behaviac.Design
         private void connectMenuItem_Click(object sender, EventArgs e)
         {
             behaviorTreeList.HandleConnect();
+            
         }
 
         private void analyzeDumpMenuItem_Click(object sender, EventArgs e)
@@ -2193,6 +2197,12 @@ namespace Behaviac.Design
             Settings.Default.ShowProfilingInfo = !Settings.Default.ShowProfilingInfo;
             BehaviorTreeViewDock.RefreshAll();
             UpdateUIState(Plugin.EditMode);
+        }
+
+        private void reConnectMenuItem_Click(object sender, EventArgs e)
+        {
+            NetworkManager.Instance.Disconnect();
+            NetworkManager.Instance.Connect(NetworkManager.ServerIP, NetworkManager.ServerPort);
         }
     }
 }

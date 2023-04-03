@@ -380,7 +380,24 @@ namespace Behaviac.Design
 
             Invalidate();
         }
+        public void SetCenter(HighlightBreakPoint highlightBreakPoint)
+        {
+            SelectedNode = RootNodeView.FindNodeViewData(highlightBreakPoint.NodeId);
+            if (ClickNode != null)
+            {
+                ClickNode(SelectedNode);
+            }
 
+            if (SelectedNode != null && !SelectedNode.CheckAllParentsExpanded())
+            {
+                SelectedNode.SetAllParentsExpanded();
+                this._pendingCenterBehavior = true;
+                
+            }
+            this.ShowNode(SelectedNode);
+
+            PropertiesDock.InspectObject(SelectedNode.RootBehavior, SelectedNode.Node);
+        }
         public void SetHighlights(List<string> highlightedTransitionIds, List<string> highlightedNodeIds, List<string> updatedNodeIds, HighlightBreakPoint highlightBreakPoint, Dictionary<string, FrameStatePool.NodeProfileInfos.ProfileInfo> profileInfos)
         {
             bool shouldRefresh = (_highlightBreakPoint != highlightBreakPoint);

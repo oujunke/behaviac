@@ -97,6 +97,25 @@ namespace Behaviac.Design
             return BehaviorTreeViewDock.GetBehaviorTreeView(behavior);
         }
 
+        public static void SetCenter( HighlightBreakPoint highlightBreakPoint)
+        {
+            string behaviorFilename =  highlightBreakPoint.BehaviorFilename ;
+
+            if (!string.IsNullOrEmpty(behaviorFilename))
+            {
+                BehaviorTreeView behaviorTreeView = ShowBehaviorTree(behaviorFilename, false);
+
+                if (behaviorTreeView != null)
+                {
+                    // check if there is a tab for the behaviour, add by j2 server start
+                    BehaviorTreeViewDock dock = BehaviorTreeViewDock.GetBehaviorTreeViewDockByName(behaviorFilename);
+                    if (dock != null && dock == BehaviorTreeViewDock.LastFocused)
+                    {
+                        behaviorTreeView.SetCenter( highlightBreakPoint);
+                    }
+                }
+            }
+        }
         /// <summary>
         /// Show the behavior tree view with highlights.
         /// </summary>
@@ -122,6 +141,7 @@ namespace Behaviac.Design
                     if (dock != null && dock == BehaviorTreeViewDock.LastFocused)
                     {
                         behaviorTreeView.SetHighlights(highlightedTransitionIds, highlightNodeIds, updatedNodeIds, highlightBreakPoint, profileInfos);
+                        
                     }
 
                     // behaviorTreeView.SetHighlights(highlightedTransitionIds, highlightNodeIds, updatedNodeIds, highlightBreakPoint, profileInfos);
