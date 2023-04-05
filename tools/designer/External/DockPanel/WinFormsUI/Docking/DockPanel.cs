@@ -629,7 +629,10 @@ namespace WeifenLuo.WinFormsUI.Docking
             else
                 return 0;
         }
-
+        protected override void OnResize(EventArgs eventargs)
+        {
+            base.OnResize(eventargs);
+        }
         protected override void OnLayout(LayoutEventArgs levent)
 		{
 			SuspendLayout(true);

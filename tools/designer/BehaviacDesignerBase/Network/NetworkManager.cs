@@ -318,7 +318,7 @@ namespace Behaviac.Design.Network
         {
             if (m_clientSocket != null && m_clientSocket.Connected)
             {
-                byte[] bytes = System.Text.Encoding.ASCII.GetBytes(msg);
+                byte[] bytes = System.Text.Encoding.UTF8.GetBytes(msg);
                 m_clientSocket.Send(bytes);
             }
         }
@@ -412,7 +412,7 @@ namespace Behaviac.Design.Network
 
         private void handleText(byte[] msgData)
         {
-            string text = GetStringFromBuffer(msgData, 1, kMaxTextLength, true);
+            string text = GetStringFromBuffer(msgData, 1, kMaxTextLength, false);
             MessageQueue.PostMessageBuffer(text);
         }
 
