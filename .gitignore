@@ -8,3 +8,6 @@ lib/**
 *.suo
 /tools/designer/.vs/BehaviacDesigner
 /tutorials/CsTutorials/.vs/CsTutorials/FileContentIndex
+/.vs
+/tools/designer/packages/System.Drawing.Common.7.0.0
+/tools/designer/Plugins/ExamplePlugin/.vs/ExamplePlugin/FileContentIndex
