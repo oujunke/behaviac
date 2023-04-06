@@ -87,7 +87,7 @@ namespace behaviac
 
             protected override EBTStatus update(Agent pAgent, EBTStatus childStatus)
             {
-                Debug.Check(childStatus == EBTStatus.BT_RUNNING);
+                Debugs.Check(childStatus == EBTStatus.BT_RUNNING);
 
                 return EBTStatus.BT_SUCCESS;
             }

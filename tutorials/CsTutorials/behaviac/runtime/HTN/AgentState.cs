@@ -48,7 +48,7 @@ namespace behaviac
 
         public virtual void AddVariable(uint varId, IInstantiatedVariable pVar, int stackIndex)
         {
-            Debug.Check(!this.m_variables.ContainsKey(varId));
+            Debugs.Check(!this.m_variables.ContainsKey(varId));
 
             this.m_variables[varId] = pVar;
         }
@@ -71,7 +71,7 @@ namespace behaviac
 
         public void UnLoad(string variableName)
         {
-            Debug.Check(!string.IsNullOrEmpty(variableName));
+            Debugs.Check(!string.IsNullOrEmpty(variableName));
 
             uint varId = Utils.MakeVariableId(variableName);
 

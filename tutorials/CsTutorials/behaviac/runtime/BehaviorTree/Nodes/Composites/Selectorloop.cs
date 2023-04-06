@@ -74,14 +74,14 @@ namespace behaviac
             {
                 base.addChild(pBehavior);
 
-                Debug.Check(pBehavior is WithPreconditionTask);
+                Debugs.Check(pBehavior is WithPreconditionTask);
             }
 
             public override void copyto(BehaviorTask target)
             {
                 base.copyto(target);
 
-                Debug.Check(target is SelectorLoopTask);
+                Debugs.Check(target is SelectorLoopTask);
                 SelectorLoopTask ttask = (SelectorLoopTask)target;
 
                 ttask.m_activeChildIndex = this.m_activeChildIndex;
@@ -104,7 +104,7 @@ namespace behaviac
             {
                 //reset the action child as it will be checked in the update
                 this.m_activeChildIndex = CompositeTask.InvalidChildIndex;
-                Debug.Check(this.m_activeChildIndex == CompositeTask.InvalidChildIndex);
+                Debugs.Check(this.m_activeChildIndex == CompositeTask.InvalidChildIndex);
 
                 return base.onenter(pAgent);
             }
@@ -128,7 +128,7 @@ namespace behaviac
 
                 if (childStatus != EBTStatus.BT_RUNNING)
                 {
-                    Debug.Check(this.m_activeChildIndex != CompositeTask.InvalidChildIndex);
+                    Debugs.Check(this.m_activeChildIndex != CompositeTask.InvalidChildIndex);
 
                     if (childStatus == EBTStatus.BT_SUCCESS)
                     {
@@ -141,7 +141,7 @@ namespace behaviac
                     }
                     else
                     {
-                        Debug.Check(false);
+                        Debugs.Check(false);
                     }
                 }
 
@@ -150,7 +150,7 @@ namespace behaviac
 
                 for (int i = (idx + 1); i < this.m_children.Count; ++i)
                 {
-                    Debug.Check(this.m_children[i] is WithPreconditionTask);
+                    Debugs.Check(this.m_children[i] is WithPreconditionTask);
                     WithPreconditionTask pSubTree = (WithPreconditionTask)this.m_children[i];
 
                     BehaviorTask pre = pSubTree.PreconditionNode;
@@ -173,7 +173,7 @@ namespace behaviac
                         if (!abortChild)
                         {
                             SelectorLoop pSelectorLoop = (SelectorLoop)(this.GetNode());
-                            Debug.Check(pSelectorLoop != null);
+                            Debugs.Check(pSelectorLoop != null);
 
                             if (pSelectorLoop != null)
                             {
@@ -227,7 +227,7 @@ namespace behaviac
                             }
                         }
 
-                        Debug.Check(s == EBTStatus.BT_RUNNING || s == EBTStatus.BT_SUCCESS);
+                        Debugs.Check(s == EBTStatus.BT_RUNNING || s == EBTStatus.BT_SUCCESS);
 
                         return s;
                     }

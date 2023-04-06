@@ -99,7 +99,7 @@ namespace behaviac
 
         public override void Init(BehaviorNode node)
         {
-            Debug.Check(node is Task, "node is not an Method");
+            Debugs.Check(node is Task, "node is not an Method");
             Task pTaskNode = (Task)(node);
 
             if (pTaskNode.IsHTN)
@@ -119,7 +119,7 @@ namespace behaviac
         {
             //reset the action child as it will be checked in the update
             this.m_activeChildIndex = CompositeTask.InvalidChildIndex;
-            Debug.Check(this.m_activeChildIndex == CompositeTask.InvalidChildIndex);
+            Debugs.Check(this.m_activeChildIndex == CompositeTask.InvalidChildIndex);
 #if BEHAVIAC_USE_HTN
             Task pMethodNode = (Task)(this.GetNode());
 
@@ -144,7 +144,7 @@ namespace behaviac
 
             if (childStatus == EBTStatus.BT_RUNNING)
             {
-                Debug.Check(this.GetNode() is Task, "node is not an Method");
+                Debugs.Check(this.GetNode() is Task, "node is not an Method");
                 Task pTaskNode = (Task)(this.GetNode());
 
                 if (pTaskNode.IsHTN)
@@ -155,14 +155,14 @@ namespace behaviac
                 }
                 else
                 {
-                    Debug.Check(this.m_children.Count == 1);
+                    Debugs.Check(this.m_children.Count == 1);
                     BehaviorTask c = this.m_children[0];
                     status = c.exec(pAgent);
                 }
             }
             else
             {
-                Debug.Check(true);
+                Debugs.Check(true);
             }
 
             return status;

@@ -49,22 +49,25 @@ namespace behaviac
 {
     #region Config
 
-    public static class Config
+    public class Config
     {
-        private static bool m_bProfiling = false;
-
-        public static void LogInfo()
+        private bool m_bProfiling = false;
+        private Workspace _workspace;
+        internal void LogInfo()
         {
-            Debug.Log(string.Format("Config::IsProfiling {0}", Config.IsProfiling ? "true" : "false"));
-            Debug.Log(string.Format("Config::IsLogging {0}", Config.IsLogging ? "true" : "false"));
-            Debug.Log(string.Format("Config::IsLoggingFlush {0}", Config.IsLoggingFlush ? "true" : "false"));
-            Debug.Log(string.Format("Config::IsSocketing {0}", Config.IsSocketing ? "true" : "false"));
-            Debug.Log(string.Format("Config::IsSocketBlocking {0}", Config.IsSocketBlocking ? "true" : "false"));
-            Debug.Log(string.Format("Config::IsHotReload {0}", Config.IsHotReload ? "true" : "false"));
-            Debug.Log(string.Format("Config::SocketPort {0}", Config.SocketPort));
+            _workspace.Debugs.Log(string.Format("Config::IsProfiling {0}", IsProfiling ? "true" : "false"));
+            _workspace.Debugs.Log(string.Format("Config::IsLogging {0}", IsLogging ? "true" : "false"));
+            _workspace.Debugs.Log(string.Format("Config::IsLoggingFlush {0}", IsLoggingFlush ? "true" : "false"));
+            _workspace.Debugs.Log(string.Format("Config::IsSocketing {0}", IsSocketing ? "true" : "false"));
+            _workspace.Debugs.Log(string.Format("Config::IsSocketBlocking {0}", IsSocketBlocking ? "true" : "false"));
+            _workspace.Debugs.Log(string.Format("Config::IsHotReload {0}", IsHotReload ? "true" : "false"));
+            _workspace.Debugs.Log(string.Format("Config::SocketPort {0}", SocketPort));
         }
-
-        public static bool IsProfiling
+        internal void Init(Workspace workspace)
+        {
+            _workspace = workspace;
+        }
+        public bool IsProfiling
         {
             get
             {
@@ -78,14 +81,14 @@ namespace behaviac
 
                 if (m_bProfiling)
                 {
-                    behaviac.Debug.LogWarning("Profiling can't be enabled on Release! please don't define BEHAVIAC_RELEASE to enable it!\n");
+                    behaviac.Debugs.LogWarning("Profiling can't be enabled on Release! please don't define BEHAVIAC_RELEASE to enable it!\n");
                 }
 
 #endif
             }
         }
 
-        public static bool IsLoggingOrSocketing
+        public bool IsLoggingOrSocketing
         {
             get
             {
@@ -94,13 +97,13 @@ namespace behaviac
         }
 
 #if !BEHAVIAC_RELEASE
-        private static bool m_bIsLogging = false;
+        private bool m_bIsLogging = false;
 #else
-        private static bool m_bIsLogging = false;
+        private  bool m_bIsLogging = false;
 #endif
 
         ///it is disable on pc by default
-        public static bool IsLogging
+        public bool IsLogging
         {
             get
             {
@@ -115,7 +118,7 @@ namespace behaviac
 
                 if (m_bIsLogging)
                 {
-                    behaviac.Debug.LogWarning("Logging can't be enabled on Release! please don't define BEHAVIAC_RELEASE to enable it!\n");
+                    behaviac.Debugs.LogWarning("Logging can't be enabled on Release! please don't define BEHAVIAC_RELEASE to enable it!\n");
                 }
 
 #endif
@@ -123,13 +126,13 @@ namespace behaviac
         }
 
 #if !BEHAVIAC_RELEASE
-        private static bool m_bIsLoggingFlush = false;
+        private bool m_bIsLoggingFlush = false;
 #else
-        private static bool m_bIsLoggingFlush = false;
+        private  bool m_bIsLoggingFlush = false;
 #endif
 
         ///it is disable on pc by default
-        public static bool IsLoggingFlush
+        public bool IsLoggingFlush
         {
             get
             {
@@ -144,7 +147,7 @@ namespace behaviac
 
                 if (m_bIsLoggingFlush)
                 {
-                    behaviac.Debug.LogWarning("Logging can't be enabled on Release! please don't define BEHAVIAC_RELEASE to enable it!\n");
+                    behaviac.Debugs.LogWarning("Logging can't be enabled on Release! please don't define BEHAVIAC_RELEASE to enable it!\n");
                 }
 
 #endif
@@ -152,13 +155,13 @@ namespace behaviac
         }
 
 #if !BEHAVIAC_RELEASE
-        private static bool m_bIsSocketing = true;
+        private bool m_bIsSocketing = true;
 #else
-        private static bool m_bIsSocketing = false;
+        private  bool m_bIsSocketing = false;
 #endif
 
         //it is enabled on pc by default
-        public static bool IsSocketing
+        public bool IsSocketing
         {
             get
             {
@@ -166,7 +169,7 @@ namespace behaviac
             }
             set
             {
-                Debug.Check(!Workspace.Instance.IsInited, "please call Config.IsSocketing at the very begining!");
+                _workspace.Debugs.Check(!_workspace.IsInited, "please call IsSocketing at the very begining!");
 
 #if !BEHAVIAC_RELEASE
                 m_bIsSocketing = value;
@@ -174,16 +177,16 @@ namespace behaviac
 
                 if (m_bIsLogging)
                 {
-                    behaviac.Debug.LogWarning("Socketing can't be enabled on Release! please don't define BEHAVIAC_RELEASE to enable it!\n");
+                    behaviac.Debugs.LogWarning("Socketing can't be enabled on Release! please don't define BEHAVIAC_RELEASE to enable it!\n");
                 }
 
 #endif
             }
         }
 
-        private static bool m_bIsSocketBlocking = false;
+        private bool m_bIsSocketBlocking = false;
 
-        public static bool IsSocketBlocking
+        public bool IsSocketBlocking
         {
             get
             {
@@ -191,14 +194,14 @@ namespace behaviac
             }
             set
             {
-                Debug.Check(!Workspace.Instance.IsInited, "please call Config.IsSocketBlocking at the very begining!");
+                _workspace.Debugs.Check(!_workspace.IsInited, "please call IsSocketBlocking at the very begining!");
                 m_bIsSocketBlocking = value;
             }
         }
 
-        private static ushort m_socketPort = 60636;
+        private ushort m_socketPort = 60636;
 
-        public static ushort SocketPort
+        public ushort SocketPort
         {
             get
             {
@@ -206,14 +209,14 @@ namespace behaviac
             }
             set
             {
-                Debug.Check(!Workspace.Instance.IsInited, "please call Config.SocketPort at the very begining!");
+                _workspace.Debugs.Check(!_workspace.IsInited, "please call SocketPort at the very begining!");
                 m_socketPort = value;
             }
         }
 
-        private static bool m_bIsHotReload = true;
+        private bool m_bIsHotReload = true;
 
-        public static bool IsHotReload
+        public bool IsHotReload
         {
             get
             {
@@ -221,18 +224,18 @@ namespace behaviac
             }
             set
             {
-                Debug.Check(!Workspace.Instance.IsInited, "please call Config.IsHotReload at the very begining!");
+                _workspace.Debugs.Check(!_workspace.IsInited, "please call IsHotReload at the very begining!");
                 m_bIsHotReload = value;
             }
         }
 
-        private static bool m_bIsSuppressingNonPublicWarning;
+        private bool m_bIsSuppressingNonPublicWarning;
 
         /// <summary>
         /// Gets or sets a value indicating is supressing non public warning.
         /// </summary>
         /// <value><c>true</c> if is supressing non public warning; otherwise, <c>false</c>.</value>
-        public static bool IsSuppressingNonPublicWarning
+        public bool IsSuppressingNonPublicWarning
         {
             get
             {
@@ -244,9 +247,9 @@ namespace behaviac
             }
         }
 
-        private static bool m_bPreloadBehaviors = true;
+        private bool m_bPreloadBehaviors = true;
 
-        public static bool PreloadBehaviors
+        public bool PreloadBehaviors
         {
             get
             {
@@ -263,38 +266,42 @@ namespace behaviac
 
     public class Workspace : IDisposable
     {
-        #region Singleton
 
-        private static Workspace ms_instance = null;
-
-        public Workspace()
+        public LogManager LogManagers;
+        public Config Configs;
+        public SocketUtils SocketUtil;
+        public AgentMeta AgentMetas;
+        public Debug Debugs;
+        public FileManager FileManagers;
+        public Context Contexts;
+        public BehaviorTask BehaviorTasks;
+        public ComparerRegister ComparerRegisters;
+        public ComputerRegister ComputerRegisters;
+        private Workspace()
         {
-            Debug.Check(ms_instance == null);
-            ms_instance = this;
+
+        }
+        private void Init(Config config)
+        {
+            Configs = config;
+            LogManagers = new LogManager(this);
+            SocketUtil = new SocketUtils(this);
+            AgentMetas = new AgentMeta();
+            Debugs = new Debug(this);
+            FileManagers = new FileManager(this);
+            Contexts = new Context(-1, this);
+            ComparerRegisters = new ComparerRegister(this);
+            ComputerRegisters = new ComputerRegister(this);
         }
 
-        public void Dispose()
+        public Workspace CreatWorkspace()
         {
-            ms_instance = null;
+            Workspace workspace = new Workspace();
+            Config config = new Config();
+            workspace.Init(config);
+            config.Init(workspace);
+            return workspace;
         }
-
-        public static Workspace Instance
-        {
-            get
-            {
-                if (ms_instance == null)
-                {
-                    Workspace instance = new Workspace();
-                    Debug.Check(instance != null);
-                    Debug.Check(ms_instance != null);
-                }
-
-                return ms_instance;
-            }
-        }
-
-        #endregion Singleton
-
         [Flags]
         public enum EFileFormat
         {
@@ -318,7 +325,7 @@ namespace behaviac
             }
         }
 
-        private static string GetDefaultFilePath()
+        private string GetDefaultFilePath()
         {
             string path = "";
 
@@ -419,7 +426,7 @@ namespace behaviac
         {
             get
             {
-                Debug.Check(!UseIntValue);
+                Debugs.Check(!UseIntValue);
 
 #if !BEHAVIAC_NOT_USE_UNITY
 
@@ -436,7 +443,7 @@ namespace behaviac
 
             set
             {
-                Debug.Check(!UseIntValue);
+                Debugs.Check(!UseIntValue);
 
                 this.m_doubleValueSinceStartup = value * 1000;
             }
@@ -446,7 +453,7 @@ namespace behaviac
         {
             get
             {
-                Debug.Check(!UseIntValue);
+                Debugs.Check(!UseIntValue);
 
 #if !BEHAVIAC_NOT_USE_UNITY
 
@@ -463,7 +470,7 @@ namespace behaviac
 
             set
             {
-                Debug.Check(!UseIntValue);
+                Debugs.Check(!UseIntValue);
 
                 this.m_doubleValueSinceStartup = value;
             }
@@ -475,7 +482,7 @@ namespace behaviac
         {
             get
             {
-                Debug.Check(UseIntValue);
+                Debugs.Check(UseIntValue);
 
 #if !BEHAVIAC_NOT_USE_UNITY
 
@@ -492,7 +499,7 @@ namespace behaviac
 
             set
             {
-                Debug.Check(UseIntValue);
+                Debugs.Check(UseIntValue);
 
                 this.m_intValueSinceStartup = value;
             }
@@ -522,7 +529,7 @@ namespace behaviac
 #if UNITY_EDITOR || UNITY_STANDALONE_WIN
 
         [DllImport("user32.dll", CharSet = CharSet.Auto)]
-        private static extern int MessageBox(int hWnd, String text, String caption, int options);
+        private  extern int MessageBox(int hWnd, String text, String caption, int options);
 
 #endif
 
@@ -583,24 +590,24 @@ namespace behaviac
 
             this.m_bInited = true;
 
-            ComparerRegister.Init();
-            ComputerRegister.Init();
+            ComparerRegisters.Init();
+            ComputerRegisters.Init();
 
-            Workspace.Instance.RegisterStuff();
+            RegisterStuff();
 
-            Config.LogInfo();
+            Configs.LogInfo();
 
             if (string.IsNullOrEmpty(this.FilePath))
             {
-                behaviac.Debug.LogError("No FilePath file is specified!");
-                behaviac.Debug.Check(false);
+                Debugs.LogError("No FilePath file is specified!");
+                Debugs.Check(false);
 
                 return false;
             }
 
-            Debug.Log(string.Format("FilePath: {0}\n", this.FilePath));
+            Debugs.Log(string.Format("FilePath: {0}\n", this.FilePath));
 
-            Debug.Check(!this.FilePath.EndsWith("\\"), "use '/' instead of '\\'");
+            Debugs.Check(!this.FilePath.EndsWith("\\"), "use '/' instead of '\\'");
 
             m_frameSinceStartup = -1;
 
@@ -615,7 +622,7 @@ namespace behaviac
 #if BEHAVIAC_HOTRELOAD
 
             // set the file watcher
-            if (behaviac.Config.IsHotReload)
+            if (behaviac.IsHotReload)
             {
                 if (this.FileFormat != EFileFormat.EFF_cs)
                 {
@@ -648,11 +655,11 @@ namespace behaviac
             //LogWorkspaceInfo();
 #endif
 
-            if (Config.IsSocketing)
+            if (Configs.IsSocketing)
             {
-                bool isBlockSocket = Config.IsSocketBlocking;
-                ushort port = Config.SocketPort;
-                behaviac.SocketUtils.SetupConnection(isBlockSocket, port);
+                bool isBlockSocket = Configs.IsSocketBlocking;
+                ushort port = Configs.SocketPort;
+                SocketUtil.SetupConnection(isBlockSocket, port);
             }
 
             return true;
@@ -660,25 +667,25 @@ namespace behaviac
 
         public void Cleanup()
         {
-            if (Config.IsSocketing)
+            if (Configs.IsSocketing)
             {
-                behaviac.SocketUtils.ShutdownConnection();
+                SocketUtil.ShutdownConnection();
             }
 
             this.UnLoadAll();
 
-            Debug.Check(this.m_bRegistered);
+            Debugs.Check(this.m_bRegistered);
 
-            ComparerRegister.Cleanup();
-            ComputerRegister.Cleanup();
+            ComparerRegisters.Cleanup();
+            ComputerRegisters.Cleanup();
 
             this.UnRegisterStuff();
 
-            Context.Cleanup(-1);
+            Contexts.Cleanup(-1);
 
 #if BEHAVIAC_HOTRELOAD
 
-            if (behaviac.Config.IsHotReload)
+            if (behaviac.IsHotReload)
             {
                 m_modifiedFiles.Clear();
 
@@ -696,7 +703,7 @@ namespace behaviac
             PlannerTask.Cleanup();
 #endif//
 
-            LogManager.Instance.Close();
+            LogManagers.Close();
 
             this.m_bInited = false;
         }
@@ -718,7 +725,7 @@ namespace behaviac
 
         private void UnRegisterStuff()
         {
-            Debug.Check(this.m_bRegistered);
+            Debugs.Check(this.m_bRegistered);
 
             this.UnRegisterBehaviorNode();
             //#if !BEHAVIAC_RELEASE
@@ -736,13 +743,13 @@ namespace behaviac
             string platformID = osInfo.Platform.ToString();
 
             string msg = string.Format("[platform] {0}\n", platformID);
-            LogManager.Instance.LogWorkspace(msg);
+            LogManagers.LogWorkspace(msg);
 
             Workspace.EFileFormat format = this.FileFormat;
             string formatString = (format == Workspace.EFileFormat.EFF_bson ? "bson.bytes" : (format == Workspace.EFileFormat.EFF_cs ? "cs" : "xml"));
 
             msg = string.Format("[workspace] {0} \"{1}\"\n", formatString, "");
-            LogManager.Instance.LogWorkspace(msg);
+            LogManagers.LogWorkspace(msg);
         }
 
         private bool LoadWorkspaceSetting(string file, string ext, ref string workspaceFile)
@@ -784,7 +791,7 @@ namespace behaviac
             catch (Exception e)
             {
                 string errorInfo = string.Format("Load Workspace {0} Error : {1}", file, e.Message);
-                behaviac.Debug.LogError(errorInfo);
+                Debugs.LogError(errorInfo);
             }
 
             return false;
@@ -920,7 +927,7 @@ namespace behaviac
                 return;
             }
 
-            //behaviac.behaviac.Debug.LogWarning(string.Format("OnFileChanged:{0}", fullpath));
+            //behaviac.behaviac.Debugs.LogWarning(string.Format("OnFileChanged:{0}", fullpath));
 
             int index = -1;
 
@@ -992,7 +999,7 @@ namespace behaviac
         {
 #if !BEHAVIAC_RELEASE
 
-            if (behaviac.Config.IsHotReload)
+            if (behaviac.IsHotReload)
             {
                 if (GetModifiedFiles())
                 {
@@ -1002,7 +1009,7 @@ namespace behaviac
 
                         if (m_allBehaviorTreeTasks.ContainsKey(relativePath))
                         {
-                            behaviac.Debug.LogWarning(string.Format("Hotreload:{0}", relativePath));
+                            behaviac.Debugs.LogWarning(string.Format("Hotreload:{0}", relativePath));
 
                             if (Load(relativePath, true))
                             {
@@ -1061,13 +1068,13 @@ namespace behaviac
         {
             public string btname;
 
-            public ushort hit_config;
+            public ushort hitConfigs;
 
             public EActionResult action_result;
 
             public BreakpointInfo_t()
             {
-                hit_config = 0;
+                hitConfigs = 0;
                 action_result = EActionResult.EAR_all;
             }
         };
@@ -1098,14 +1105,14 @@ namespace behaviac
             }
             else
             {
-                Debug.Check(false);
+                Debugs.Check(false);
             }
 
             bp.btname = tokens[2];
 
             if (tokens[3] == "all")
             {
-                Debug.Check(bp.action_result == EActionResult.EAR_all);
+                Debugs.Check(bp.action_result == EActionResult.EAR_all);
             }
             else if (tokens[3] == "success")
             {
@@ -1117,7 +1124,7 @@ namespace behaviac
             }
             else
             {
-                Debug.Check(false);
+                Debugs.Check(false);
             }
 
             const string kHitNumber = "Hit=";
@@ -1126,7 +1133,7 @@ namespace behaviac
             if (posb != -1)
             {
                 posb = tokens[4].IndexOf('=');
-                Debug.Check(posb != -1);
+                Debugs.Check(posb != -1);
 
                 int size = -1;
                 //tokens[4] is the last one with '\n'
@@ -1142,7 +1149,7 @@ namespace behaviac
                 }
 
                 string numString = tokens[4].Substring(posb + 1, size);
-                bp.hit_config = ushort.Parse(numString);
+                bp.hitConfigs = ushort.Parse(numString);
             }
 
             uint bpid = Utils.MakeVariableId(bp.btname);
@@ -1161,15 +1168,15 @@ namespace behaviac
         {
             if (tokens[1] == "true")
             {
-                Config.IsProfiling = true;
+                Configs.IsProfiling = true;
             }
             else if (tokens[1] == "false")
             {
-                Config.IsProfiling = false;
+                Configs.IsProfiling = false;
             }
             else
             {
-                Debug.Check(false);
+                Debugs.Check(false);
             }
         }
 
@@ -1223,9 +1230,9 @@ namespace behaviac
         {
 #if !BEHAVIAC_RELEASE
 
-            if (Config.IsLoggingOrSocketing)
+            if (Configs.IsLoggingOrSocketing)
             {
-                LogManager.Instance.Log("[frame]{0}\n", (this.FrameSinceStartup >= 0) ? this.FrameSinceStartup : (this.m_frame++));
+                LogManagers.Log("[frame]{0}\n", (this.FrameSinceStartup >= 0) ? this.FrameSinceStartup : (this.m_frame++));
             }
 
 #endif
@@ -1249,11 +1256,10 @@ namespace behaviac
 
 #if !BEHAVIAC_RELEASE
 
-            if (Config.IsSocketing)
+            if (Configs.IsSocketing)
             {
                 string command = "";
-
-                if (SocketUtils.ReadText(ref command))
+                if (SocketUtil.ReadText(ref command))
                 {
                     const string kBreakpoint = "[breakpoint]";
                     const string kProperty = "[property]";
@@ -1306,14 +1312,14 @@ namespace behaviac
                         }
                         else
                         {
-                            Debug.Check(false);
+                            Debugs.Check(false);
                         }
                     }//end of for
                 }//end of if (Socket::ReadText(command))
 
                 else
                 {
-                    if (!SocketUtils.IsConnected())
+                    if (!SocketUtil.IsConnected())
                     {
                         //connection has something wrong
                         bContinue = true;
@@ -1349,7 +1355,7 @@ namespace behaviac
             this.LogFrames();
             this.HandleRequests();
 
-            if (behaviac.Config.IsHotReload)
+            if (Configs.IsHotReload)
             {
                 this.HotReload();
             }
@@ -1363,21 +1369,21 @@ namespace behaviac
             {
                 int contextId = -1;
 
-                Context.execAgents(contextId);
+                Contexts.execAgents(contextId);
             }
         }
 
         public void LogCurrentStates()
         {
             int contextId = -1;
-            Context.LogCurrentStates(contextId);
+            Contexts.LogCurrentStates(contextId);
         }
 
         public bool CheckBreakpoint(Agent pAgent, BehaviorNode b, string action, EActionResult actionResult)
         {
 #if !BEHAVIAC_RELEASE
 
-            if (Config.IsSocketing)
+            if (Configs.IsSocketing)
             {
                 string bpStr = BehaviorTask.GetTickInfo(pAgent, b, action);
 
@@ -1390,9 +1396,9 @@ namespace behaviac
                     if ((bp.action_result & actionResult) != 0)
                     {
                         int count = GetActionCount(bpStr);
-                        Debug.Check(count > 0);
+                        Debugs.Check(count > 0);
 
-                        if (bp.hit_config == 0 || bp.hit_config == count)
+                        if (bp.hitConfigs == 0 || bp.hitConfigs == count)
                         {
                             return true;
                         }
@@ -1408,7 +1414,7 @@ namespace behaviac
         {
 #if !BEHAVIAC_RELEASE
 
-            if (Config.IsSocketing)
+            if (Configs.IsSocketing)
             {
                 //m_applogFilter is UPPER
                 if (!string.IsNullOrEmpty(m_applogFilter))
@@ -1528,8 +1534,8 @@ namespace behaviac
 
         public void UnLoad(string relativePath)
         {
-            Debug.Check(string.IsNullOrEmpty(StringUtils.FindExtension(relativePath)), "no extention to specify");
-            Debug.Check(this.IsValidPath(relativePath));
+            Debugs.Check(string.IsNullOrEmpty(StringUtils.FindExtension(relativePath)), "no extention to specify");
+            Debugs.Check(this.IsValidPath(relativePath));
 
             if (BehaviorTrees.ContainsKey(relativePath))
             {
@@ -1546,14 +1552,14 @@ namespace behaviac
 
         public byte[] ReadFileToBuffer(string file, string ext)
         {
-            byte[] pBuffer = FileManager.Instance.FileOpen(file, ext);
+            byte[] pBuffer = FileManagers.FileOpen(file, ext);
 
             return pBuffer;
         }
 
         public void PopFileFromBuffer(string file, string ext, byte[] pBuffer)
         {
-            FileManager.Instance.FileClose(file, ext, pBuffer);
+            FileManagers.FileClose(file, ext, pBuffer);
         }
 
         private string getValidFilename(string filename)
@@ -1579,8 +1585,8 @@ namespace behaviac
         */
         public bool Load(string relativePath, bool bForce)
         {
-            Debug.Check(string.IsNullOrEmpty(StringUtils.FindExtension(relativePath)), "no extention to specify");
-            Debug.Check(this.IsValidPath(relativePath));
+            Debugs.Check(string.IsNullOrEmpty(StringUtils.FindExtension(relativePath)), "no extention to specify");
+            Debugs.Check(this.IsValidPath(relativePath));
 
             TryInit();
 
@@ -1612,13 +1618,13 @@ namespace behaviac
             if (pBT == null)
             {
                 bNewly = true;
-                pBT = new BehaviorTree();
+                pBT = new BehaviorTree(this);
 
                 //in case of circular referencebehavior
                 BehaviorTrees[relativePath] = pBT;
             }
 
-            Debug.Check(pBT != null);
+            Debugs.Check(pBT != null);
 
             if (f == EFileFormat.EFF_xml || f == EFileFormat.EFF_bson)
             {
@@ -1646,8 +1652,8 @@ namespace behaviac
                 }
                 else
                 {
-                    Debug.LogError(string.Format("'{0}' doesn't exist!, Please set Workspace.FilePath", fullPath));
-                    Debug.Check(false);
+                    Debugs.LogError(string.Format("'{0}' doesn't exist!, Please set Workspace.FilePath", fullPath));
+                    Debugs.Check(false);
                 }
             }
             else if (f == EFileFormat.EFF_cs)
@@ -1674,7 +1680,7 @@ namespace behaviac
                         if (type != null)
                         {
                             m = type.GetMethod("build_behavior_tree", BindingFlags.Public | BindingFlags.Static);
-                            Debug.Check(m != null);
+                            Debugs.Check(m != null);
 
                             if (m != null)
                             {
@@ -1690,28 +1696,28 @@ namespace behaviac
                     }
                     else
                     {
-                        Debug.Check(false);
-                        Debug.LogError("The generated_behaviors.cs file should be added into the app.");
+                        Debugs.Check(false);
+                        Debugs.LogError("The generated_behaviors.cs file should be added into the app.");
                     }
                 }
                 catch (Exception e)
                 {
                     string errorInfo = string.Format("The behavior {0} failed to be loaded : {1}", relativePath, e.Message);
-                    Debug.LogError(errorInfo);
+                    Debugs.LogError(errorInfo);
                 }
             }
             else
             {
-                Debug.Check(false);
+                Debugs.Check(false);
             }
 
             if (bLoadResult)
             {
-                Debug.Check(pBT.GetName() == relativePath);
+                Debugs.Check(pBT.GetName() == relativePath);
 
                 if (!bNewly)
                 {
-                    Debug.Check(BehaviorTrees[pBT.GetName()] == pBT);
+                    Debugs.Check(BehaviorTrees[pBT.GetName()] == pBT);
                 }
             }
             else
@@ -1719,7 +1725,7 @@ namespace behaviac
                 if (bNewly)
                 {
                     bool removed = BehaviorTrees.Remove(relativePath);
-                    Debug.Check(removed);
+                    Debugs.Check(removed);
                 }
                 else if (bCleared)
                 {
@@ -1727,7 +1733,7 @@ namespace behaviac
                     BehaviorTrees.Remove(relativePath);
                 }
 
-                behaviac.Debug.LogError(string.Format("{0} is not loaded!", fullPath));
+                Debugs.LogError(string.Format("{0} is not loaded!", fullPath));
             }
 
             return bLoadResult;
@@ -1740,7 +1746,7 @@ namespace behaviac
                 // try to load the behavior in xml
                 ext = ".xml";
 
-                if (FileManager.Instance.FileExist(fullPath, ext))
+                if (FileManagers.FileExist(fullPath, ext))
                 {
                     f = EFileFormat.EFF_xml;
                 }
@@ -1749,7 +1755,7 @@ namespace behaviac
                     // try to load the behavior in bson
                     ext = ".bson";
 
-                    if (FileManager.Instance.FileExist(fullPath, ext))
+                    if (FileManagers.FileExist(fullPath, ext))
                     {
                         f = EFileFormat.EFF_bson;
                     }
@@ -1800,7 +1806,7 @@ namespace behaviac
 
         public bool IsValidPath(string relativePath)
         {
-            Debug.Check(!string.IsNullOrEmpty(relativePath));
+            Debugs.Check(!string.IsNullOrEmpty(relativePath));
 
             if (relativePath[0] == '.' && (relativePath[1] == '/' || relativePath[1] == '\\'))
             {
@@ -1830,8 +1836,8 @@ namespace behaviac
 
         public BehaviorTreeTask CreateBehaviorTreeTask(string relativePath)
         {
-            Debug.Check(string.IsNullOrEmpty(Path.GetExtension(relativePath)), "no extention to specify");
-            Debug.Check(this.IsValidPath(relativePath));
+            Debugs.Check(string.IsNullOrEmpty(Path.GetExtension(relativePath)), "no extention to specify");
+            Debugs.Check(this.IsValidPath(relativePath));
 
             BehaviorTree bt = null;
 
@@ -1852,7 +1858,7 @@ namespace behaviac
             if (bt != null)
             {
                 BehaviorTask task = bt.CreateAndInitTask();
-                Debug.Check(task is BehaviorTreeTask);
+                Debugs.Check(task is BehaviorTreeTask);
                 BehaviorTreeTask behaviorTreeTask = task as BehaviorTreeTask;
 
                 if (!m_allBehaviorTreeTasks.ContainsKey(relativePath))
@@ -1903,7 +1909,7 @@ namespace behaviac
 
         private void UnRegisterBehaviorNode()
         {
-            Debug.Check(m_behaviorNodeTypes != null);
+            Debugs.Check(m_behaviorNodeTypes != null);
             m_behaviorNodeTypes.Clear();
         }
 
@@ -1919,7 +1925,7 @@ namespace behaviac
             {
                 string fullClassName = "behaviac." + className.Replace("::", ".");
                 type = this.CallingAssembly.GetType(fullClassName, false);
-                Debug.Check(type != null);
+                Debugs.Check(type != null);
 
                 if (type == null)
                 {
@@ -1958,7 +1964,7 @@ namespace behaviac
 
         public bool ExportMetas(string xmlMetaFilePath, bool onlyExportPublicMembers)
         {
-            Debug.LogWarning("deprecated, please remove calling of ExportMetas");
+            Debugs.LogWarning("deprecated, please remove calling of ExportMetas");
 
             return false;
         }
@@ -1968,5 +1974,9 @@ namespace behaviac
             return ExportMetas(exportPathRelativeToWorkspace, false);
         }
 
+        public void Dispose()
+        {
+            throw new NotImplementedException();
+        }
     }
 }

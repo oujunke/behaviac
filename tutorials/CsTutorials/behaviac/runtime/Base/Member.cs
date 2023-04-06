@@ -14,6 +14,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
 
 namespace behaviac
 {
@@ -26,19 +27,19 @@ namespace behaviac
     {
         public T value;
 
-        public TValue(T v)
+        public TValue(T v, Workspace workspace)
         {
-            Utils.Clone(ref value, v);
+            Utils.Clone(ref value, v, workspace);
         }
 
-        public TValue(TValue<T> rhs)
+        public TValue(TValue<T> rhs, Workspace workspace)
         {
-            Utils.Clone(ref value, rhs.value);
+            Utils.Clone(ref value, rhs.value, workspace);
         }
 
-        public TValue<T> Clone()
+        public TValue<T> Clone(Workspace workspace)
         {
-            return new TValue<T>(this);
+            return new TValue<T>(this, workspace);
         }
 
         public void Log(Agent agent, string name, bool bForce)
@@ -46,9 +47,9 @@ namespace behaviac
 #if !BEHAVIAC_RELEASE
             T currentValue = agent.GetVariable<T>(name);
 
-            if (bForce || OperationUtils.Compare<T>(currentValue, this.value, EOperatorType.E_NOTEQUAL))
+            if (bForce || OperationUtils.Compare<T>(currentValue, this.value, EOperatorType.E_NOTEQUAL, agent.Workspace))
             {
-                LogManager.Instance.LogVarValue(agent, name, currentValue);
+                agent.Workspace.LogManagers.LogVarValue(agent, name, currentValue);
                 this.value = currentValue;
             }
 
@@ -107,19 +108,24 @@ namespace behaviac
     {
         protected string _instance = "Self";
         protected IInstanceMember _indexMember = null;
-
-        public CInstanceMember()
+        public Workspace Workspace { get; private set; }
+        public Config Configs { set; get; }
+        public Debug Debugs { set; get; }
+        public CInstanceMember(Workspace workspace)
         {
+            Workspace = workspace;
+            Configs = workspace.Configs;
+            Debugs = workspace.Debugs;
             _indexMember = null;
         }
 
-        public CInstanceMember(string instance, IInstanceMember indexMember)
+        public CInstanceMember(string instance, IInstanceMember indexMember, Workspace workspace) : this(workspace)
         {
             _instance = instance;
             _indexMember = indexMember;
         }
 
-        public CInstanceMember(CInstanceMember<T> rhs)
+        public CInstanceMember(CInstanceMember<T> rhs, Workspace workspace) : this(workspace)
         {
             _instance = rhs._instance;
             _indexMember = rhs._indexMember;
@@ -142,7 +148,7 @@ namespace behaviac
         {
             //Agent agent = Utils.GetParentAgent(self, _instance);
             object rightObject = right.GetValueObject(self);
-            Debug.Check(rightObject is IList);
+            Debugs.Check(rightObject is IList);
             IList il = (IList)rightObject;
             List<T> list = (List<T>)il;
 
@@ -153,7 +159,7 @@ namespace behaviac
 
         public virtual T GetValue(Agent self)
         {
-            Debug.Check(false);
+            Debugs.Check(false);
             return default(T);
         }
 
@@ -164,12 +170,12 @@ namespace behaviac
 
         public virtual void SetValue(Agent self, T value)
         {
-            Debug.Check(false);
+            Debugs.Check(false);
         }
 
         public void SetValue(Agent self, object value)
         {
-            Debug.Check(value == null || !value.GetType().IsValueType);
+            Debugs.Check(value == null || !value.GetType().IsValueType);
 
             SetValue(self, (T)value);
         }
@@ -210,7 +216,7 @@ namespace behaviac
             T leftValue = this.GetValue(self);
             T rightValue = ((CInstanceMember<T>)right).GetValue(self);
 
-            return OperationUtils.Compare(leftValue, rightValue, comparisonType);
+            return OperationUtils.Compare(leftValue, rightValue, comparisonType, Workspace);
         }
 
         public void Compute(Agent self, IInstanceMember right1, IInstanceMember right2, EOperatorType computeType)
@@ -218,7 +224,7 @@ namespace behaviac
             T rightValue1 = ((CInstanceMember<T>)right1).GetValue(self);
             T rightValue2 = ((CInstanceMember<T>)right2).GetValue(self);
 
-            SetValue(self, OperationUtils.Compute(rightValue1, rightValue2, computeType));
+            SetValue(self, OperationUtils.Compute(rightValue1, rightValue2, computeType, Workspace));
         }
 
         public virtual void Run(Agent self)
@@ -246,20 +252,25 @@ namespace behaviac
             }
         }
 #endif
-
-        public CProperty(string name)
+        public Workspace Workspace { get; private set; }
+        public Config Configs { set; get; }
+        public Debug Debugs { set; get; }
+        public CProperty(string name, Workspace workspace)
         {
+            Workspace = workspace;
+            Configs = workspace.Configs;
+            Debugs = workspace.Debugs;
             _name = name;
         }
 
         public IInstanceMember CreateInstance(string instance, IInstanceMember indexMember)
         {
-            return new CInstanceProperty<T>(instance, indexMember, this);
+            return new CInstanceProperty<T>(instance, indexMember, this, Workspace);
         }
 
         public IValue CreateIValue()
         {
-            return new TValue<T>(default(T));
+            return new TValue<T>(default(T), Workspace);
         }
 
         public object GetValueObject(Agent self)
@@ -275,7 +286,7 @@ namespace behaviac
         public void SetValueFromString(Agent self, string valueStr)
         {
             T value;
-            ValueConverter<T>.Convert(valueStr, out value);
+            ValueConverter<T>.Convert(valueStr, out value, Workspace);
 
             SetValue(self, value);
         }
@@ -289,23 +300,23 @@ namespace behaviac
 
         public virtual void SetValue(Agent self, T value)
         {
-            Debug.Check(false);
+            Debugs.Check(false);
         }
 
         public virtual void SetValue(Agent self, T value, int index)
         {
-            Debug.Check(false);
+            Debugs.Check(false);
         }
 
         public virtual T GetValue(Agent self)
         {
-            Debug.Check(false);
+            Debugs.Check(false);
             return default(T);
         }
 
         public virtual T GetValue(Agent self, int index)
         {
-            Debug.Check(false);
+            Debugs.Check(false);
             return default(T);
         }
 
@@ -315,8 +326,8 @@ namespace behaviac
     {
         CProperty<T> _property;
 
-        public CInstanceProperty(string instance, IInstanceMember indexMember, CProperty<T> prop)
-        : base(instance, indexMember)
+        public CInstanceProperty(string instance, IInstanceMember indexMember, CProperty<T> prop, Workspace workspace)
+        : base(instance, indexMember, workspace)
         {
             _property = prop;
         }
@@ -358,8 +369,8 @@ namespace behaviac
         SetFunctionPointer _sfp;
         GetFunctionPointer _gfp;
 
-        public CStaticMemberProperty(string name, SetFunctionPointer sfp, GetFunctionPointer gfp)
-        : base(name)
+        public CStaticMemberProperty(string name, SetFunctionPointer sfp, GetFunctionPointer gfp, Workspace workspace)
+        : base(name, workspace)
         {
             _sfp = sfp;
             _gfp = gfp;
@@ -367,14 +378,14 @@ namespace behaviac
 
         public override T GetValue(Agent self)
         {
-            Debug.Check(_gfp != null);
+            Debugs.Check(_gfp != null);
 
             return _gfp();
         }
 
         public override void SetValue(Agent self, T value)
         {
-            Debug.Check(_sfp != null);
+            Debugs.Check(_sfp != null);
 
             _sfp(value);
         }
@@ -388,8 +399,8 @@ namespace behaviac
         SetFunctionPointer _sfp;
         GetFunctionPointer _gfp;
 
-        public CStaticMemberArrayItemProperty(string name, SetFunctionPointer sfp, GetFunctionPointer gfp)
-        : base(name)
+        public CStaticMemberArrayItemProperty(string name, SetFunctionPointer sfp, GetFunctionPointer gfp, Workspace workspace)
+        : base(name, workspace)
         {
             _sfp = sfp;
             _gfp = gfp;
@@ -406,14 +417,14 @@ namespace behaviac
 #endif
         public override T GetValue(Agent self, int index)
         {
-            Debug.Check(_gfp != null);
+            Debugs.Check(_gfp != null);
 
             return _gfp(index);
         }
 
         public override void SetValue(Agent self, T value, int index)
         {
-            Debug.Check(_sfp != null);
+            Debugs.Check(_sfp != null);
 
             _sfp(value, index);
         }
@@ -427,8 +438,8 @@ namespace behaviac
         SetFunctionPointer _sfp;
         GetFunctionPointer _gfp;
 
-        public CMemberProperty(string name, SetFunctionPointer sfp, GetFunctionPointer gfp)
-        : base(name)
+        public CMemberProperty(string name, SetFunctionPointer sfp, GetFunctionPointer gfp, Workspace workspace)
+        : base(name, workspace)
         {
             _sfp = sfp;
             _gfp = gfp;
@@ -436,7 +447,7 @@ namespace behaviac
 
         public override T GetValue(Agent self)
         {
-            Debug.Check(_gfp != null);
+            Debugs.Check(_gfp != null);
 
 #if BEHAVIAC_USE_HTN
 
@@ -459,7 +470,7 @@ namespace behaviac
 
         public override void SetValue(Agent self, T value)
         {
-            Debug.Check(_sfp != null);
+            Debugs.Check(_sfp != null);
 
 #if BEHAVIAC_USE_HTN
 
@@ -495,8 +506,8 @@ namespace behaviac
         SetFunctionPointer _sfp;
         GetFunctionPointer _gfp;
 
-        public CMemberArrayItemProperty(string name, SetFunctionPointer sfp, GetFunctionPointer gfp)
-        : base(name)
+        public CMemberArrayItemProperty(string name, SetFunctionPointer sfp, GetFunctionPointer gfp, Workspace workspace)
+        : base(name, workspace)
         {
             _sfp = sfp;
             _gfp = gfp;
@@ -514,14 +525,14 @@ namespace behaviac
 
         public override T GetValue(Agent self, int index)
         {
-            Debug.Check(_gfp != null);
+            Debugs.Check(_gfp != null);
 
             return _gfp(self, index);
         }
 
         public override void SetValue(Agent self, T value, int index)
         {
-            Debug.Check(_sfp != null);
+            Debugs.Check(_sfp != null);
 
             _sfp(self, value, index);
         }
@@ -562,11 +573,11 @@ namespace behaviac
         uint _id;
         T _defaultValue;
 
-        public CCustomizedProperty(uint id, string name, string valueStr)
-        : base(name)
+        public CCustomizedProperty(uint id, string name, string valueStr, Workspace workspace)
+        : base(name, workspace)
         {
             _id = id;
-            ValueConverter<T>.Convert(valueStr, out _defaultValue);
+            ValueConverter<T>.Convert(valueStr, out _defaultValue, workspace);
         }
 
         public override T GetValue(Agent self)
@@ -587,14 +598,14 @@ namespace behaviac
         public override void SetValue(Agent self, T value)
         {
             bool bOk = self.SetVarValue<T>(_id, value);
-            Debug.Check(bOk);
+            Debugs.Check(bOk);
         }
 
         public IInstantiatedVariable Instantiate()
         {
             T value = default(T);
-            Utils.Clone(ref value, _defaultValue);
-            return new CVariable<T>(this.Name, value);
+            Utils.Clone(ref value, _defaultValue, Workspace);
+            return new CVariable<T>(this.Name, value, Workspace);
         }
     }
 
@@ -602,8 +613,8 @@ namespace behaviac
     {
         uint _parentId;
 
-        public CCustomizedArrayItemProperty(uint parentId, string parentName)
-        : base(parentName)
+        public CCustomizedArrayItemProperty(uint parentId, string parentName, Workspace workspace)
+        : base(parentName, workspace)
         {
             _parentId = parentId;
         }
@@ -621,11 +632,11 @@ namespace behaviac
         public override T GetValue(Agent self, int index)
         {
             List<T> arrayValue = self.GetVariable<List<T>>(_parentId);
-            Debug.Check(arrayValue != null);
+            Debugs.Check(arrayValue != null);
 
             if (arrayValue != null)
             {
-                Debug.Check(index >= 0 && index < arrayValue.Count);
+                Debugs.Check(index >= 0 && index < arrayValue.Count);
                 return arrayValue[index];
             }
 
@@ -635,7 +646,7 @@ namespace behaviac
         public override void SetValue(Agent self, T value, int index)
         {
             List<T> arrayValue = self.GetVariable<List<T>>(_parentId);
-            Debug.Check(arrayValue != null);
+            Debugs.Check(arrayValue != null);
 
             if (arrayValue != null)
             {
@@ -645,7 +656,7 @@ namespace behaviac
 
         public IInstantiatedVariable Instantiate()
         {
-            return new CArrayItemVariable<T>(_parentId, this.Name);
+            return new CArrayItemVariable<T>(_parentId, this.Name,Workspace);
         }
     }
 
@@ -654,7 +665,7 @@ namespace behaviac
         T _value;
 
         string _name;
-
+        public Workspace Workspace { set; get; }
 #if !BEHAVIAC_RELEASE
         bool _isModified = false;
         internal bool IsModified
@@ -671,10 +682,10 @@ namespace behaviac
         }
 #endif
 
-        public CVariable(string name, T value)
+        public CVariable(string name, T value, Workspace workspace)
         {
-            Utils.Clone<T>(ref this._value, value);
-
+            Utils.Clone<T>(ref this._value, value, workspace);
+            Workspace = workspace;
             _name = name;
 
 #if !BEHAVIAC_RELEASE
@@ -682,10 +693,10 @@ namespace behaviac
 #endif
         }
 
-        public CVariable(string name, string valueStr)
+        public CVariable(string name, string valueStr, Workspace workspace)
         {
-            ValueConverter<T>.Convert(valueStr, out _value);
-
+            ValueConverter<T>.Convert(valueStr, out _value, workspace);
+            Workspace = workspace;
             _name = name;
 
 #if !BEHAVIAC_RELEASE
@@ -711,7 +722,7 @@ namespace behaviac
 
         public void SetValueFromString(Agent self, string valueStr)
         {
-            ValueConverter<T>.Convert(valueStr, out _value);
+            ValueConverter<T>.Convert(valueStr, out _value, self.Workspace);
         }
 
         public void SetValue(Agent self, T value)
@@ -730,7 +741,7 @@ namespace behaviac
 
         public void SetValue(Agent self, object value, int index)
         {
-            Debug.Check(false);
+            self.Workspace.Debugs.Check(false);
         }
 
         public string Name
@@ -747,7 +758,7 @@ namespace behaviac
 
             if (_isModified)
             {
-                LogManager.Instance.LogVarValue(self, this.Name, this._value);
+                self.Workspace.LogManagers.LogVarValue(self, this.Name, this._value);
 
                 // clear it
                 _isModified = false;
@@ -759,7 +770,7 @@ namespace behaviac
         public void CopyTo(Agent pAgent)
         {
             //TODO:
-            Debug.Check(false);
+            pAgent.Debugs.Check(false);
         }
 
         public void Save(ISerializableNode node)
@@ -777,7 +788,7 @@ namespace behaviac
 
         public IInstantiatedVariable clone()
         {
-            CVariable<T> p = new CVariable<T>(this._name, this._value);
+            CVariable<T> p = new CVariable<T>(this._name, this._value, Workspace);
 
             return p;
         }
@@ -787,10 +798,12 @@ namespace behaviac
     {
         string _name;
         uint _parentId;
-        public CArrayItemVariable(uint parentId, string name)
+        Workspace Workspace { set; get; }
+        public CArrayItemVariable(uint parentId, string name,Workspace workspace)
         {
             _parentId = parentId;
             _name = name;
+            Workspace = workspace;
         }
 
         public T GetValue(Agent self, int index)
@@ -817,7 +830,7 @@ namespace behaviac
 
         public void SetValueFromString(Agent self, string valueStr)
         {
-            Debug.Check(false);
+            self.Debugs.Check(false);
         }
 
         public void SetValue(Agent self, T value, int index)
@@ -837,7 +850,7 @@ namespace behaviac
 
         public object GetValueObject(Agent self)
         {
-            Debug.Check(false);
+            self.Debugs.Check(false);
             return null;
         }
 
@@ -848,7 +861,7 @@ namespace behaviac
 
         public void SetValue(Agent self, object value)
         {
-            Debug.Check(false);
+            self.Debugs.Check(false);
         }
 
         public void SetValue(Agent self, object value, int index)
@@ -872,7 +885,7 @@ namespace behaviac
 
             if (arrayVar != null && arrayVar.IsModified)
             {
-                LogManager.Instance.LogVarValue(self, this.Name, arrayVar);
+                self.Workspace.LogManagers.LogVarValue(self, this.Name, arrayVar);
             }
 
 #endif
@@ -880,17 +893,18 @@ namespace behaviac
 
         public void CopyTo(Agent pAgent)
         {
-            Debug.Check(false);
+            pAgent.Debugs.Check(false);
         }
 
         public void Save(ISerializableNode node)
         {
-            Debug.Check(false);
+
+            Workspace.Debugs.Check(false);
         }
 
         public IInstantiatedVariable clone()
         {
-            CArrayItemVariable<T> p = new CArrayItemVariable<T>(this._parentId, this._name);
+            CArrayItemVariable<T> p = new CArrayItemVariable<T>(this._parentId, this._name, Workspace);
 
             return p;
         }
@@ -900,8 +914,8 @@ namespace behaviac
     {
         uint _id;
 
-        public CInstanceCustomizedProperty(string instance, IInstanceMember indexMember, uint id)
-        : base(instance, indexMember)
+        public CInstanceCustomizedProperty(string instance, IInstanceMember indexMember, uint id, Workspace workspace)
+        : base(instance, indexMember, workspace)
         {
             _id = id;
         }
@@ -946,7 +960,7 @@ namespace behaviac
     {
         protected T _value;
 
-        public CInstanceConst(string typeName, string valueStr)
+        public CInstanceConst(string typeName, string valueStr, Workspace workspace) : base(workspace)
         {
             this._value = (T)AgentMeta.ParseTypeValue(typeName, valueStr);
         }
@@ -979,30 +993,30 @@ namespace behaviac
     {
         protected TValue<T> _returnValue;
 
-        protected CAgentMethodBase()
+        public CAgentMethodBase(Workspace workspace) : base(workspace)
         {
-            _returnValue = new TValue<T>(default(T));
+            _returnValue = new TValue<T>(default(T), workspace);
         }
 
-        protected CAgentMethodBase(CAgentMethodBase<T> rhs)
+        public CAgentMethodBase(CAgentMethodBase<T> rhs, Workspace workspace) : base(workspace)
         {
-            _returnValue = rhs._returnValue.Clone();
+            _returnValue = rhs._returnValue.Clone(workspace);
         }
 
         public virtual IMethod Clone()
         {
-            Debug.Check(false);
+            Debugs.Check(false);
             return null;
         }
 
         public virtual void Load(string instance, string[] paramStrs)
         {
-            Debug.Check(false);
+            Debugs.Check(false);
         }
 
         public override void Run(Agent self)
         {
-            Debug.Check(false);
+            Debugs.Check(false);
         }
 
         public override T GetValue(Agent self)
@@ -1035,7 +1049,7 @@ namespace behaviac
 
         public virtual void SetTaskParams(Agent self, BehaviorTreeTask treeTask)
         {
-            Debug.Check(false);
+            Debugs.Check(false);
         }
     }
 
@@ -1045,25 +1059,25 @@ namespace behaviac
 
         FunctionPointer _fp;
 
-        public CAgentMethod(FunctionPointer f)
+        public CAgentMethod(FunctionPointer f,Workspace workspace):base(workspace)
         {
             _fp = f;
         }
 
-        public CAgentMethod(CAgentMethod<T> rhs)
-        : base(rhs)
+        public CAgentMethod(CAgentMethod<T> rhs, Workspace workspace)
+        : base(rhs,workspace)
         {
             _fp = rhs._fp;
         }
 
         public override IMethod Clone()
         {
-            return new CAgentMethod<T>(this);
+            return new CAgentMethod<T>(this,Workspace);
         }
 
         public override void Load(string instance, string[] paramStrs)
         {
-            Debug.Check(paramStrs.Length == 0);
+            Debugs.Check(paramStrs.Length == 0);
 
             _instance = instance;
         }
@@ -1087,13 +1101,13 @@ namespace behaviac
         FunctionPointer _fp;
         IInstanceMember _p1;
 
-        public CAgentMethod(FunctionPointer f)
+        public CAgentMethod(FunctionPointer f, Workspace workspace):base(workspace)
         {
             _fp = f;
         }
 
-        public CAgentMethod(CAgentMethod<T, P1> rhs)
-        : base(rhs)
+        public CAgentMethod(CAgentMethod<T, P1> rhs, Workspace workspace)
+        : base(rhs, workspace)
         {
             _fp = rhs._fp;
             _p1 = rhs._p1;
@@ -1101,12 +1115,12 @@ namespace behaviac
 
         public override IMethod Clone()
         {
-            return new CAgentMethod<T, P1>(this);
+            return new CAgentMethod<T, P1>(this, Workspace);
         }
 
         public override void Load(string instance, string[] paramStrs)
         {
-            Debug.Check(paramStrs.Length == 1);
+            Debugs.Check(paramStrs.Length == 1);
 
             _instance = instance;
             _p1 = AgentMeta.ParseProperty<P1>(paramStrs[0]);
@@ -1114,7 +1128,7 @@ namespace behaviac
 
         public override void Run(Agent self)
         {
-            Debug.Check(_p1 != null);
+            Debugs.Check(_p1 != null);
 
             Agent agent = Utils.GetParentAgent(self, _instance);
 
@@ -1123,7 +1137,7 @@ namespace behaviac
 
         public override IValue GetIValue(Agent self, IInstanceMember firstParam)
         {
-            Debug.Check(_p1 != null);
+            Debugs.Check(_p1 != null);
 
             Agent agent = Utils.GetParentAgent(self, _instance);
 
@@ -1147,13 +1161,13 @@ namespace behaviac
         IInstanceMember _p1;
         IInstanceMember _p2;
 
-        public CAgentMethod(FunctionPointer f)
+        public CAgentMethod(FunctionPointer f, Workspace workspace):base(workspace)
         {
             _fp = f;
         }
 
-        public CAgentMethod(CAgentMethod<T, P1, P2> rhs)
-        : base(rhs)
+        public CAgentMethod(CAgentMethod<T, P1, P2> rhs, Workspace workspace)
+        : base(rhs, workspace)
         {
             _fp = rhs._fp;
             _p1 = rhs._p1;
@@ -1162,12 +1176,12 @@ namespace behaviac
 
         public override IMethod Clone()
         {
-            return new CAgentMethod<T, P1, P2>(this);
+            return new CAgentMethod<T, P1, P2>(this, Workspace);
         }
 
         public override void Load(string instance, string[] paramStrs)
         {
-            Debug.Check(paramStrs.Length == 2);
+            Debugs.Check(paramStrs.Length == 2);
 
             _instance = instance;
             _p1 = AgentMeta.ParseProperty<P1>(paramStrs[0]);
@@ -1176,8 +1190,8 @@ namespace behaviac
 
         public override void Run(Agent self)
         {
-            Debug.Check(_p1 != null);
-            Debug.Check(_p2 != null);
+            Debugs.Check(_p1 != null);
+            Debugs.Check(_p2 != null);
 
             Agent agent = Utils.GetParentAgent(self, _instance);
 
@@ -1205,13 +1219,13 @@ namespace behaviac
         IInstanceMember _p2;
         IInstanceMember _p3;
 
-        public CAgentMethod(FunctionPointer f)
+        public CAgentMethod(FunctionPointer f, Workspace workspace) : base(workspace)
         {
             _fp = f;
         }
 
-        public CAgentMethod(CAgentMethod<T, P1, P2, P3> rhs)
-        : base(rhs)
+        public CAgentMethod(CAgentMethod<T, P1, P2, P3> rhs, Workspace workspace)
+        : base(rhs, workspace)
         {
             _fp = rhs._fp;
             _p1 = rhs._p1;
@@ -1221,12 +1235,12 @@ namespace behaviac
 
         public override IMethod Clone()
         {
-            return new CAgentMethod<T, P1, P2, P3>(this);
+            return new CAgentMethod<T, P1, P2, P3>(this, Workspace);
         }
 
         public override void Load(string instance, string[] paramStrs)
         {
-            Debug.Check(paramStrs.Length == 3);
+            Debugs.Check(paramStrs.Length == 3);
 
             _instance = instance;
             _p1 = AgentMeta.ParseProperty<P1>(paramStrs[0]);
@@ -1236,9 +1250,9 @@ namespace behaviac
 
         public override void Run(Agent self)
         {
-            Debug.Check(_p1 != null);
-            Debug.Check(_p2 != null);
-            Debug.Check(_p3 != null);
+            Debugs.Check(_p1 != null);
+            Debugs.Check(_p2 != null);
+            Debugs.Check(_p3 != null);
 
             Agent agent = Utils.GetParentAgent(self, _instance);
 
@@ -1271,13 +1285,13 @@ namespace behaviac
         IInstanceMember _p3;
         IInstanceMember _p4;
 
-        public CAgentMethod(FunctionPointer f)
+        public CAgentMethod(FunctionPointer f, Workspace workspace) : base(workspace)
         {
             _fp = f;
         }
 
-        public CAgentMethod(CAgentMethod<T, P1, P2, P3, P4> rhs)
-        : base(rhs)
+        public CAgentMethod(CAgentMethod<T, P1, P2, P3, P4> rhs, Workspace workspace)
+        : base(rhs, workspace)
         {
             _fp = rhs._fp;
             _p1 = rhs._p1;
@@ -1288,12 +1302,12 @@ namespace behaviac
 
         public override IMethod Clone()
         {
-            return new CAgentMethod<T, P1, P2, P3, P4>(this);
+            return new CAgentMethod<T, P1, P2, P3, P4>(this, Workspace);
         }
 
         public override void Load(string instance, string[] paramStrs)
         {
-            Debug.Check(paramStrs.Length == 4);
+            Debugs.Check(paramStrs.Length == 4);
 
             _instance = instance;
             _p1 = AgentMeta.ParseProperty<P1>(paramStrs[0]);
@@ -1304,10 +1318,10 @@ namespace behaviac
 
         public override void Run(Agent self)
         {
-            Debug.Check(_p1 != null);
-            Debug.Check(_p2 != null);
-            Debug.Check(_p3 != null);
-            Debug.Check(_p4 != null);
+            Debugs.Check(_p1 != null);
+            Debugs.Check(_p2 != null);
+            Debugs.Check(_p3 != null);
+            Debugs.Check(_p4 != null);
 
             Agent agent = Utils.GetParentAgent(self, _instance);
 
@@ -1345,13 +1359,13 @@ namespace behaviac
         IInstanceMember _p4;
         IInstanceMember _p5;
 
-        public CAgentMethod(FunctionPointer f)
+        public CAgentMethod(FunctionPointer f, Workspace workspace) : base(workspace)
         {
             _fp = f;
         }
 
-        public CAgentMethod(CAgentMethod<T, P1, P2, P3, P4, P5> rhs)
-        : base(rhs)
+        public CAgentMethod(CAgentMethod<T, P1, P2, P3, P4, P5> rhs, Workspace workspace)
+        : base(rhs, workspace)
         {
             _fp = rhs._fp;
             _p1 = rhs._p1;
@@ -1363,12 +1377,12 @@ namespace behaviac
 
         public override IMethod Clone()
         {
-            return new CAgentMethod<T, P1, P2, P3, P4, P5>(this);
+            return new CAgentMethod<T, P1, P2, P3, P4, P5>(this, Workspace);
         }
 
         public override void Load(string instance, string[] paramStrs)
         {
-            Debug.Check(paramStrs.Length == 5);
+            Debugs.Check(paramStrs.Length == 5);
 
             _instance = instance;
             _p1 = AgentMeta.ParseProperty<P1>(paramStrs[0]);
@@ -1380,11 +1394,11 @@ namespace behaviac
 
         public override void Run(Agent self)
         {
-            Debug.Check(_p1 != null);
-            Debug.Check(_p2 != null);
-            Debug.Check(_p3 != null);
-            Debug.Check(_p4 != null);
-            Debug.Check(_p5 != null);
+            Debugs.Check(_p1 != null);
+            Debugs.Check(_p2 != null);
+            Debugs.Check(_p3 != null);
+            Debugs.Check(_p4 != null);
+            Debugs.Check(_p5 != null);
 
             Agent agent = Utils.GetParentAgent(self, _instance);
 
@@ -1427,13 +1441,13 @@ namespace behaviac
         IInstanceMember _p5;
         IInstanceMember _p6;
 
-        public CAgentMethod(FunctionPointer f)
+        public CAgentMethod(FunctionPointer f, Workspace workspace) : base(workspace)
         {
             _fp = f;
         }
 
-        public CAgentMethod(CAgentMethod<T, P1, P2, P3, P4, P5, P6> rhs)
-        : base(rhs)
+        public CAgentMethod(CAgentMethod<T, P1, P2, P3, P4, P5, P6> rhs, Workspace workspace)
+        : base(rhs, workspace)
         {
             _fp = rhs._fp;
             _p1 = rhs._p1;
@@ -1446,12 +1460,12 @@ namespace behaviac
 
         public override IMethod Clone()
         {
-            return new CAgentMethod<T, P1, P2, P3, P4, P5, P6>(this);
+            return new CAgentMethod<T, P1, P2, P3, P4, P5, P6>(this, Workspace);
         }
 
         public override void Load(string instance, string[] paramStrs)
         {
-            Debug.Check(paramStrs.Length == 6);
+            Debugs.Check(paramStrs.Length == 6);
 
             _instance = instance;
             _p1 = AgentMeta.ParseProperty<P1>(paramStrs[0]);
@@ -1464,12 +1478,12 @@ namespace behaviac
 
         public override void Run(Agent self)
         {
-            Debug.Check(_p1 != null);
-            Debug.Check(_p2 != null);
-            Debug.Check(_p3 != null);
-            Debug.Check(_p4 != null);
-            Debug.Check(_p5 != null);
-            Debug.Check(_p6 != null);
+            Debugs.Check(_p1 != null);
+            Debugs.Check(_p2 != null);
+            Debugs.Check(_p3 != null);
+            Debugs.Check(_p4 != null);
+            Debugs.Check(_p5 != null);
+            Debugs.Check(_p6 != null);
 
             Agent agent = Utils.GetParentAgent(self, _instance);
 
@@ -1517,13 +1531,13 @@ namespace behaviac
         IInstanceMember _p6;
         IInstanceMember _p7;
 
-        public CAgentMethod(FunctionPointer f)
+        public CAgentMethod(FunctionPointer f, Workspace workspace) : base(workspace)
         {
             _fp = f;
         }
 
-        public CAgentMethod(CAgentMethod<T, P1, P2, P3, P4, P5, P6, P7> rhs)
-        : base(rhs)
+        public CAgentMethod(CAgentMethod<T, P1, P2, P3, P4, P5, P6, P7> rhs, Workspace workspace)
+        : base(rhs, workspace)
         {
             _fp = rhs._fp;
             _p1 = rhs._p1;
@@ -1537,12 +1551,12 @@ namespace behaviac
 
         public override IMethod Clone()
         {
-            return new CAgentMethod<T, P1, P2, P3, P4, P5, P6, P7>(this);
+            return new CAgentMethod<T, P1, P2, P3, P4, P5, P6, P7>(this, Workspace);
         }
 
         public override void Load(string instance, string[] paramStrs)
         {
-            Debug.Check(paramStrs.Length == 7);
+            Debugs.Check(paramStrs.Length == 7);
 
             _instance = instance;
             _p1 = AgentMeta.ParseProperty<P1>(paramStrs[0]);
@@ -1556,13 +1570,13 @@ namespace behaviac
 
         public override void Run(Agent self)
         {
-            Debug.Check(_p1 != null);
-            Debug.Check(_p2 != null);
-            Debug.Check(_p3 != null);
-            Debug.Check(_p4 != null);
-            Debug.Check(_p5 != null);
-            Debug.Check(_p6 != null);
-            Debug.Check(_p7 != null);
+            Debugs.Check(_p1 != null);
+            Debugs.Check(_p2 != null);
+            Debugs.Check(_p3 != null);
+            Debugs.Check(_p4 != null);
+            Debugs.Check(_p5 != null);
+            Debugs.Check(_p6 != null);
+            Debugs.Check(_p7 != null);
 
             Agent agent = Utils.GetParentAgent(self, _instance);
 
@@ -1615,13 +1629,13 @@ namespace behaviac
         IInstanceMember _p7;
         IInstanceMember _p8;
 
-        public CAgentMethod(FunctionPointer f)
+        public CAgentMethod(FunctionPointer f, Workspace workspace) : base(workspace)
         {
             _fp = f;
         }
 
-        public CAgentMethod(CAgentMethod<T, P1, P2, P3, P4, P5, P6, P7, P8> rhs)
-        : base(rhs)
+        public CAgentMethod(CAgentMethod<T, P1, P2, P3, P4, P5, P6, P7, P8> rhs, Workspace workspace)
+        : base(rhs, workspace)
         {
             _fp = rhs._fp;
             _p1 = rhs._p1;
@@ -1636,12 +1650,12 @@ namespace behaviac
 
         public override IMethod Clone()
         {
-            return new CAgentMethod<T, P1, P2, P3, P4, P5, P6, P7, P8>(this);
+            return new CAgentMethod<T, P1, P2, P3, P4, P5, P6, P7, P8>(this, Workspace);
         }
 
         public override void Load(string instance, string[] paramStrs)
         {
-            Debug.Check(paramStrs.Length == 8);
+            Debugs.Check(paramStrs.Length == 8);
 
             _instance = instance;
             _p1 = AgentMeta.ParseProperty<P1>(paramStrs[0]);
@@ -1656,14 +1670,14 @@ namespace behaviac
 
         public override void Run(Agent self)
         {
-            Debug.Check(_p1 != null);
-            Debug.Check(_p2 != null);
-            Debug.Check(_p3 != null);
-            Debug.Check(_p4 != null);
-            Debug.Check(_p5 != null);
-            Debug.Check(_p6 != null);
-            Debug.Check(_p7 != null);
-            Debug.Check(_p8 != null);
+            Debugs.Check(_p1 != null);
+            Debugs.Check(_p2 != null);
+            Debugs.Check(_p3 != null);
+            Debugs.Check(_p4 != null);
+            Debugs.Check(_p5 != null);
+            Debugs.Check(_p6 != null);
+            Debugs.Check(_p7 != null);
+            Debugs.Check(_p8 != null);
 
             Agent agent = Utils.GetParentAgent(self, _instance);
 
@@ -1721,13 +1735,13 @@ namespace behaviac
         IInstanceMember _p8;
         IInstanceMember _p9;
 
-        public CAgentMethod(FunctionPointer f)
+        public CAgentMethod(FunctionPointer f, Workspace workspace) : base(workspace)
         {
             _fp = f;
         }
 
-        public CAgentMethod(CAgentMethod<T, P1, P2, P3, P4, P5, P6, P7, P8, P9> rhs)
-        : base(rhs)
+        public CAgentMethod(CAgentMethod<T, P1, P2, P3, P4, P5, P6, P7, P8, P9> rhs, Workspace workspace)
+        : base(rhs, workspace)
         {
             _fp = rhs._fp;
             _p1 = rhs._p1;
@@ -1743,12 +1757,12 @@ namespace behaviac
 
         public override IMethod Clone()
         {
-            return new CAgentMethod<T, P1, P2, P3, P4, P5, P6, P7, P8, P9>(this);
+            return new CAgentMethod<T, P1, P2, P3, P4, P5, P6, P7, P8, P9>(this, Workspace);
         }
 
         public override void Load(string instance, string[] paramStrs)
         {
-            Debug.Check(paramStrs.Length == 9);
+            Debugs.Check(paramStrs.Length == 9);
 
             _instance = instance;
             _p1 = AgentMeta.ParseProperty<P1>(paramStrs[0]);
@@ -1764,15 +1778,15 @@ namespace behaviac
 
         public override void Run(Agent self)
         {
-            Debug.Check(_p1 != null);
-            Debug.Check(_p2 != null);
-            Debug.Check(_p3 != null);
-            Debug.Check(_p4 != null);
-            Debug.Check(_p5 != null);
-            Debug.Check(_p6 != null);
-            Debug.Check(_p7 != null);
-            Debug.Check(_p8 != null);
-            Debug.Check(_p9 != null);
+            Debugs.Check(_p1 != null);
+            Debugs.Check(_p2 != null);
+            Debugs.Check(_p3 != null);
+            Debugs.Check(_p4 != null);
+            Debugs.Check(_p5 != null);
+            Debugs.Check(_p6 != null);
+            Debugs.Check(_p7 != null);
+            Debugs.Check(_p8 != null);
+            Debugs.Check(_p9 != null);
 
             Agent agent = Utils.GetParentAgent(self, _instance);
 
@@ -1835,13 +1849,13 @@ namespace behaviac
         IInstanceMember _p9;
         IInstanceMember _p10;
 
-        public CAgentMethod(FunctionPointer f)
+        public CAgentMethod(FunctionPointer f, Workspace workspace) : base(workspace)
         {
             _fp = f;
         }
 
-        public CAgentMethod(CAgentMethod<T, P1, P2, P3, P4, P5, P6, P7, P8, P9, P10> rhs)
-        : base(rhs)
+        public CAgentMethod(CAgentMethod<T, P1, P2, P3, P4, P5, P6, P7, P8, P9, P10> rhs, Workspace workspace)
+        : base(rhs, workspace)
         {
             _fp = rhs._fp;
             _p1 = rhs._p1;
@@ -1858,12 +1872,12 @@ namespace behaviac
 
         public override IMethod Clone()
         {
-            return new CAgentMethod<T, P1, P2, P3, P4, P5, P6, P7, P8, P9, P10>(this);
+            return new CAgentMethod<T, P1, P2, P3, P4, P5, P6, P7, P8, P9, P10>(this, Workspace);
         }
 
         public override void Load(string instance, string[] paramStrs)
         {
-            Debug.Check(paramStrs.Length == 10);
+            Debugs.Check(paramStrs.Length == 10);
 
             _instance = instance;
             _p1 = AgentMeta.ParseProperty<P1>(paramStrs[0]);
@@ -1880,16 +1894,16 @@ namespace behaviac
 
         public override void Run(Agent self)
         {
-            Debug.Check(_p1 != null);
-            Debug.Check(_p2 != null);
-            Debug.Check(_p3 != null);
-            Debug.Check(_p4 != null);
-            Debug.Check(_p5 != null);
-            Debug.Check(_p6 != null);
-            Debug.Check(_p7 != null);
-            Debug.Check(_p8 != null);
-            Debug.Check(_p9 != null);
-            Debug.Check(_p10 != null);
+            Debugs.Check(_p1 != null);
+            Debugs.Check(_p2 != null);
+            Debugs.Check(_p3 != null);
+            Debugs.Check(_p4 != null);
+            Debugs.Check(_p5 != null);
+            Debugs.Check(_p6 != null);
+            Debugs.Check(_p7 != null);
+            Debugs.Check(_p8 != null);
+            Debugs.Check(_p9 != null);
+            Debugs.Check(_p10 != null);
 
             Agent agent = Utils.GetParentAgent(self, _instance);
 
@@ -1957,13 +1971,13 @@ namespace behaviac
         IInstanceMember _p10;
         IInstanceMember _p11;
 
-        public CAgentMethod(FunctionPointer f)
+        public CAgentMethod(FunctionPointer f, Workspace workspace) : base(workspace)
         {
             _fp = f;
         }
 
-        public CAgentMethod(CAgentMethod<T, P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11> rhs)
-        : base(rhs)
+        public CAgentMethod(CAgentMethod<T, P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11> rhs, Workspace workspace)
+        : base(rhs, workspace)
         {
             _fp = rhs._fp;
             _p1 = rhs._p1;
@@ -1981,12 +1995,12 @@ namespace behaviac
 
         public override IMethod Clone()
         {
-            return new CAgentMethod<T, P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11>(this);
+            return new CAgentMethod<T, P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11>(this, Workspace);
         }
 
         public override void Load(string instance, string[] paramStrs)
         {
-            Debug.Check(paramStrs.Length == 11);
+            Debugs.Check(paramStrs.Length == 11);
 
             _instance = instance;
             _p1 = AgentMeta.ParseProperty<P1>(paramStrs[0]);
@@ -2004,17 +2018,17 @@ namespace behaviac
 
         public override void Run(Agent self)
         {
-            Debug.Check(_p1 != null);
-            Debug.Check(_p2 != null);
-            Debug.Check(_p3 != null);
-            Debug.Check(_p4 != null);
-            Debug.Check(_p5 != null);
-            Debug.Check(_p6 != null);
-            Debug.Check(_p7 != null);
-            Debug.Check(_p8 != null);
-            Debug.Check(_p9 != null);
-            Debug.Check(_p10 != null);
-            Debug.Check(_p11 != null);
+            Debugs.Check(_p1 != null);
+            Debugs.Check(_p2 != null);
+            Debugs.Check(_p3 != null);
+            Debugs.Check(_p4 != null);
+            Debugs.Check(_p5 != null);
+            Debugs.Check(_p6 != null);
+            Debugs.Check(_p7 != null);
+            Debugs.Check(_p8 != null);
+            Debugs.Check(_p9 != null);
+            Debugs.Check(_p10 != null);
+            Debugs.Check(_p11 != null);
 
             Agent agent = Utils.GetParentAgent(self, _instance);
 
@@ -2087,13 +2101,13 @@ namespace behaviac
         IInstanceMember _p11;
         IInstanceMember _p12;
 
-        public CAgentMethod(FunctionPointer f)
+        public CAgentMethod(FunctionPointer f, Workspace workspace) : base(workspace)
         {
             _fp = f;
         }
 
-        public CAgentMethod(CAgentMethod<T, P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12> rhs)
-        : base(rhs)
+        public CAgentMethod(CAgentMethod<T, P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12> rhs, Workspace workspace)
+        : base(rhs, workspace)
         {
             _fp = rhs._fp;
             _p1 = rhs._p1;
@@ -2112,12 +2126,12 @@ namespace behaviac
 
         public override IMethod Clone()
         {
-            return new CAgentMethod<T, P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12>(this);
+            return new CAgentMethod<T, P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12>(this, Workspace);
         }
 
         public override void Load(string instance, string[] paramStrs)
         {
-            Debug.Check(paramStrs.Length == 12);
+            Debugs.Check(paramStrs.Length == 12);
 
             _instance = instance;
             _p1 = AgentMeta.ParseProperty<P1>(paramStrs[0]);
@@ -2136,18 +2150,18 @@ namespace behaviac
 
         public override void Run(Agent self)
         {
-            Debug.Check(_p1 != null);
-            Debug.Check(_p2 != null);
-            Debug.Check(_p3 != null);
-            Debug.Check(_p4 != null);
-            Debug.Check(_p5 != null);
-            Debug.Check(_p6 != null);
-            Debug.Check(_p7 != null);
-            Debug.Check(_p8 != null);
-            Debug.Check(_p9 != null);
-            Debug.Check(_p10 != null);
-            Debug.Check(_p11 != null);
-            Debug.Check(_p12 != null);
+            Debugs.Check(_p1 != null);
+            Debugs.Check(_p2 != null);
+            Debugs.Check(_p3 != null);
+            Debugs.Check(_p4 != null);
+            Debugs.Check(_p5 != null);
+            Debugs.Check(_p6 != null);
+            Debugs.Check(_p7 != null);
+            Debugs.Check(_p8 != null);
+            Debugs.Check(_p9 != null);
+            Debugs.Check(_p10 != null);
+            Debugs.Check(_p11 != null);
+            Debugs.Check(_p12 != null);
 
             Agent agent = Utils.GetParentAgent(self, _instance);
 
@@ -2225,13 +2239,13 @@ namespace behaviac
         IInstanceMember _p12;
         IInstanceMember _p13;
 
-        public CAgentMethod(FunctionPointer f)
+        public CAgentMethod(FunctionPointer f, Workspace workspace) : base(workspace)
         {
             _fp = f;
         }
 
-        public CAgentMethod(CAgentMethod<T, P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12, P13> rhs)
-        : base(rhs)
+        public CAgentMethod(CAgentMethod<T, P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12, P13> rhs, Workspace workspace)
+        : base(rhs, workspace)
         {
             _fp = rhs._fp;
             _p1 = rhs._p1;
@@ -2251,12 +2265,12 @@ namespace behaviac
 
         public override IMethod Clone()
         {
-            return new CAgentMethod<T, P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12, P13>(this);
+            return new CAgentMethod<T, P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12, P13>(this, Workspace);
         }
 
         public override void Load(string instance, string[] paramStrs)
         {
-            Debug.Check(paramStrs.Length == 13);
+            Debugs.Check(paramStrs.Length == 13);
 
             _instance = instance;
             _p1 = AgentMeta.ParseProperty<P1>(paramStrs[0]);
@@ -2276,19 +2290,19 @@ namespace behaviac
 
         public override void Run(Agent self)
         {
-            Debug.Check(_p1 != null);
-            Debug.Check(_p2 != null);
-            Debug.Check(_p3 != null);
-            Debug.Check(_p4 != null);
-            Debug.Check(_p5 != null);
-            Debug.Check(_p6 != null);
-            Debug.Check(_p7 != null);
-            Debug.Check(_p8 != null);
-            Debug.Check(_p9 != null);
-            Debug.Check(_p10 != null);
-            Debug.Check(_p11 != null);
-            Debug.Check(_p12 != null);
-            Debug.Check(_p13 != null);
+            Debugs.Check(_p1 != null);
+            Debugs.Check(_p2 != null);
+            Debugs.Check(_p3 != null);
+            Debugs.Check(_p4 != null);
+            Debugs.Check(_p5 != null);
+            Debugs.Check(_p6 != null);
+            Debugs.Check(_p7 != null);
+            Debugs.Check(_p8 != null);
+            Debugs.Check(_p9 != null);
+            Debugs.Check(_p10 != null);
+            Debugs.Check(_p11 != null);
+            Debugs.Check(_p12 != null);
+            Debugs.Check(_p13 != null);
 
             Agent agent = Utils.GetParentAgent(self, _instance);
 
@@ -2371,13 +2385,13 @@ namespace behaviac
         IInstanceMember _p13;
         IInstanceMember _p14;
 
-        public CAgentMethod(FunctionPointer f)
+        public CAgentMethod(FunctionPointer f, Workspace workspace) : base(workspace)
         {
             _fp = f;
         }
 
-        public CAgentMethod(CAgentMethod<T, P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12, P13, P14> rhs)
-        : base(rhs)
+        public CAgentMethod(CAgentMethod<T, P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12, P13, P14> rhs, Workspace workspace)
+        : base(rhs, workspace)
         {
             _fp = rhs._fp;
             _p1 = rhs._p1;
@@ -2398,12 +2412,12 @@ namespace behaviac
 
         public override IMethod Clone()
         {
-            return new CAgentMethod<T, P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12, P13, P14>(this);
+            return new CAgentMethod<T, P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12, P13, P14>(this, Workspace);
         }
 
         public override void Load(string instance, string[] paramStrs)
         {
-            Debug.Check(paramStrs.Length == 14);
+            Debugs.Check(paramStrs.Length == 14);
 
             _instance = instance;
             _p1 = AgentMeta.ParseProperty<P1>(paramStrs[0]);
@@ -2424,20 +2438,20 @@ namespace behaviac
 
         public override void Run(Agent self)
         {
-            Debug.Check(_p1 != null);
-            Debug.Check(_p2 != null);
-            Debug.Check(_p3 != null);
-            Debug.Check(_p4 != null);
-            Debug.Check(_p5 != null);
-            Debug.Check(_p6 != null);
-            Debug.Check(_p7 != null);
-            Debug.Check(_p8 != null);
-            Debug.Check(_p9 != null);
-            Debug.Check(_p10 != null);
-            Debug.Check(_p11 != null);
-            Debug.Check(_p12 != null);
-            Debug.Check(_p13 != null);
-            Debug.Check(_p14 != null);
+            Debugs.Check(_p1 != null);
+            Debugs.Check(_p2 != null);
+            Debugs.Check(_p3 != null);
+            Debugs.Check(_p4 != null);
+            Debugs.Check(_p5 != null);
+            Debugs.Check(_p6 != null);
+            Debugs.Check(_p7 != null);
+            Debugs.Check(_p8 != null);
+            Debugs.Check(_p9 != null);
+            Debugs.Check(_p10 != null);
+            Debugs.Check(_p11 != null);
+            Debugs.Check(_p12 != null);
+            Debugs.Check(_p13 != null);
+            Debugs.Check(_p14 != null);
 
             Agent agent = Utils.GetParentAgent(self, _instance);
 
@@ -2510,25 +2524,25 @@ namespace behaviac
 
         FunctionPointer _fp;
 
-        public CAgentStaticMethod(FunctionPointer f)
+        public CAgentStaticMethod(FunctionPointer f, Workspace workspace) : base(workspace)
         {
             _fp = f;
         }
 
-        public CAgentStaticMethod(CAgentStaticMethod<T> rhs)
-        : base(rhs)
+        public CAgentStaticMethod(CAgentStaticMethod<T> rhs, Workspace workspace)
+        : base(rhs, workspace)
         {
             _fp = rhs._fp;
         }
 
         public override IMethod Clone()
         {
-            return new CAgentStaticMethod<T>(this);
+            return new CAgentStaticMethod<T>(this, Workspace);
         }
 
         public override void Load(string instance, string[] paramStrs)
         {
-            Debug.Check(paramStrs.Length == 0);
+            Debugs.Check(paramStrs.Length == 0);
 
             _instance = instance;
         }
@@ -2550,13 +2564,13 @@ namespace behaviac
         FunctionPointer _fp;
         IInstanceMember _p1;
 
-        public CAgentStaticMethod(FunctionPointer f)
+        public CAgentStaticMethod(FunctionPointer f, Workspace workspace) : base(workspace)
         {
             _fp = f;
         }
 
-        public CAgentStaticMethod(CAgentStaticMethod<T, P1> rhs)
-        : base(rhs)
+        public CAgentStaticMethod(CAgentStaticMethod<T, P1> rhs, Workspace workspace)
+        : base(rhs, workspace)
         {
             _fp = rhs._fp;
             _p1 = rhs._p1;
@@ -2564,12 +2578,12 @@ namespace behaviac
 
         public override IMethod Clone()
         {
-            return new CAgentStaticMethod<T, P1>(this);
+            return new CAgentStaticMethod<T, P1>(this, Workspace);
         }
 
         public override void Load(string instance, string[] paramStrs)
         {
-            Debug.Check(paramStrs.Length == 1);
+            Debugs.Check(paramStrs.Length == 1);
 
             _instance = instance;
             _p1 = AgentMeta.ParseProperty<P1>(paramStrs[0]);
@@ -2577,14 +2591,14 @@ namespace behaviac
 
         public override void Run(Agent self)
         {
-            Debug.Check(_p1 != null);
+            Debugs.Check(_p1 != null);
 
             _returnValue.value = _fp(((CInstanceMember<P1>)_p1).GetValue(self));
         }
 
         public override IValue GetIValue(Agent self, IInstanceMember firstParam)
         {
-            Debug.Check(_p1 != null);
+            Debugs.Check(_p1 != null);
 
             _returnValue.value = _fp(((CInstanceMember<P1>)firstParam).GetValue(self));
 
@@ -2606,13 +2620,13 @@ namespace behaviac
         IInstanceMember _p1;
         IInstanceMember _p2;
 
-        public CAgentStaticMethod(FunctionPointer f)
+        public CAgentStaticMethod(FunctionPointer f, Workspace workspace) : base(workspace)
         {
             _fp = f;
         }
 
-        public CAgentStaticMethod(CAgentStaticMethod<T, P1, P2> rhs)
-        : base(rhs)
+        public CAgentStaticMethod(CAgentStaticMethod<T, P1, P2> rhs, Workspace workspace)
+        : base(rhs, workspace)
         {
             _fp = rhs._fp;
             _p1 = rhs._p1;
@@ -2621,12 +2635,12 @@ namespace behaviac
 
         public override IMethod Clone()
         {
-            return new CAgentStaticMethod<T, P1, P2>(this);
+            return new CAgentStaticMethod<T, P1, P2>(this, Workspace);
         }
 
         public override void Load(string instance, string[] paramStrs)
         {
-            Debug.Check(paramStrs.Length == 2);
+            Debugs.Check(paramStrs.Length == 2);
 
             _instance = instance;
             _p1 = AgentMeta.ParseProperty<P1>(paramStrs[0]);
@@ -2635,8 +2649,8 @@ namespace behaviac
 
         public override void Run(Agent self)
         {
-            Debug.Check(_p1 != null);
-            Debug.Check(_p2 != null);
+            Debugs.Check(_p1 != null);
+            Debugs.Check(_p2 != null);
 
             _returnValue.value = _fp(((CInstanceMember<P1>)_p1).GetValue(self), ((CInstanceMember<P2>)_p2).GetValue(self));
         }
@@ -2660,13 +2674,13 @@ namespace behaviac
         IInstanceMember _p2;
         IInstanceMember _p3;
 
-        public CAgentStaticMethod(FunctionPointer f)
+        public CAgentStaticMethod(FunctionPointer f, Workspace workspace) : base(workspace)
         {
             _fp = f;
         }
 
-        public CAgentStaticMethod(CAgentStaticMethod<T, P1, P2, P3> rhs)
-        : base(rhs)
+        public CAgentStaticMethod(CAgentStaticMethod<T, P1, P2, P3> rhs, Workspace workspace)
+        : base(rhs, workspace)
         {
             _fp = rhs._fp;
             _p1 = rhs._p1;
@@ -2676,12 +2690,12 @@ namespace behaviac
 
         public override IMethod Clone()
         {
-            return new CAgentStaticMethod<T, P1, P2, P3>(this);
+            return new CAgentStaticMethod<T, P1, P2, P3>(this, Workspace);
         }
 
         public override void Load(string instance, string[] paramStrs)
         {
-            Debug.Check(paramStrs.Length == 3);
+            Debugs.Check(paramStrs.Length == 3);
 
             _instance = instance;
             _p1 = AgentMeta.ParseProperty<P1>(paramStrs[0]);
@@ -2691,9 +2705,9 @@ namespace behaviac
 
         public override void Run(Agent self)
         {
-            Debug.Check(_p1 != null);
-            Debug.Check(_p2 != null);
-            Debug.Check(_p3 != null);
+            Debugs.Check(_p1 != null);
+            Debugs.Check(_p2 != null);
+            Debugs.Check(_p3 != null);
 
             _returnValue.value = _fp(
                                      ((CInstanceMember<P1>)_p1).GetValue(self),
@@ -2724,13 +2738,13 @@ namespace behaviac
         IInstanceMember _p3;
         IInstanceMember _p4;
 
-        public CAgentStaticMethod(FunctionPointer f)
+        public CAgentStaticMethod(FunctionPointer f, Workspace workspace) : base(workspace)
         {
             _fp = f;
         }
 
-        public CAgentStaticMethod(CAgentStaticMethod<T, P1, P2, P3, P4> rhs)
-        : base(rhs)
+        public CAgentStaticMethod(CAgentStaticMethod<T, P1, P2, P3, P4> rhs, Workspace workspace)
+        : base(rhs, workspace)
         {
             _fp = rhs._fp;
             _p1 = rhs._p1;
@@ -2741,12 +2755,12 @@ namespace behaviac
 
         public override IMethod Clone()
         {
-            return new CAgentStaticMethod<T, P1, P2, P3, P4>(this);
+            return new CAgentStaticMethod<T, P1, P2, P3, P4>(this, Workspace);
         }
 
         public override void Load(string instance, string[] paramStrs)
         {
-            Debug.Check(paramStrs.Length == 4);
+            Debugs.Check(paramStrs.Length == 4);
 
             _instance = instance;
             _p1 = AgentMeta.ParseProperty<P1>(paramStrs[0]);
@@ -2757,10 +2771,10 @@ namespace behaviac
 
         public override void Run(Agent self)
         {
-            Debug.Check(_p1 != null);
-            Debug.Check(_p2 != null);
-            Debug.Check(_p3 != null);
-            Debug.Check(_p4 != null);
+            Debugs.Check(_p1 != null);
+            Debugs.Check(_p2 != null);
+            Debugs.Check(_p3 != null);
+            Debugs.Check(_p4 != null);
 
             _returnValue.value = _fp(
                                      ((CInstanceMember<P1>)_p1).GetValue(self),
@@ -2796,13 +2810,13 @@ namespace behaviac
         IInstanceMember _p4;
         IInstanceMember _p5;
 
-        public CAgentStaticMethod(FunctionPointer f)
+        public CAgentStaticMethod(FunctionPointer f, Workspace workspace) : base(workspace)
         {
             _fp = f;
         }
 
-        public CAgentStaticMethod(CAgentStaticMethod<T, P1, P2, P3, P4, P5> rhs)
-        : base(rhs)
+        public CAgentStaticMethod(CAgentStaticMethod<T, P1, P2, P3, P4, P5> rhs, Workspace workspace)
+        : base(rhs, workspace)
         {
             _fp = rhs._fp;
             _p1 = rhs._p1;
@@ -2814,12 +2828,12 @@ namespace behaviac
 
         public override IMethod Clone()
         {
-            return new CAgentStaticMethod<T, P1, P2, P3, P4, P5>(this);
+            return new CAgentStaticMethod<T, P1, P2, P3, P4, P5>(this, Workspace);
         }
 
         public override void Load(string instance, string[] paramStrs)
         {
-            Debug.Check(paramStrs.Length == 5);
+            Debugs.Check(paramStrs.Length == 5);
 
             _instance = instance;
             _p1 = AgentMeta.ParseProperty<P1>(paramStrs[0]);
@@ -2831,11 +2845,11 @@ namespace behaviac
 
         public override void Run(Agent self)
         {
-            Debug.Check(_p1 != null);
-            Debug.Check(_p2 != null);
-            Debug.Check(_p3 != null);
-            Debug.Check(_p4 != null);
-            Debug.Check(_p5 != null);
+            Debugs.Check(_p1 != null);
+            Debugs.Check(_p2 != null);
+            Debugs.Check(_p3 != null);
+            Debugs.Check(_p4 != null);
+            Debugs.Check(_p5 != null);
 
             _returnValue.value = _fp(
                                      ((CInstanceMember<P1>)_p1).GetValue(self),
@@ -2876,13 +2890,13 @@ namespace behaviac
         IInstanceMember _p5;
         IInstanceMember _p6;
 
-        public CAgentStaticMethod(FunctionPointer f)
+        public CAgentStaticMethod(FunctionPointer f, Workspace workspace) : base(workspace)
         {
             _fp = f;
         }
 
-        public CAgentStaticMethod(CAgentStaticMethod<T, P1, P2, P3, P4, P5, P6> rhs)
-        : base(rhs)
+        public CAgentStaticMethod(CAgentStaticMethod<T, P1, P2, P3, P4, P5, P6> rhs, Workspace workspace)
+        : base(rhs, workspace)
         {
             _fp = rhs._fp;
             _p1 = rhs._p1;
@@ -2895,12 +2909,12 @@ namespace behaviac
 
         public override IMethod Clone()
         {
-            return new CAgentStaticMethod<T, P1, P2, P3, P4, P5, P6>(this);
+            return new CAgentStaticMethod<T, P1, P2, P3, P4, P5, P6>(this, Workspace);
         }
 
         public override void Load(string instance, string[] paramStrs)
         {
-            Debug.Check(paramStrs.Length == 6);
+            Debugs.Check(paramStrs.Length == 6);
 
             _instance = instance;
             _p1 = AgentMeta.ParseProperty<P1>(paramStrs[0]);
@@ -2913,12 +2927,12 @@ namespace behaviac
 
         public override void Run(Agent self)
         {
-            Debug.Check(_p1 != null);
-            Debug.Check(_p2 != null);
-            Debug.Check(_p3 != null);
-            Debug.Check(_p4 != null);
-            Debug.Check(_p5 != null);
-            Debug.Check(_p6 != null);
+            Debugs.Check(_p1 != null);
+            Debugs.Check(_p2 != null);
+            Debugs.Check(_p3 != null);
+            Debugs.Check(_p4 != null);
+            Debugs.Check(_p5 != null);
+            Debugs.Check(_p6 != null);
 
             _returnValue.value = _fp(
                                      ((CInstanceMember<P1>)_p1).GetValue(self),
@@ -2964,13 +2978,13 @@ namespace behaviac
         IInstanceMember _p6;
         IInstanceMember _p7;
 
-        public CAgentStaticMethod(FunctionPointer f)
+        public CAgentStaticMethod(FunctionPointer f, Workspace workspace) : base(workspace)
         {
             _fp = f;
         }
 
-        public CAgentStaticMethod(CAgentStaticMethod<T, P1, P2, P3, P4, P5, P6, P7> rhs)
-        : base(rhs)
+        public CAgentStaticMethod(CAgentStaticMethod<T, P1, P2, P3, P4, P5, P6, P7> rhs, Workspace workspace)
+        : base(rhs, workspace)
         {
             _fp = rhs._fp;
             _p1 = rhs._p1;
@@ -2984,12 +2998,12 @@ namespace behaviac
 
         public override IMethod Clone()
         {
-            return new CAgentStaticMethod<T, P1, P2, P3, P4, P5, P6, P7>(this);
+            return new CAgentStaticMethod<T, P1, P2, P3, P4, P5, P6, P7>(this, Workspace);
         }
 
         public override void Load(string instance, string[] paramStrs)
         {
-            Debug.Check(paramStrs.Length == 7);
+            Debugs.Check(paramStrs.Length == 7);
 
             _instance = instance;
             _p1 = AgentMeta.ParseProperty<P1>(paramStrs[0]);
@@ -3003,13 +3017,13 @@ namespace behaviac
 
         public override void Run(Agent self)
         {
-            Debug.Check(_p1 != null);
-            Debug.Check(_p2 != null);
-            Debug.Check(_p3 != null);
-            Debug.Check(_p4 != null);
-            Debug.Check(_p5 != null);
-            Debug.Check(_p6 != null);
-            Debug.Check(_p7 != null);
+            Debugs.Check(_p1 != null);
+            Debugs.Check(_p2 != null);
+            Debugs.Check(_p3 != null);
+            Debugs.Check(_p4 != null);
+            Debugs.Check(_p5 != null);
+            Debugs.Check(_p6 != null);
+            Debugs.Check(_p7 != null);
 
             _returnValue.value = _fp(
                                      ((CInstanceMember<P1>)_p1).GetValue(self),
@@ -3060,13 +3074,13 @@ namespace behaviac
         IInstanceMember _p7;
         IInstanceMember _p8;
 
-        public CAgentStaticMethod(FunctionPointer f)
+        public CAgentStaticMethod(FunctionPointer f, Workspace workspace) : base(workspace)
         {
             _fp = f;
         }
 
-        public CAgentStaticMethod(CAgentStaticMethod<T, P1, P2, P3, P4, P5, P6, P7, P8> rhs)
-        : base(rhs)
+        public CAgentStaticMethod(CAgentStaticMethod<T, P1, P2, P3, P4, P5, P6, P7, P8> rhs, Workspace workspace)
+        : base(rhs, workspace)
         {
             _fp = rhs._fp;
             _p1 = rhs._p1;
@@ -3081,12 +3095,12 @@ namespace behaviac
 
         public override IMethod Clone()
         {
-            return new CAgentStaticMethod<T, P1, P2, P3, P4, P5, P6, P7, P8>(this);
+            return new CAgentStaticMethod<T, P1, P2, P3, P4, P5, P6, P7, P8>(this, Workspace);
         }
 
         public override void Load(string instance, string[] paramStrs)
         {
-            Debug.Check(paramStrs.Length == 8);
+            Debugs.Check(paramStrs.Length == 8);
 
             _instance = instance;
             _p1 = AgentMeta.ParseProperty<P1>(paramStrs[0]);
@@ -3101,14 +3115,14 @@ namespace behaviac
 
         public override void Run(Agent self)
         {
-            Debug.Check(_p1 != null);
-            Debug.Check(_p2 != null);
-            Debug.Check(_p3 != null);
-            Debug.Check(_p4 != null);
-            Debug.Check(_p5 != null);
-            Debug.Check(_p6 != null);
-            Debug.Check(_p7 != null);
-            Debug.Check(_p8 != null);
+            Debugs.Check(_p1 != null);
+            Debugs.Check(_p2 != null);
+            Debugs.Check(_p3 != null);
+            Debugs.Check(_p4 != null);
+            Debugs.Check(_p5 != null);
+            Debugs.Check(_p6 != null);
+            Debugs.Check(_p7 != null);
+            Debugs.Check(_p8 != null);
 
             _returnValue.value = _fp(
                                      ((CInstanceMember<P1>)_p1).GetValue(self),
@@ -3164,13 +3178,13 @@ namespace behaviac
         IInstanceMember _p8;
         IInstanceMember _p9;
 
-        public CAgentStaticMethod(FunctionPointer f)
+        public CAgentStaticMethod(FunctionPointer f, Workspace workspace) : base(workspace)
         {
             _fp = f;
         }
 
-        public CAgentStaticMethod(CAgentStaticMethod<T, P1, P2, P3, P4, P5, P6, P7, P8, P9> rhs)
-        : base(rhs)
+        public CAgentStaticMethod(CAgentStaticMethod<T, P1, P2, P3, P4, P5, P6, P7, P8, P9> rhs, Workspace workspace)
+        : base(rhs, workspace)
         {
             _fp = rhs._fp;
             _p1 = rhs._p1;
@@ -3186,12 +3200,12 @@ namespace behaviac
 
         public override IMethod Clone()
         {
-            return new CAgentStaticMethod<T, P1, P2, P3, P4, P5, P6, P7, P8, P9>(this);
+            return new CAgentStaticMethod<T, P1, P2, P3, P4, P5, P6, P7, P8, P9>(this, Workspace);
         }
 
         public override void Load(string instance, string[] paramStrs)
         {
-            Debug.Check(paramStrs.Length == 9);
+            Debugs.Check(paramStrs.Length == 9);
 
             _instance = instance;
             _p1 = AgentMeta.ParseProperty<P1>(paramStrs[0]);
@@ -3207,15 +3221,15 @@ namespace behaviac
 
         public override void Run(Agent self)
         {
-            Debug.Check(_p1 != null);
-            Debug.Check(_p2 != null);
-            Debug.Check(_p3 != null);
-            Debug.Check(_p4 != null);
-            Debug.Check(_p5 != null);
-            Debug.Check(_p6 != null);
-            Debug.Check(_p7 != null);
-            Debug.Check(_p8 != null);
-            Debug.Check(_p9 != null);
+            Debugs.Check(_p1 != null);
+            Debugs.Check(_p2 != null);
+            Debugs.Check(_p3 != null);
+            Debugs.Check(_p4 != null);
+            Debugs.Check(_p5 != null);
+            Debugs.Check(_p6 != null);
+            Debugs.Check(_p7 != null);
+            Debugs.Check(_p8 != null);
+            Debugs.Check(_p9 != null);
 
             _returnValue.value = _fp(
                                      ((CInstanceMember<P1>)_p1).GetValue(self),
@@ -3276,13 +3290,13 @@ namespace behaviac
         IInstanceMember _p9;
         IInstanceMember _p10;
 
-        public CAgentStaticMethod(FunctionPointer f)
+        public CAgentStaticMethod(FunctionPointer f, Workspace workspace) : base(workspace)
         {
             _fp = f;
         }
 
-        public CAgentStaticMethod(CAgentStaticMethod<T, P1, P2, P3, P4, P5, P6, P7, P8, P9, P10> rhs)
-        : base(rhs)
+        public CAgentStaticMethod(CAgentStaticMethod<T, P1, P2, P3, P4, P5, P6, P7, P8, P9, P10> rhs, Workspace workspace)
+        : base(rhs, workspace)
         {
             _fp = rhs._fp;
             _p1 = rhs._p1;
@@ -3299,12 +3313,12 @@ namespace behaviac
 
         public override IMethod Clone()
         {
-            return new CAgentStaticMethod<T, P1, P2, P3, P4, P5, P6, P7, P8, P9, P10>(this);
+            return new CAgentStaticMethod<T, P1, P2, P3, P4, P5, P6, P7, P8, P9, P10>(this, Workspace);
         }
 
         public override void Load(string instance, string[] paramStrs)
         {
-            Debug.Check(paramStrs.Length == 10);
+            Debugs.Check(paramStrs.Length == 10);
 
             _instance = instance;
             _p1 = AgentMeta.ParseProperty<P1>(paramStrs[0]);
@@ -3321,16 +3335,16 @@ namespace behaviac
 
         public override void Run(Agent self)
         {
-            Debug.Check(_p1 != null);
-            Debug.Check(_p2 != null);
-            Debug.Check(_p3 != null);
-            Debug.Check(_p4 != null);
-            Debug.Check(_p5 != null);
-            Debug.Check(_p6 != null);
-            Debug.Check(_p7 != null);
-            Debug.Check(_p8 != null);
-            Debug.Check(_p9 != null);
-            Debug.Check(_p10 != null);
+            Debugs.Check(_p1 != null);
+            Debugs.Check(_p2 != null);
+            Debugs.Check(_p3 != null);
+            Debugs.Check(_p4 != null);
+            Debugs.Check(_p5 != null);
+            Debugs.Check(_p6 != null);
+            Debugs.Check(_p7 != null);
+            Debugs.Check(_p8 != null);
+            Debugs.Check(_p9 != null);
+            Debugs.Check(_p10 != null);
 
             _returnValue.value = _fp(
                                      ((CInstanceMember<P1>)_p1).GetValue(self),
@@ -3396,13 +3410,13 @@ namespace behaviac
         IInstanceMember _p10;
         IInstanceMember _p11;
 
-        public CAgentStaticMethod(FunctionPointer f)
+        public CAgentStaticMethod(FunctionPointer f, Workspace workspace) : base(workspace)
         {
             _fp = f;
         }
 
-        public CAgentStaticMethod(CAgentStaticMethod<T, P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11> rhs)
-        : base(rhs)
+        public CAgentStaticMethod(CAgentStaticMethod<T, P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11> rhs, Workspace workspace)
+        : base(rhs, workspace)
         {
             _fp = rhs._fp;
             _p1 = rhs._p1;
@@ -3420,12 +3434,12 @@ namespace behaviac
 
         public override IMethod Clone()
         {
-            return new CAgentStaticMethod<T, P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11>(this);
+            return new CAgentStaticMethod<T, P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11>(this, Workspace);
         }
 
         public override void Load(string instance, string[] paramStrs)
         {
-            Debug.Check(paramStrs.Length == 11);
+            Debugs.Check(paramStrs.Length == 11);
 
             _instance = instance;
             _p1 = AgentMeta.ParseProperty<P1>(paramStrs[0]);
@@ -3443,17 +3457,17 @@ namespace behaviac
 
         public override void Run(Agent self)
         {
-            Debug.Check(_p1 != null);
-            Debug.Check(_p2 != null);
-            Debug.Check(_p3 != null);
-            Debug.Check(_p4 != null);
-            Debug.Check(_p5 != null);
-            Debug.Check(_p6 != null);
-            Debug.Check(_p7 != null);
-            Debug.Check(_p8 != null);
-            Debug.Check(_p9 != null);
-            Debug.Check(_p10 != null);
-            Debug.Check(_p11 != null);
+            Debugs.Check(_p1 != null);
+            Debugs.Check(_p2 != null);
+            Debugs.Check(_p3 != null);
+            Debugs.Check(_p4 != null);
+            Debugs.Check(_p5 != null);
+            Debugs.Check(_p6 != null);
+            Debugs.Check(_p7 != null);
+            Debugs.Check(_p8 != null);
+            Debugs.Check(_p9 != null);
+            Debugs.Check(_p10 != null);
+            Debugs.Check(_p11 != null);
 
             _returnValue.value = _fp(
                                      ((CInstanceMember<P1>)_p1).GetValue(self),
@@ -3524,13 +3538,13 @@ namespace behaviac
         IInstanceMember _p11;
         IInstanceMember _p12;
 
-        public CAgentStaticMethod(FunctionPointer f)
+        public CAgentStaticMethod(FunctionPointer f, Workspace workspace) : base(workspace)
         {
             _fp = f;
         }
 
-        public CAgentStaticMethod(CAgentStaticMethod<T, P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12> rhs)
-        : base(rhs)
+        public CAgentStaticMethod(CAgentStaticMethod<T, P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12> rhs, Workspace workspace)
+        : base(rhs, workspace)
         {
             _fp = rhs._fp;
             _p1 = rhs._p1;
@@ -3549,12 +3563,12 @@ namespace behaviac
 
         public override IMethod Clone()
         {
-            return new CAgentStaticMethod<T, P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12>(this);
+            return new CAgentStaticMethod<T, P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12>(this, Workspace);
         }
 
         public override void Load(string instance, string[] paramStrs)
         {
-            Debug.Check(paramStrs.Length == 12);
+            Debugs.Check(paramStrs.Length == 12);
 
             _instance = instance;
             _p1 = AgentMeta.ParseProperty<P1>(paramStrs[0]);
@@ -3573,18 +3587,18 @@ namespace behaviac
 
         public override void Run(Agent self)
         {
-            Debug.Check(_p1 != null);
-            Debug.Check(_p2 != null);
-            Debug.Check(_p3 != null);
-            Debug.Check(_p4 != null);
-            Debug.Check(_p5 != null);
-            Debug.Check(_p6 != null);
-            Debug.Check(_p7 != null);
-            Debug.Check(_p8 != null);
-            Debug.Check(_p9 != null);
-            Debug.Check(_p10 != null);
-            Debug.Check(_p11 != null);
-            Debug.Check(_p12 != null);
+            Debugs.Check(_p1 != null);
+            Debugs.Check(_p2 != null);
+            Debugs.Check(_p3 != null);
+            Debugs.Check(_p4 != null);
+            Debugs.Check(_p5 != null);
+            Debugs.Check(_p6 != null);
+            Debugs.Check(_p7 != null);
+            Debugs.Check(_p8 != null);
+            Debugs.Check(_p9 != null);
+            Debugs.Check(_p10 != null);
+            Debugs.Check(_p11 != null);
+            Debugs.Check(_p12 != null);
 
             _returnValue.value = _fp(
                                      ((CInstanceMember<P1>)_p1).GetValue(self),
@@ -3660,13 +3674,13 @@ namespace behaviac
         IInstanceMember _p12;
         IInstanceMember _p13;
 
-        public CAgentStaticMethod(FunctionPointer f)
+        public CAgentStaticMethod(FunctionPointer f, Workspace workspace) : base(workspace)
         {
             _fp = f;
         }
 
-        public CAgentStaticMethod(CAgentStaticMethod<T, P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12, P13> rhs)
-        : base(rhs)
+        public CAgentStaticMethod(CAgentStaticMethod<T, P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12, P13> rhs, Workspace workspace)
+        : base(rhs, workspace)
         {
             _fp = rhs._fp;
             _p1 = rhs._p1;
@@ -3686,12 +3700,12 @@ namespace behaviac
 
         public override IMethod Clone()
         {
-            return new CAgentStaticMethod<T, P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12, P13>(this);
+            return new CAgentStaticMethod<T, P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12, P13>(this, Workspace);
         }
 
         public override void Load(string instance, string[] paramStrs)
         {
-            Debug.Check(paramStrs.Length == 13);
+            Debugs.Check(paramStrs.Length == 13);
 
             _instance = instance;
             _p1 = AgentMeta.ParseProperty<P1>(paramStrs[0]);
@@ -3711,19 +3725,19 @@ namespace behaviac
 
         public override void Run(Agent self)
         {
-            Debug.Check(_p1 != null);
-            Debug.Check(_p2 != null);
-            Debug.Check(_p3 != null);
-            Debug.Check(_p4 != null);
-            Debug.Check(_p5 != null);
-            Debug.Check(_p6 != null);
-            Debug.Check(_p7 != null);
-            Debug.Check(_p8 != null);
-            Debug.Check(_p9 != null);
-            Debug.Check(_p10 != null);
-            Debug.Check(_p11 != null);
-            Debug.Check(_p12 != null);
-            Debug.Check(_p13 != null);
+            Debugs.Check(_p1 != null);
+            Debugs.Check(_p2 != null);
+            Debugs.Check(_p3 != null);
+            Debugs.Check(_p4 != null);
+            Debugs.Check(_p5 != null);
+            Debugs.Check(_p6 != null);
+            Debugs.Check(_p7 != null);
+            Debugs.Check(_p8 != null);
+            Debugs.Check(_p9 != null);
+            Debugs.Check(_p10 != null);
+            Debugs.Check(_p11 != null);
+            Debugs.Check(_p12 != null);
+            Debugs.Check(_p13 != null);
 
             _returnValue.value = _fp(
                                      ((CInstanceMember<P1>)_p1).GetValue(self),
@@ -3804,13 +3818,13 @@ namespace behaviac
         IInstanceMember _p13;
         IInstanceMember _p14;
 
-        public CAgentStaticMethod(FunctionPointer f)
+        public CAgentStaticMethod(FunctionPointer f, Workspace workspace) : base(workspace)
         {
             _fp = f;
         }
 
-        public CAgentStaticMethod(CAgentStaticMethod<T, P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12, P13, P14> rhs)
-        : base(rhs)
+        public CAgentStaticMethod(CAgentStaticMethod<T, P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12, P13, P14> rhs, Workspace workspace)
+        : base(rhs,workspace)
         {
             _fp = rhs._fp;
             _p1 = rhs._p1;
@@ -3831,12 +3845,12 @@ namespace behaviac
 
         public override IMethod Clone()
         {
-            return new CAgentStaticMethod<T, P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12, P13, P14>(this);
+            return new CAgentStaticMethod<T, P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12, P13, P14>(this, Workspace);
         }
 
         public override void Load(string instance, string[] paramStrs)
         {
-            Debug.Check(paramStrs.Length == 14);
+            Debugs.Check(paramStrs.Length == 14);
 
             _instance = instance;
             _p1 = AgentMeta.ParseProperty<P1>(paramStrs[0]);
@@ -3857,20 +3871,20 @@ namespace behaviac
 
         public override void Run(Agent self)
         {
-            Debug.Check(_p1 != null);
-            Debug.Check(_p2 != null);
-            Debug.Check(_p3 != null);
-            Debug.Check(_p4 != null);
-            Debug.Check(_p5 != null);
-            Debug.Check(_p6 != null);
-            Debug.Check(_p7 != null);
-            Debug.Check(_p8 != null);
-            Debug.Check(_p9 != null);
-            Debug.Check(_p10 != null);
-            Debug.Check(_p11 != null);
-            Debug.Check(_p12 != null);
-            Debug.Check(_p13 != null);
-            Debug.Check(_p14 != null);
+            Debugs.Check(_p1 != null);
+            Debugs.Check(_p2 != null);
+            Debugs.Check(_p3 != null);
+            Debugs.Check(_p4 != null);
+            Debugs.Check(_p5 != null);
+            Debugs.Check(_p6 != null);
+            Debugs.Check(_p7 != null);
+            Debugs.Check(_p8 != null);
+            Debugs.Check(_p9 != null);
+            Debugs.Check(_p10 != null);
+            Debugs.Check(_p11 != null);
+            Debugs.Check(_p12 != null);
+            Debugs.Check(_p13 != null);
+            Debugs.Check(_p14 != null);
 
             _returnValue.value = _fp(
                                      ((CInstanceMember<P1>)_p1).GetValue(self),
@@ -3939,53 +3953,57 @@ namespace behaviac
     {
         protected string _instance = "Self";
 
-        public CAgentMethodVoidBase()
-        {
-        }
-
-        public CAgentMethodVoidBase(CAgentMethodVoidBase rhs)
+        public Workspace Workspace { get; private set; }
+        public Config Configs { set; get; }
+        public Debug Debugs { set; get; }
+        public CAgentMethodVoidBase(Workspace workspace, CAgentMethodVoidBase rhs) : this(workspace)
         {
             _instance = rhs._instance;
         }
-
+        public CAgentMethodVoidBase(Workspace workspace)
+        {
+            Workspace = workspace;
+            Configs = workspace.Configs;
+            Debugs = workspace.Debugs;
+        }
         public virtual IMethod Clone()
         {
-            Debug.Check(false);
+            Debugs.Check(false);
             return null;
         }
 
         public virtual void Load(string instance, string[] paramStrs)
         {
-            Debug.Check(false);
+            Debugs.Check(false);
 
             _instance = instance;
         }
 
         public int GetCount(Agent self)
         {
-            Debug.Check(false);
+            Debugs.Check(false);
             return 0;
         }
 
         public void SetValue(Agent self, IInstanceMember right, int index)
         {
-            Debug.Check(false);
+            Debugs.Check(false);
         }
 
         public virtual void Run(Agent self)
         {
-            Debug.Check(false);
+            Debugs.Check(false);
         }
 
         public IValue GetIValue(Agent self)
         {
-            Debug.Check(false);
+            Debugs.Check(false);
             return null;
         }
 
         public object GetValueObject(Agent self)
         {
-            Debug.Check(false);
+            Debugs.Check(false);
             return null;
         }
 
@@ -3999,38 +4017,38 @@ namespace behaviac
 
         public void SetValue(Agent self, IValue value)
         {
-            Debug.Check(false);
+            Debugs.Check(false);
         }
 
         public void SetValue(Agent self, object value)
         {
-            Debug.Check(false);
+            Debugs.Check(false);
         }
 
         public void SetValueAs(Agent self, IInstanceMember right)
         {
-            Debug.Check(false);
+            Debugs.Check(false);
         }
 
         public void SetValue(Agent self, IInstanceMember right)
         {
-            Debug.Check(false);
+            Debugs.Check(false);
         }
 
         public bool Compare(Agent self, IInstanceMember right, EOperatorType comparisonType)
         {
-            Debug.Check(false);
+            Debugs.Check(false);
             return false;
         }
 
         public void Compute(Agent self, IInstanceMember right1, IInstanceMember right2, EOperatorType computeType)
         {
-            Debug.Check(false);
+            Debugs.Check(false);
         }
 
         public virtual void SetTaskParams(Agent self, BehaviorTreeTask treeTask)
         {
-            Debug.Check(false);
+            Debugs.Check(false);
         }
     }
 
@@ -4040,25 +4058,25 @@ namespace behaviac
 
         FunctionPointer _fp;
 
-        public CAgentMethodVoid(FunctionPointer f)
+        public CAgentMethodVoid(FunctionPointer f, Workspace workspace) : base(workspace)
         {
             _fp = f;
         }
 
-        public CAgentMethodVoid(CAgentMethodVoid rhs)
-        : base(rhs)
+        public CAgentMethodVoid(CAgentMethodVoid rhs, Workspace workspace)
+        : base(workspace, rhs)
         {
             _fp = rhs._fp;
         }
 
         public override IMethod Clone()
         {
-            return new CAgentMethodVoid(this);
+            return new CAgentMethodVoid(this, Workspace);
         }
 
         public override void Load(string instance, string[] paramStrs)
         {
-            Debug.Check(paramStrs.Length == 0);
+            Debugs.Check(paramStrs.Length == 0);
 
             _instance = instance;
         }
@@ -4082,13 +4100,13 @@ namespace behaviac
         FunctionPointer _fp;
         IInstanceMember _p1;
 
-        public CAgentMethodVoid(FunctionPointer f)
+        public CAgentMethodVoid(FunctionPointer f, Workspace workspace) : base(workspace)
         {
             _fp = f;
         }
 
-        public CAgentMethodVoid(CAgentMethodVoid<P1> rhs)
-        : base(rhs)
+        public CAgentMethodVoid(CAgentMethodVoid<P1> rhs, Workspace workspace)
+        : base(workspace, rhs)
         {
             _fp = rhs._fp;
             _p1 = rhs._p1;
@@ -4096,12 +4114,12 @@ namespace behaviac
 
         public override IMethod Clone()
         {
-            return new CAgentMethodVoid<P1>(this);
+            return new CAgentMethodVoid<P1>(this, Workspace);
         }
 
         public override void Load(string instance, string[] paramStrs)
         {
-            Debug.Check(paramStrs.Length == 1);
+            Debugs.Check(paramStrs.Length == 1);
 
             _instance = instance;
             _p1 = AgentMeta.ParseProperty<P1>(paramStrs[0]);
@@ -4109,7 +4127,7 @@ namespace behaviac
 
         public override void Run(Agent self)
         {
-            Debug.Check(_p1 != null);
+            Debugs.Check(_p1 != null);
 
             Agent agent = Utils.GetParentAgent(self, _instance);
 
@@ -4131,13 +4149,13 @@ namespace behaviac
         IInstanceMember _p1;
         IInstanceMember _p2;
 
-        public CAgentMethodVoid(FunctionPointer f)
+        public CAgentMethodVoid(FunctionPointer f, Workspace workspace) : base(workspace)
         {
             _fp = f;
         }
 
-        public CAgentMethodVoid(CAgentMethodVoid<P1, P2> rhs)
-        : base(rhs)
+        public CAgentMethodVoid(CAgentMethodVoid<P1, P2> rhs, Workspace workspace)
+        : base(workspace, rhs)
         {
             _fp = rhs._fp;
             _p1 = rhs._p1;
@@ -4146,12 +4164,12 @@ namespace behaviac
 
         public override IMethod Clone()
         {
-            return new CAgentMethodVoid<P1, P2>(this);
+            return new CAgentMethodVoid<P1, P2>(this, Workspace);
         }
 
         public override void Load(string instance, string[] paramStrs)
         {
-            Debug.Check(paramStrs.Length == 2);
+            Debugs.Check(paramStrs.Length == 2);
 
             _instance = instance;
             _p1 = AgentMeta.ParseProperty<P1>(paramStrs[0]);
@@ -4160,8 +4178,8 @@ namespace behaviac
 
         public override void Run(Agent self)
         {
-            Debug.Check(_p1 != null);
-            Debug.Check(_p2 != null);
+            Debugs.Check(_p1 != null);
+            Debugs.Check(_p2 != null);
 
             Agent agent = Utils.GetParentAgent(self, _instance);
 
@@ -4187,13 +4205,13 @@ namespace behaviac
         IInstanceMember _p2;
         IInstanceMember _p3;
 
-        public CAgentMethodVoid(FunctionPointer f)
+        public CAgentMethodVoid(FunctionPointer f, Workspace workspace) : base(workspace)
         {
             _fp = f;
         }
 
-        public CAgentMethodVoid(CAgentMethodVoid<P1, P2, P3> rhs)
-        : base(rhs)
+        public CAgentMethodVoid(CAgentMethodVoid<P1, P2, P3> rhs, Workspace workspace)
+        : base(workspace, rhs)
         {
             _fp = rhs._fp;
             _p1 = rhs._p1;
@@ -4203,12 +4221,12 @@ namespace behaviac
 
         public override IMethod Clone()
         {
-            return new CAgentMethodVoid<P1, P2, P3>(this);
+            return new CAgentMethodVoid<P1, P2, P3>(this, Workspace);
         }
 
         public override void Load(string instance, string[] paramStrs)
         {
-            Debug.Check(paramStrs.Length == 3);
+            Debugs.Check(paramStrs.Length == 3);
 
             _instance = instance;
             _p1 = AgentMeta.ParseProperty<P1>(paramStrs[0]);
@@ -4218,9 +4236,9 @@ namespace behaviac
 
         public override void Run(Agent self)
         {
-            Debug.Check(_p1 != null);
-            Debug.Check(_p2 != null);
-            Debug.Check(_p3 != null);
+            Debugs.Check(_p1 != null);
+            Debugs.Check(_p2 != null);
+            Debugs.Check(_p3 != null);
 
             Agent agent = Utils.GetParentAgent(self, _instance);
 
@@ -4253,13 +4271,13 @@ namespace behaviac
         IInstanceMember _p3;
         IInstanceMember _p4;
 
-        public CAgentMethodVoid(FunctionPointer f, IInstanceMember p1, IInstanceMember p2, IInstanceMember p3, IInstanceMember p4)
+        public CAgentMethodVoid(FunctionPointer f, IInstanceMember p1, IInstanceMember p2, IInstanceMember p3, IInstanceMember p4, Workspace workspace) : base(workspace)
         {
             _fp = f;
         }
 
-        public CAgentMethodVoid(CAgentMethodVoid<P1, P2, P3, P4> rhs)
-        : base(rhs)
+        public CAgentMethodVoid(CAgentMethodVoid<P1, P2, P3, P4> rhs, Workspace workspace)
+        : base(workspace, rhs)
         {
             _fp = rhs._fp;
             _p1 = rhs._p1;
@@ -4270,12 +4288,12 @@ namespace behaviac
 
         public override IMethod Clone()
         {
-            return new CAgentMethodVoid<P1, P2, P3, P4>(this);
+            return new CAgentMethodVoid<P1, P2, P3, P4>(this, Workspace);
         }
 
         public override void Load(string instance, string[] paramStrs)
         {
-            Debug.Check(paramStrs.Length == 4);
+            Debugs.Check(paramStrs.Length == 4);
 
             _instance = instance;
             _p1 = AgentMeta.ParseProperty<P1>(paramStrs[0]);
@@ -4286,10 +4304,10 @@ namespace behaviac
 
         public override void Run(Agent self)
         {
-            Debug.Check(_p1 != null);
-            Debug.Check(_p2 != null);
-            Debug.Check(_p3 != null);
-            Debug.Check(_p4 != null);
+            Debugs.Check(_p1 != null);
+            Debugs.Check(_p2 != null);
+            Debugs.Check(_p3 != null);
+            Debugs.Check(_p4 != null);
 
             Agent agent = Utils.GetParentAgent(self, _instance);
 
@@ -4327,13 +4345,13 @@ namespace behaviac
         IInstanceMember _p4;
         IInstanceMember _p5;
 
-        public CAgentMethodVoid(FunctionPointer f)
+        public CAgentMethodVoid(FunctionPointer f, Workspace workspace) : base(workspace)
         {
             _fp = f;
         }
 
-        public CAgentMethodVoid(CAgentMethodVoid<P1, P2, P3, P4, P5> rhs)
-        : base(rhs)
+        public CAgentMethodVoid(CAgentMethodVoid<P1, P2, P3, P4, P5> rhs, Workspace workspace)
+        : base(workspace, rhs)
         {
             _fp = rhs._fp;
             _p1 = rhs._p1;
@@ -4345,12 +4363,12 @@ namespace behaviac
 
         public override IMethod Clone()
         {
-            return new CAgentMethodVoid<P1, P2, P3, P4, P5>(this);
+            return new CAgentMethodVoid<P1, P2, P3, P4, P5>(this, Workspace);
         }
 
         public override void Load(string instance, string[] paramStrs)
         {
-            Debug.Check(paramStrs.Length == 5);
+            Debugs.Check(paramStrs.Length == 5);
 
             _instance = instance;
             _p1 = AgentMeta.ParseProperty<P1>(paramStrs[0]);
@@ -4362,11 +4380,11 @@ namespace behaviac
 
         public override void Run(Agent self)
         {
-            Debug.Check(_p1 != null);
-            Debug.Check(_p2 != null);
-            Debug.Check(_p3 != null);
-            Debug.Check(_p4 != null);
-            Debug.Check(_p5 != null);
+            Debugs.Check(_p1 != null);
+            Debugs.Check(_p2 != null);
+            Debugs.Check(_p3 != null);
+            Debugs.Check(_p4 != null);
+            Debugs.Check(_p5 != null);
 
             Agent agent = Utils.GetParentAgent(self, _instance);
 
@@ -4409,13 +4427,13 @@ namespace behaviac
         IInstanceMember _p5;
         IInstanceMember _p6;
 
-        public CAgentMethodVoid(FunctionPointer f)
+        public CAgentMethodVoid(FunctionPointer f, Workspace workspace) : base(workspace)
         {
             _fp = f;
         }
 
-        public CAgentMethodVoid(CAgentMethodVoid<P1, P2, P3, P4, P5, P6> rhs)
-        : base(rhs)
+        public CAgentMethodVoid(CAgentMethodVoid<P1, P2, P3, P4, P5, P6> rhs, Workspace workspace)
+        : base(workspace, rhs)
         {
             _fp = rhs._fp;
             _p1 = rhs._p1;
@@ -4428,12 +4446,12 @@ namespace behaviac
 
         public override IMethod Clone()
         {
-            return new CAgentMethodVoid<P1, P2, P3, P4, P5, P6>(this);
+            return new CAgentMethodVoid<P1, P2, P3, P4, P5, P6>(this, Workspace);
         }
 
         public override void Load(string instance, string[] paramStrs)
         {
-            Debug.Check(paramStrs.Length == 6);
+            Debugs.Check(paramStrs.Length == 6);
 
             _instance = instance;
             _p1 = AgentMeta.ParseProperty<P1>(paramStrs[0]);
@@ -4446,12 +4464,12 @@ namespace behaviac
 
         public override void Run(Agent self)
         {
-            Debug.Check(_p1 != null);
-            Debug.Check(_p2 != null);
-            Debug.Check(_p3 != null);
-            Debug.Check(_p4 != null);
-            Debug.Check(_p5 != null);
-            Debug.Check(_p6 != null);
+            Debugs.Check(_p1 != null);
+            Debugs.Check(_p2 != null);
+            Debugs.Check(_p3 != null);
+            Debugs.Check(_p4 != null);
+            Debugs.Check(_p5 != null);
+            Debugs.Check(_p6 != null);
 
             Agent agent = Utils.GetParentAgent(self, _instance);
 
@@ -4499,13 +4517,13 @@ namespace behaviac
         IInstanceMember _p6;
         IInstanceMember _p7;
 
-        public CAgentMethodVoid(FunctionPointer f)
+        public CAgentMethodVoid(FunctionPointer f, Workspace workspace) : base(workspace)
         {
             _fp = f;
         }
 
-        public CAgentMethodVoid(CAgentMethodVoid<P1, P2, P3, P4, P5, P6, P7> rhs)
-        : base(rhs)
+        public CAgentMethodVoid(CAgentMethodVoid<P1, P2, P3, P4, P5, P6, P7> rhs, Workspace workspace)
+        : base(workspace, rhs)
         {
             _fp = rhs._fp;
             _p1 = rhs._p1;
@@ -4519,12 +4537,12 @@ namespace behaviac
 
         public override IMethod Clone()
         {
-            return new CAgentMethodVoid<P1, P2, P3, P4, P5, P6, P7>(this);
+            return new CAgentMethodVoid<P1, P2, P3, P4, P5, P6, P7>(this, Workspace);
         }
 
         public override void Load(string instance, string[] paramStrs)
         {
-            Debug.Check(paramStrs.Length == 7);
+            Debugs.Check(paramStrs.Length == 7);
 
             _instance = instance;
             _p1 = AgentMeta.ParseProperty<P1>(paramStrs[0]);
@@ -4538,13 +4556,13 @@ namespace behaviac
 
         public override void Run(Agent self)
         {
-            Debug.Check(_p1 != null);
-            Debug.Check(_p2 != null);
-            Debug.Check(_p3 != null);
-            Debug.Check(_p4 != null);
-            Debug.Check(_p5 != null);
-            Debug.Check(_p6 != null);
-            Debug.Check(_p7 != null);
+            Debugs.Check(_p1 != null);
+            Debugs.Check(_p2 != null);
+            Debugs.Check(_p3 != null);
+            Debugs.Check(_p4 != null);
+            Debugs.Check(_p5 != null);
+            Debugs.Check(_p6 != null);
+            Debugs.Check(_p7 != null);
 
             Agent agent = Utils.GetParentAgent(self, _instance);
 
@@ -4597,13 +4615,13 @@ namespace behaviac
         IInstanceMember _p7;
         IInstanceMember _p8;
 
-        public CAgentMethodVoid(FunctionPointer f)
+        public CAgentMethodVoid(FunctionPointer f, Workspace workspace) : base(workspace)
         {
             _fp = f;
         }
 
-        public CAgentMethodVoid(CAgentMethodVoid<P1, P2, P3, P4, P5, P6, P7, P8> rhs)
-        : base(rhs)
+        public CAgentMethodVoid(CAgentMethodVoid<P1, P2, P3, P4, P5, P6, P7, P8> rhs, Workspace workspace)
+        : base(workspace, rhs)
         {
             _fp = rhs._fp;
             _p1 = rhs._p1;
@@ -4618,12 +4636,12 @@ namespace behaviac
 
         public override IMethod Clone()
         {
-            return new CAgentMethodVoid<P1, P2, P3, P4, P5, P6, P7, P8>(this);
+            return new CAgentMethodVoid<P1, P2, P3, P4, P5, P6, P7, P8>(this, Workspace);
         }
 
         public override void Load(string instance, string[] paramStrs)
         {
-            Debug.Check(paramStrs.Length == 8);
+            Debugs.Check(paramStrs.Length == 8);
 
             _instance = instance;
             _p1 = AgentMeta.ParseProperty<P1>(paramStrs[0]);
@@ -4638,14 +4656,14 @@ namespace behaviac
 
         public override void Run(Agent self)
         {
-            Debug.Check(_p1 != null);
-            Debug.Check(_p2 != null);
-            Debug.Check(_p3 != null);
-            Debug.Check(_p4 != null);
-            Debug.Check(_p5 != null);
-            Debug.Check(_p6 != null);
-            Debug.Check(_p7 != null);
-            Debug.Check(_p8 != null);
+            Debugs.Check(_p1 != null);
+            Debugs.Check(_p2 != null);
+            Debugs.Check(_p3 != null);
+            Debugs.Check(_p4 != null);
+            Debugs.Check(_p5 != null);
+            Debugs.Check(_p6 != null);
+            Debugs.Check(_p7 != null);
+            Debugs.Check(_p8 != null);
 
             Agent agent = Utils.GetParentAgent(self, _instance);
 
@@ -4703,13 +4721,13 @@ namespace behaviac
         IInstanceMember _p8;
         IInstanceMember _p9;
 
-        public CAgentMethodVoid(FunctionPointer f)
+        public CAgentMethodVoid(FunctionPointer f, Workspace workspace) : base(workspace)
         {
             _fp = f;
         }
 
-        public CAgentMethodVoid(CAgentMethodVoid<P1, P2, P3, P4, P5, P6, P7, P8, P9> rhs)
-        : base(rhs)
+        public CAgentMethodVoid(CAgentMethodVoid<P1, P2, P3, P4, P5, P6, P7, P8, P9> rhs, Workspace workspace)
+        : base(workspace, rhs)
         {
             _fp = rhs._fp;
             _p1 = rhs._p1;
@@ -4725,12 +4743,12 @@ namespace behaviac
 
         public override IMethod Clone()
         {
-            return new CAgentMethodVoid<P1, P2, P3, P4, P5, P6, P7, P8, P9>(this);
+            return new CAgentMethodVoid<P1, P2, P3, P4, P5, P6, P7, P8, P9>(this, Workspace);
         }
 
         public override void Load(string instance, string[] paramStrs)
         {
-            Debug.Check(paramStrs.Length == 9);
+            Debugs.Check(paramStrs.Length == 9);
 
             _instance = instance;
             _p1 = AgentMeta.ParseProperty<P1>(paramStrs[0]);
@@ -4746,15 +4764,15 @@ namespace behaviac
 
         public override void Run(Agent self)
         {
-            Debug.Check(_p1 != null);
-            Debug.Check(_p2 != null);
-            Debug.Check(_p3 != null);
-            Debug.Check(_p4 != null);
-            Debug.Check(_p5 != null);
-            Debug.Check(_p6 != null);
-            Debug.Check(_p7 != null);
-            Debug.Check(_p8 != null);
-            Debug.Check(_p9 != null);
+            Debugs.Check(_p1 != null);
+            Debugs.Check(_p2 != null);
+            Debugs.Check(_p3 != null);
+            Debugs.Check(_p4 != null);
+            Debugs.Check(_p5 != null);
+            Debugs.Check(_p6 != null);
+            Debugs.Check(_p7 != null);
+            Debugs.Check(_p8 != null);
+            Debugs.Check(_p9 != null);
 
             Agent agent = Utils.GetParentAgent(self, _instance);
 
@@ -4817,13 +4835,13 @@ namespace behaviac
         IInstanceMember _p9;
         IInstanceMember _p10;
 
-        public CAgentMethodVoid(FunctionPointer f)
+        public CAgentMethodVoid(FunctionPointer f, Workspace workspace) : base(workspace)
         {
             _fp = f;
         }
 
-        public CAgentMethodVoid(CAgentMethodVoid<P1, P2, P3, P4, P5, P6, P7, P8, P9, P10> rhs)
-        : base(rhs)
+        public CAgentMethodVoid(CAgentMethodVoid<P1, P2, P3, P4, P5, P6, P7, P8, P9, P10> rhs, Workspace workspace)
+        : base(workspace, rhs)
         {
             _fp = rhs._fp;
             _p1 = rhs._p1;
@@ -4840,12 +4858,12 @@ namespace behaviac
 
         public override IMethod Clone()
         {
-            return new CAgentMethodVoid<P1, P2, P3, P4, P5, P6, P7, P8, P9, P10>(this);
+            return new CAgentMethodVoid<P1, P2, P3, P4, P5, P6, P7, P8, P9, P10>(this, Workspace);
         }
 
         public override void Load(string instance, string[] paramStrs)
         {
-            Debug.Check(paramStrs.Length == 10);
+            Debugs.Check(paramStrs.Length == 10);
 
             _instance = instance;
             _p1 = AgentMeta.ParseProperty<P1>(paramStrs[0]);
@@ -4862,16 +4880,16 @@ namespace behaviac
 
         public override void Run(Agent self)
         {
-            Debug.Check(_p1 != null);
-            Debug.Check(_p2 != null);
-            Debug.Check(_p3 != null);
-            Debug.Check(_p4 != null);
-            Debug.Check(_p5 != null);
-            Debug.Check(_p6 != null);
-            Debug.Check(_p7 != null);
-            Debug.Check(_p8 != null);
-            Debug.Check(_p9 != null);
-            Debug.Check(_p10 != null);
+            Debugs.Check(_p1 != null);
+            Debugs.Check(_p2 != null);
+            Debugs.Check(_p3 != null);
+            Debugs.Check(_p4 != null);
+            Debugs.Check(_p5 != null);
+            Debugs.Check(_p6 != null);
+            Debugs.Check(_p7 != null);
+            Debugs.Check(_p8 != null);
+            Debugs.Check(_p9 != null);
+            Debugs.Check(_p10 != null);
 
             Agent agent = Utils.GetParentAgent(self, _instance);
 
@@ -4939,13 +4957,12 @@ namespace behaviac
         IInstanceMember _p10;
         IInstanceMember _p11;
 
-        public CAgentMethodVoid(FunctionPointer f)
+        public CAgentMethodVoid(FunctionPointer f, Workspace workspace) : base(workspace)
         {
             _fp = f;
         }
 
-        public CAgentMethodVoid(CAgentMethodVoid<P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11> rhs)
-        : base(rhs)
+        public CAgentMethodVoid(CAgentMethodVoid<P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11> rhs, Workspace workspace) : base(workspace, rhs)
         {
             _fp = rhs._fp;
             _p1 = rhs._p1;
@@ -4963,12 +4980,12 @@ namespace behaviac
 
         public override IMethod Clone()
         {
-            return new CAgentMethodVoid<P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11>(this);
+            return new CAgentMethodVoid<P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11>(this, Workspace);
         }
 
         public override void Load(string instance, string[] paramStrs)
         {
-            Debug.Check(paramStrs.Length == 11);
+            Debugs.Check(paramStrs.Length == 11);
 
             _instance = instance;
             _p1 = AgentMeta.ParseProperty<P1>(paramStrs[0]);
@@ -4986,17 +5003,17 @@ namespace behaviac
 
         public override void Run(Agent self)
         {
-            Debug.Check(_p1 != null);
-            Debug.Check(_p2 != null);
-            Debug.Check(_p3 != null);
-            Debug.Check(_p4 != null);
-            Debug.Check(_p5 != null);
-            Debug.Check(_p6 != null);
-            Debug.Check(_p7 != null);
-            Debug.Check(_p8 != null);
-            Debug.Check(_p9 != null);
-            Debug.Check(_p10 != null);
-            Debug.Check(_p11 != null);
+            Debugs.Check(_p1 != null);
+            Debugs.Check(_p2 != null);
+            Debugs.Check(_p3 != null);
+            Debugs.Check(_p4 != null);
+            Debugs.Check(_p5 != null);
+            Debugs.Check(_p6 != null);
+            Debugs.Check(_p7 != null);
+            Debugs.Check(_p8 != null);
+            Debugs.Check(_p9 != null);
+            Debugs.Check(_p10 != null);
+            Debugs.Check(_p11 != null);
 
             Agent agent = Utils.GetParentAgent(self, _instance);
 
@@ -5069,13 +5086,13 @@ namespace behaviac
         IInstanceMember _p11;
         IInstanceMember _p12;
 
-        public CAgentMethodVoid(FunctionPointer f)
+        public CAgentMethodVoid(FunctionPointer f, Workspace workspace) : base(workspace)
         {
             _fp = f;
         }
 
-        public CAgentMethodVoid(CAgentMethodVoid<P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12> rhs)
-        : base(rhs)
+        public CAgentMethodVoid(CAgentMethodVoid<P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12> rhs, Workspace workspace)
+        : base(workspace, rhs)
         {
             _fp = rhs._fp;
             _p1 = rhs._p1;
@@ -5094,12 +5111,12 @@ namespace behaviac
 
         public override IMethod Clone()
         {
-            return new CAgentMethodVoid<P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12>(this);
+            return new CAgentMethodVoid<P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12>(this, Workspace);
         }
 
         public override void Load(string instance, string[] paramStrs)
         {
-            Debug.Check(paramStrs.Length == 12);
+            Debugs.Check(paramStrs.Length == 12);
 
             _instance = instance;
             _p1 = AgentMeta.ParseProperty<P1>(paramStrs[0]);
@@ -5118,18 +5135,18 @@ namespace behaviac
 
         public override void Run(Agent self)
         {
-            Debug.Check(_p1 != null);
-            Debug.Check(_p2 != null);
-            Debug.Check(_p3 != null);
-            Debug.Check(_p4 != null);
-            Debug.Check(_p5 != null);
-            Debug.Check(_p6 != null);
-            Debug.Check(_p7 != null);
-            Debug.Check(_p8 != null);
-            Debug.Check(_p9 != null);
-            Debug.Check(_p10 != null);
-            Debug.Check(_p11 != null);
-            Debug.Check(_p12 != null);
+            Debugs.Check(_p1 != null);
+            Debugs.Check(_p2 != null);
+            Debugs.Check(_p3 != null);
+            Debugs.Check(_p4 != null);
+            Debugs.Check(_p5 != null);
+            Debugs.Check(_p6 != null);
+            Debugs.Check(_p7 != null);
+            Debugs.Check(_p8 != null);
+            Debugs.Check(_p9 != null);
+            Debugs.Check(_p10 != null);
+            Debugs.Check(_p11 != null);
+            Debugs.Check(_p12 != null);
 
             Agent agent = Utils.GetParentAgent(self, _instance);
 
@@ -5207,13 +5224,13 @@ namespace behaviac
         IInstanceMember _p12;
         IInstanceMember _p13;
 
-        public CAgentMethodVoid(FunctionPointer f)
+        public CAgentMethodVoid(FunctionPointer f, Workspace workspace) : base(workspace)
         {
             _fp = f;
         }
 
-        public CAgentMethodVoid(CAgentMethodVoid<P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12, P13> rhs)
-        : base(rhs)
+        public CAgentMethodVoid(CAgentMethodVoid<P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12, P13> rhs, Workspace workspace)
+        : base(workspace, rhs)
         {
             _fp = rhs._fp;
             _p1 = rhs._p1;
@@ -5233,12 +5250,12 @@ namespace behaviac
 
         public override IMethod Clone()
         {
-            return new CAgentMethodVoid<P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12, P13>(this);
+            return new CAgentMethodVoid<P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12, P13>(this, Workspace);
         }
 
         public override void Load(string instance, string[] paramStrs)
         {
-            Debug.Check(paramStrs.Length == 13);
+            Debugs.Check(paramStrs.Length == 13);
 
             _instance = instance;
             _p1 = AgentMeta.ParseProperty<P1>(paramStrs[0]);
@@ -5258,19 +5275,19 @@ namespace behaviac
 
         public override void Run(Agent self)
         {
-            Debug.Check(_p1 != null);
-            Debug.Check(_p2 != null);
-            Debug.Check(_p3 != null);
-            Debug.Check(_p4 != null);
-            Debug.Check(_p5 != null);
-            Debug.Check(_p6 != null);
-            Debug.Check(_p7 != null);
-            Debug.Check(_p8 != null);
-            Debug.Check(_p9 != null);
-            Debug.Check(_p10 != null);
-            Debug.Check(_p11 != null);
-            Debug.Check(_p12 != null);
-            Debug.Check(_p13 != null);
+            Debugs.Check(_p1 != null);
+            Debugs.Check(_p2 != null);
+            Debugs.Check(_p3 != null);
+            Debugs.Check(_p4 != null);
+            Debugs.Check(_p5 != null);
+            Debugs.Check(_p6 != null);
+            Debugs.Check(_p7 != null);
+            Debugs.Check(_p8 != null);
+            Debugs.Check(_p9 != null);
+            Debugs.Check(_p10 != null);
+            Debugs.Check(_p11 != null);
+            Debugs.Check(_p12 != null);
+            Debugs.Check(_p13 != null);
 
             Agent agent = Utils.GetParentAgent(self, _instance);
 
@@ -5353,13 +5370,13 @@ namespace behaviac
         IInstanceMember _p13;
         IInstanceMember _p14;
 
-        public CAgentMethodVoid(FunctionPointer f)
+        public CAgentMethodVoid(FunctionPointer f, Workspace workspace) : base(workspace)
         {
             _fp = f;
         }
 
-        public CAgentMethodVoid(CAgentMethodVoid<P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12, P13, P14> rhs)
-        : base(rhs)
+        public CAgentMethodVoid(CAgentMethodVoid<P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12, P13, P14> rhs, Workspace workspace)
+        : base(workspace, rhs)
         {
             _fp = rhs._fp;
             _p1 = rhs._p1;
@@ -5380,12 +5397,12 @@ namespace behaviac
 
         public override IMethod Clone()
         {
-            return new CAgentMethodVoid<P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12, P13, P14>(this);
+            return new CAgentMethodVoid<P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12, P13, P14>(this, Workspace);
         }
 
         public override void Load(string instance, string[] paramStrs)
         {
-            Debug.Check(paramStrs.Length == 14);
+            Debugs.Check(paramStrs.Length == 14);
 
             _instance = instance;
             _p1 = AgentMeta.ParseProperty<P1>(paramStrs[0]);
@@ -5406,20 +5423,20 @@ namespace behaviac
 
         public override void Run(Agent self)
         {
-            Debug.Check(_p1 != null);
-            Debug.Check(_p2 != null);
-            Debug.Check(_p3 != null);
-            Debug.Check(_p4 != null);
-            Debug.Check(_p5 != null);
-            Debug.Check(_p6 != null);
-            Debug.Check(_p7 != null);
-            Debug.Check(_p8 != null);
-            Debug.Check(_p9 != null);
-            Debug.Check(_p10 != null);
-            Debug.Check(_p11 != null);
-            Debug.Check(_p12 != null);
-            Debug.Check(_p13 != null);
-            Debug.Check(_p14 != null);
+            Debugs.Check(_p1 != null);
+            Debugs.Check(_p2 != null);
+            Debugs.Check(_p3 != null);
+            Debugs.Check(_p4 != null);
+            Debugs.Check(_p5 != null);
+            Debugs.Check(_p6 != null);
+            Debugs.Check(_p7 != null);
+            Debugs.Check(_p8 != null);
+            Debugs.Check(_p9 != null);
+            Debugs.Check(_p10 != null);
+            Debugs.Check(_p11 != null);
+            Debugs.Check(_p12 != null);
+            Debugs.Check(_p13 != null);
+            Debugs.Check(_p14 != null);
 
             Agent agent = Utils.GetParentAgent(self, _instance);
 
@@ -5492,25 +5509,25 @@ namespace behaviac
 
         FunctionPointer _fp;
 
-        public CAgentStaticMethodVoid(FunctionPointer f)
+        public CAgentStaticMethodVoid(FunctionPointer f, Workspace workspace) : base(workspace)
         {
             _fp = f;
         }
 
-        public CAgentStaticMethodVoid(CAgentStaticMethodVoid rhs)
-        : base(rhs)
+        public CAgentStaticMethodVoid(CAgentStaticMethodVoid rhs, Workspace workspace)
+        : base(workspace, rhs)
         {
             _fp = rhs._fp;
         }
 
         public override IMethod Clone()
         {
-            return new CAgentStaticMethodVoid(this);
+            return new CAgentStaticMethodVoid(this, Workspace);
         }
 
         public override void Load(string instance, string[] paramStrs)
         {
-            Debug.Check(paramStrs.Length == 0);
+            Debugs.Check(paramStrs.Length == 0);
 
             _instance = instance;
         }
@@ -5532,13 +5549,13 @@ namespace behaviac
         FunctionPointer _fp;
         IInstanceMember _p1;
 
-        public CAgentStaticMethodVoid(FunctionPointer f)
+        public CAgentStaticMethodVoid(FunctionPointer f, Workspace workspace) : base(workspace)
         {
             _fp = f;
         }
 
-        public CAgentStaticMethodVoid(CAgentStaticMethodVoid<P1> rhs)
-        : base(rhs)
+        public CAgentStaticMethodVoid(CAgentStaticMethodVoid<P1> rhs, Workspace workspace)
+        : base(workspace, rhs)
         {
             _fp = rhs._fp;
             _p1 = rhs._p1;
@@ -5546,12 +5563,12 @@ namespace behaviac
 
         public override IMethod Clone()
         {
-            return new CAgentStaticMethodVoid<P1>(this);
+            return new CAgentStaticMethodVoid<P1>(this, Workspace);
         }
 
         public override void Load(string instance, string[] paramStrs)
         {
-            Debug.Check(paramStrs.Length == 1);
+            Debugs.Check(paramStrs.Length == 1);
 
             _instance = instance;
             _p1 = AgentMeta.ParseProperty<P1>(paramStrs[0]);
@@ -5559,7 +5576,7 @@ namespace behaviac
 
         public override void Run(Agent self)
         {
-            Debug.Check(_p1 != null);
+            Debugs.Check(_p1 != null);
 
             _fp(((CInstanceMember<P1>)_p1).GetValue(self));
         }
@@ -5579,13 +5596,13 @@ namespace behaviac
         IInstanceMember _p1;
         IInstanceMember _p2;
 
-        public CAgentStaticMethodVoid(FunctionPointer f)
+        public CAgentStaticMethodVoid(FunctionPointer f, Workspace workspace) : base(workspace)
         {
             _fp = f;
         }
 
-        public CAgentStaticMethodVoid(CAgentStaticMethodVoid<P1, P2> rhs)
-        : base(rhs)
+        public CAgentStaticMethodVoid(CAgentStaticMethodVoid<P1, P2> rhs, Workspace workspace)
+        : base(workspace, rhs)
         {
             _fp = rhs._fp;
             _p1 = rhs._p1;
@@ -5594,12 +5611,12 @@ namespace behaviac
 
         public override IMethod Clone()
         {
-            return new CAgentStaticMethodVoid<P1, P2>(this);
+            return new CAgentStaticMethodVoid<P1, P2>(this, Workspace);
         }
 
         public override void Load(string instance, string[] paramStrs)
         {
-            Debug.Check(paramStrs.Length == 2);
+            Debugs.Check(paramStrs.Length == 2);
 
             _instance = instance;
             _p1 = AgentMeta.ParseProperty<P1>(paramStrs[0]);
@@ -5608,8 +5625,8 @@ namespace behaviac
 
         public override void Run(Agent self)
         {
-            Debug.Check(_p1 != null);
-            Debug.Check(_p2 != null);
+            Debugs.Check(_p1 != null);
+            Debugs.Check(_p2 != null);
 
             _fp(((CInstanceMember<P1>)_p1).GetValue(self), ((CInstanceMember<P2>)_p2).GetValue(self));
         }
@@ -5633,13 +5650,13 @@ namespace behaviac
         IInstanceMember _p2;
         IInstanceMember _p3;
 
-        public CAgentStaticMethodVoid(FunctionPointer f)
+        public CAgentStaticMethodVoid(FunctionPointer f, Workspace workspace) : base(workspace)
         {
             _fp = f;
         }
 
-        public CAgentStaticMethodVoid(CAgentStaticMethodVoid<P1, P2, P3> rhs)
-        : base(rhs)
+        public CAgentStaticMethodVoid(CAgentStaticMethodVoid<P1, P2, P3> rhs, Workspace workspace)
+        : base(workspace, rhs)
         {
             _fp = rhs._fp;
             _p1 = rhs._p1;
@@ -5649,12 +5666,12 @@ namespace behaviac
 
         public override IMethod Clone()
         {
-            return new CAgentStaticMethodVoid<P1, P2, P3>(this);
+            return new CAgentStaticMethodVoid<P1, P2, P3>(this, Workspace);
         }
 
         public override void Load(string instance, string[] paramStrs)
         {
-            Debug.Check(paramStrs.Length == 3);
+            Debugs.Check(paramStrs.Length == 3);
 
             _instance = instance;
             _p1 = AgentMeta.ParseProperty<P1>(paramStrs[0]);
@@ -5664,9 +5681,9 @@ namespace behaviac
 
         public override void Run(Agent self)
         {
-            Debug.Check(_p1 != null);
-            Debug.Check(_p2 != null);
-            Debug.Check(_p3 != null);
+            Debugs.Check(_p1 != null);
+            Debugs.Check(_p2 != null);
+            Debugs.Check(_p3 != null);
 
             _fp(((CInstanceMember<P1>)_p1).GetValue(self),
                 ((CInstanceMember<P2>)_p2).GetValue(self),
@@ -5696,13 +5713,13 @@ namespace behaviac
         IInstanceMember _p3;
         IInstanceMember _p4;
 
-        public CAgentStaticMethodVoid(FunctionPointer f, IInstanceMember p1, IInstanceMember p2, IInstanceMember p3, IInstanceMember p4)
+        public CAgentStaticMethodVoid(FunctionPointer f, IInstanceMember p1, IInstanceMember p2, IInstanceMember p3, IInstanceMember p4, Workspace workspace) : base(workspace)
         {
             _fp = f;
         }
 
-        public CAgentStaticMethodVoid(CAgentStaticMethodVoid<P1, P2, P3, P4> rhs)
-        : base(rhs)
+        public CAgentStaticMethodVoid(CAgentStaticMethodVoid<P1, P2, P3, P4> rhs, Workspace workspace)
+        : base(workspace, rhs)
         {
             _fp = rhs._fp;
             _p1 = rhs._p1;
@@ -5713,12 +5730,12 @@ namespace behaviac
 
         public override IMethod Clone()
         {
-            return new CAgentStaticMethodVoid<P1, P2, P3, P4>(this);
+            return new CAgentStaticMethodVoid<P1, P2, P3, P4>(this, Workspace);
         }
 
         public override void Load(string instance, string[] paramStrs)
         {
-            Debug.Check(paramStrs.Length == 4);
+            Debugs.Check(paramStrs.Length == 4);
 
             _instance = instance;
             _p1 = AgentMeta.ParseProperty<P1>(paramStrs[0]);
@@ -5729,10 +5746,10 @@ namespace behaviac
 
         public override void Run(Agent self)
         {
-            Debug.Check(_p1 != null);
-            Debug.Check(_p2 != null);
-            Debug.Check(_p3 != null);
-            Debug.Check(_p4 != null);
+            Debugs.Check(_p1 != null);
+            Debugs.Check(_p2 != null);
+            Debugs.Check(_p3 != null);
+            Debugs.Check(_p4 != null);
 
             _fp(((CInstanceMember<P1>)_p1).GetValue(self),
                 ((CInstanceMember<P2>)_p2).GetValue(self),
@@ -5767,13 +5784,13 @@ namespace behaviac
         IInstanceMember _p4;
         IInstanceMember _p5;
 
-        public CAgentStaticMethodVoid(FunctionPointer f)
+        public CAgentStaticMethodVoid(FunctionPointer f, Workspace workspace) : base(workspace)
         {
             _fp = f;
         }
 
-        public CAgentStaticMethodVoid(CAgentStaticMethodVoid<P1, P2, P3, P4, P5> rhs)
-        : base(rhs)
+        public CAgentStaticMethodVoid(CAgentStaticMethodVoid<P1, P2, P3, P4, P5> rhs, Workspace workspace)
+        : base(workspace, rhs)
         {
             _fp = rhs._fp;
             _p1 = rhs._p1;
@@ -5785,12 +5802,12 @@ namespace behaviac
 
         public override IMethod Clone()
         {
-            return new CAgentStaticMethodVoid<P1, P2, P3, P4, P5>(this);
+            return new CAgentStaticMethodVoid<P1, P2, P3, P4, P5>(this, Workspace);
         }
 
         public override void Load(string instance, string[] paramStrs)
         {
-            Debug.Check(paramStrs.Length == 5);
+            Debugs.Check(paramStrs.Length == 5);
 
             _instance = instance;
             _p1 = AgentMeta.ParseProperty<P1>(paramStrs[0]);
@@ -5802,11 +5819,11 @@ namespace behaviac
 
         public override void Run(Agent self)
         {
-            Debug.Check(_p1 != null);
-            Debug.Check(_p2 != null);
-            Debug.Check(_p3 != null);
-            Debug.Check(_p4 != null);
-            Debug.Check(_p5 != null);
+            Debugs.Check(_p1 != null);
+            Debugs.Check(_p2 != null);
+            Debugs.Check(_p3 != null);
+            Debugs.Check(_p4 != null);
+            Debugs.Check(_p5 != null);
 
             _fp(((CInstanceMember<P1>)_p1).GetValue(self),
                 ((CInstanceMember<P2>)_p2).GetValue(self),
@@ -5846,13 +5863,13 @@ namespace behaviac
         IInstanceMember _p5;
         IInstanceMember _p6;
 
-        public CAgentStaticMethodVoid(FunctionPointer f)
+        public CAgentStaticMethodVoid(FunctionPointer f, Workspace workspace) : base(workspace)
         {
             _fp = f;
         }
 
-        public CAgentStaticMethodVoid(CAgentStaticMethodVoid<P1, P2, P3, P4, P5, P6> rhs)
-        : base(rhs)
+        public CAgentStaticMethodVoid(CAgentStaticMethodVoid<P1, P2, P3, P4, P5, P6> rhs, Workspace workspace)
+        : base(workspace, rhs)
         {
             _fp = rhs._fp;
             _p1 = rhs._p1;
@@ -5865,12 +5882,12 @@ namespace behaviac
 
         public override IMethod Clone()
         {
-            return new CAgentStaticMethodVoid<P1, P2, P3, P4, P5, P6>(this);
+            return new CAgentStaticMethodVoid<P1, P2, P3, P4, P5, P6>(this, Workspace);
         }
 
         public override void Load(string instance, string[] paramStrs)
         {
-            Debug.Check(paramStrs.Length == 6);
+            Debugs.Check(paramStrs.Length == 6);
 
             _instance = instance;
             _p1 = AgentMeta.ParseProperty<P1>(paramStrs[0]);
@@ -5883,12 +5900,12 @@ namespace behaviac
 
         public override void Run(Agent self)
         {
-            Debug.Check(_p1 != null);
-            Debug.Check(_p2 != null);
-            Debug.Check(_p3 != null);
-            Debug.Check(_p4 != null);
-            Debug.Check(_p5 != null);
-            Debug.Check(_p6 != null);
+            Debugs.Check(_p1 != null);
+            Debugs.Check(_p2 != null);
+            Debugs.Check(_p3 != null);
+            Debugs.Check(_p4 != null);
+            Debugs.Check(_p5 != null);
+            Debugs.Check(_p6 != null);
 
             _fp(((CInstanceMember<P1>)_p1).GetValue(self),
                 ((CInstanceMember<P2>)_p2).GetValue(self),
@@ -5933,13 +5950,13 @@ namespace behaviac
         IInstanceMember _p6;
         IInstanceMember _p7;
 
-        public CAgentStaticMethodVoid(FunctionPointer f)
+        public CAgentStaticMethodVoid(FunctionPointer f, Workspace workspace) : base(workspace)
         {
             _fp = f;
         }
 
-        public CAgentStaticMethodVoid(CAgentStaticMethodVoid<P1, P2, P3, P4, P5, P6, P7> rhs)
-        : base(rhs)
+        public CAgentStaticMethodVoid(CAgentStaticMethodVoid<P1, P2, P3, P4, P5, P6, P7> rhs, Workspace workspace)
+        : base(workspace, rhs)
         {
             _fp = rhs._fp;
             _p1 = rhs._p1;
@@ -5953,12 +5970,12 @@ namespace behaviac
 
         public override IMethod Clone()
         {
-            return new CAgentStaticMethodVoid<P1, P2, P3, P4, P5, P6, P7>(this);
+            return new CAgentStaticMethodVoid<P1, P2, P3, P4, P5, P6, P7>(this, Workspace);
         }
 
         public override void Load(string instance, string[] paramStrs)
         {
-            Debug.Check(paramStrs.Length == 7);
+            Debugs.Check(paramStrs.Length == 7);
 
             _instance = instance;
             _p1 = AgentMeta.ParseProperty<P1>(paramStrs[0]);
@@ -5972,13 +5989,13 @@ namespace behaviac
 
         public override void Run(Agent self)
         {
-            Debug.Check(_p1 != null);
-            Debug.Check(_p2 != null);
-            Debug.Check(_p3 != null);
-            Debug.Check(_p4 != null);
-            Debug.Check(_p5 != null);
-            Debug.Check(_p6 != null);
-            Debug.Check(_p7 != null);
+            Debugs.Check(_p1 != null);
+            Debugs.Check(_p2 != null);
+            Debugs.Check(_p3 != null);
+            Debugs.Check(_p4 != null);
+            Debugs.Check(_p5 != null);
+            Debugs.Check(_p6 != null);
+            Debugs.Check(_p7 != null);
 
             _fp(((CInstanceMember<P1>)_p1).GetValue(self),
                 ((CInstanceMember<P2>)_p2).GetValue(self),
@@ -6028,13 +6045,13 @@ namespace behaviac
         IInstanceMember _p7;
         IInstanceMember _p8;
 
-        public CAgentStaticMethodVoid(FunctionPointer f)
+        public CAgentStaticMethodVoid(FunctionPointer f, Workspace workspace) : base(workspace)
         {
             _fp = f;
         }
 
-        public CAgentStaticMethodVoid(CAgentStaticMethodVoid<P1, P2, P3, P4, P5, P6, P7, P8> rhs)
-        : base(rhs)
+        public CAgentStaticMethodVoid(CAgentStaticMethodVoid<P1, P2, P3, P4, P5, P6, P7, P8> rhs, Workspace workspace)
+        : base(workspace, rhs)
         {
             _fp = rhs._fp;
             _p1 = rhs._p1;
@@ -6049,12 +6066,12 @@ namespace behaviac
 
         public override IMethod Clone()
         {
-            return new CAgentStaticMethodVoid<P1, P2, P3, P4, P5, P6, P7, P8>(this);
+            return new CAgentStaticMethodVoid<P1, P2, P3, P4, P5, P6, P7, P8>(this, Workspace);
         }
 
         public override void Load(string instance, string[] paramStrs)
         {
-            Debug.Check(paramStrs.Length == 8);
+            Debugs.Check(paramStrs.Length == 8);
 
             _instance = instance;
             _p1 = AgentMeta.ParseProperty<P1>(paramStrs[0]);
@@ -6069,14 +6086,14 @@ namespace behaviac
 
         public override void Run(Agent self)
         {
-            Debug.Check(_p1 != null);
-            Debug.Check(_p2 != null);
-            Debug.Check(_p3 != null);
-            Debug.Check(_p4 != null);
-            Debug.Check(_p5 != null);
-            Debug.Check(_p6 != null);
-            Debug.Check(_p7 != null);
-            Debug.Check(_p8 != null);
+            Debugs.Check(_p1 != null);
+            Debugs.Check(_p2 != null);
+            Debugs.Check(_p3 != null);
+            Debugs.Check(_p4 != null);
+            Debugs.Check(_p5 != null);
+            Debugs.Check(_p6 != null);
+            Debugs.Check(_p7 != null);
+            Debugs.Check(_p8 != null);
 
             _fp(((CInstanceMember<P1>)_p1).GetValue(self),
                 ((CInstanceMember<P2>)_p2).GetValue(self),
@@ -6131,13 +6148,13 @@ namespace behaviac
         IInstanceMember _p8;
         IInstanceMember _p9;
 
-        public CAgentStaticMethodVoid(FunctionPointer f)
+        public CAgentStaticMethodVoid(FunctionPointer f, Workspace workspace) : base(workspace)
         {
             _fp = f;
         }
 
-        public CAgentStaticMethodVoid(CAgentStaticMethodVoid<P1, P2, P3, P4, P5, P6, P7, P8, P9> rhs)
-        : base(rhs)
+        public CAgentStaticMethodVoid(CAgentStaticMethodVoid<P1, P2, P3, P4, P5, P6, P7, P8, P9> rhs, Workspace workspace)
+        : base(workspace, rhs)
         {
             _fp = rhs._fp;
             _p1 = rhs._p1;
@@ -6153,12 +6170,12 @@ namespace behaviac
 
         public override IMethod Clone()
         {
-            return new CAgentStaticMethodVoid<P1, P2, P3, P4, P5, P6, P7, P8, P9>(this);
+            return new CAgentStaticMethodVoid<P1, P2, P3, P4, P5, P6, P7, P8, P9>(this, Workspace);
         }
 
         public override void Load(string instance, string[] paramStrs)
         {
-            Debug.Check(paramStrs.Length == 9);
+            Debugs.Check(paramStrs.Length == 9);
 
             _instance = instance;
             _p1 = AgentMeta.ParseProperty<P1>(paramStrs[0]);
@@ -6174,15 +6191,15 @@ namespace behaviac
 
         public override void Run(Agent self)
         {
-            Debug.Check(_p1 != null);
-            Debug.Check(_p2 != null);
-            Debug.Check(_p3 != null);
-            Debug.Check(_p4 != null);
-            Debug.Check(_p5 != null);
-            Debug.Check(_p6 != null);
-            Debug.Check(_p7 != null);
-            Debug.Check(_p8 != null);
-            Debug.Check(_p9 != null);
+            Debugs.Check(_p1 != null);
+            Debugs.Check(_p2 != null);
+            Debugs.Check(_p3 != null);
+            Debugs.Check(_p4 != null);
+            Debugs.Check(_p5 != null);
+            Debugs.Check(_p6 != null);
+            Debugs.Check(_p7 != null);
+            Debugs.Check(_p8 != null);
+            Debugs.Check(_p9 != null);
 
             _fp(((CInstanceMember<P1>)_p1).GetValue(self),
                 ((CInstanceMember<P2>)_p2).GetValue(self),
@@ -6242,13 +6259,13 @@ namespace behaviac
         IInstanceMember _p9;
         IInstanceMember _p10;
 
-        public CAgentStaticMethodVoid(FunctionPointer f)
+        public CAgentStaticMethodVoid(FunctionPointer f, Workspace workspace) : base(workspace)
         {
             _fp = f;
         }
 
-        public CAgentStaticMethodVoid(CAgentStaticMethodVoid<P1, P2, P3, P4, P5, P6, P7, P8, P9, P10> rhs)
-        : base(rhs)
+        public CAgentStaticMethodVoid(CAgentStaticMethodVoid<P1, P2, P3, P4, P5, P6, P7, P8, P9, P10> rhs, Workspace workspace)
+        : base(workspace, rhs)
         {
             _fp = rhs._fp;
             _p1 = rhs._p1;
@@ -6265,12 +6282,12 @@ namespace behaviac
 
         public override IMethod Clone()
         {
-            return new CAgentStaticMethodVoid<P1, P2, P3, P4, P5, P6, P7, P8, P9, P10>(this);
+            return new CAgentStaticMethodVoid<P1, P2, P3, P4, P5, P6, P7, P8, P9, P10>(this, Workspace);
         }
 
         public override void Load(string instance, string[] paramStrs)
         {
-            Debug.Check(paramStrs.Length == 10);
+            Debugs.Check(paramStrs.Length == 10);
 
             _instance = instance;
             _p1 = AgentMeta.ParseProperty<P1>(paramStrs[0]);
@@ -6287,16 +6304,16 @@ namespace behaviac
 
         public override void Run(Agent self)
         {
-            Debug.Check(_p1 != null);
-            Debug.Check(_p2 != null);
-            Debug.Check(_p3 != null);
-            Debug.Check(_p4 != null);
-            Debug.Check(_p5 != null);
-            Debug.Check(_p6 != null);
-            Debug.Check(_p7 != null);
-            Debug.Check(_p8 != null);
-            Debug.Check(_p9 != null);
-            Debug.Check(_p10 != null);
+            Debugs.Check(_p1 != null);
+            Debugs.Check(_p2 != null);
+            Debugs.Check(_p3 != null);
+            Debugs.Check(_p4 != null);
+            Debugs.Check(_p5 != null);
+            Debugs.Check(_p6 != null);
+            Debugs.Check(_p7 != null);
+            Debugs.Check(_p8 != null);
+            Debugs.Check(_p9 != null);
+            Debugs.Check(_p10 != null);
 
             _fp(((CInstanceMember<P1>)_p1).GetValue(self),
                 ((CInstanceMember<P2>)_p2).GetValue(self),
@@ -6361,13 +6378,13 @@ namespace behaviac
         IInstanceMember _p10;
         IInstanceMember _p11;
 
-        public CAgentStaticMethodVoid(FunctionPointer f)
+        public CAgentStaticMethodVoid(FunctionPointer f, Workspace workspace) : base(workspace)
         {
             _fp = f;
         }
 
-        public CAgentStaticMethodVoid(CAgentStaticMethodVoid<P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11> rhs)
-        : base(rhs)
+        public CAgentStaticMethodVoid(CAgentStaticMethodVoid<P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11> rhs, Workspace workspace)
+        : base(workspace, rhs)
         {
             _fp = rhs._fp;
             _p1 = rhs._p1;
@@ -6385,12 +6402,12 @@ namespace behaviac
 
         public override IMethod Clone()
         {
-            return new CAgentStaticMethodVoid<P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11>(this);
+            return new CAgentStaticMethodVoid<P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11>(this, Workspace);
         }
 
         public override void Load(string instance, string[] paramStrs)
         {
-            Debug.Check(paramStrs.Length == 11);
+            Debugs.Check(paramStrs.Length == 11);
 
             _instance = instance;
             _p1 = AgentMeta.ParseProperty<P1>(paramStrs[0]);
@@ -6408,17 +6425,17 @@ namespace behaviac
 
         public override void Run(Agent self)
         {
-            Debug.Check(_p1 != null);
-            Debug.Check(_p2 != null);
-            Debug.Check(_p3 != null);
-            Debug.Check(_p4 != null);
-            Debug.Check(_p5 != null);
-            Debug.Check(_p6 != null);
-            Debug.Check(_p7 != null);
-            Debug.Check(_p8 != null);
-            Debug.Check(_p9 != null);
-            Debug.Check(_p10 != null);
-            Debug.Check(_p11 != null);
+            Debugs.Check(_p1 != null);
+            Debugs.Check(_p2 != null);
+            Debugs.Check(_p3 != null);
+            Debugs.Check(_p4 != null);
+            Debugs.Check(_p5 != null);
+            Debugs.Check(_p6 != null);
+            Debugs.Check(_p7 != null);
+            Debugs.Check(_p8 != null);
+            Debugs.Check(_p9 != null);
+            Debugs.Check(_p10 != null);
+            Debugs.Check(_p11 != null);
 
             _fp(((CInstanceMember<P1>)_p1).GetValue(self),
                 ((CInstanceMember<P2>)_p2).GetValue(self),
@@ -6488,13 +6505,13 @@ namespace behaviac
         IInstanceMember _p11;
         IInstanceMember _p12;
 
-        public CAgentStaticMethodVoid(FunctionPointer f)
+        public CAgentStaticMethodVoid(FunctionPointer f, Workspace workspace) : base(workspace)
         {
             _fp = f;
         }
 
-        public CAgentStaticMethodVoid(CAgentStaticMethodVoid<P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12> rhs)
-        : base(rhs)
+        public CAgentStaticMethodVoid(CAgentStaticMethodVoid<P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12> rhs, Workspace workspace)
+        : base(workspace, rhs)
         {
             _fp = rhs._fp;
             _p1 = rhs._p1;
@@ -6513,12 +6530,12 @@ namespace behaviac
 
         public override IMethod Clone()
         {
-            return new CAgentStaticMethodVoid<P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12>(this);
+            return new CAgentStaticMethodVoid<P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12>(this, Workspace);
         }
 
         public override void Load(string instance, string[] paramStrs)
         {
-            Debug.Check(paramStrs.Length == 12);
+            Debugs.Check(paramStrs.Length == 12);
 
             _instance = instance;
             _p1 = AgentMeta.ParseProperty<P1>(paramStrs[0]);
@@ -6537,18 +6554,18 @@ namespace behaviac
 
         public override void Run(Agent self)
         {
-            Debug.Check(_p1 != null);
-            Debug.Check(_p2 != null);
-            Debug.Check(_p3 != null);
-            Debug.Check(_p4 != null);
-            Debug.Check(_p5 != null);
-            Debug.Check(_p6 != null);
-            Debug.Check(_p7 != null);
-            Debug.Check(_p8 != null);
-            Debug.Check(_p9 != null);
-            Debug.Check(_p10 != null);
-            Debug.Check(_p11 != null);
-            Debug.Check(_p12 != null);
+            Debugs.Check(_p1 != null);
+            Debugs.Check(_p2 != null);
+            Debugs.Check(_p3 != null);
+            Debugs.Check(_p4 != null);
+            Debugs.Check(_p5 != null);
+            Debugs.Check(_p6 != null);
+            Debugs.Check(_p7 != null);
+            Debugs.Check(_p8 != null);
+            Debugs.Check(_p9 != null);
+            Debugs.Check(_p10 != null);
+            Debugs.Check(_p11 != null);
+            Debugs.Check(_p12 != null);
 
             _fp(((CInstanceMember<P1>)_p1).GetValue(self),
                 ((CInstanceMember<P2>)_p2).GetValue(self),
@@ -6623,13 +6640,13 @@ namespace behaviac
         IInstanceMember _p12;
         IInstanceMember _p13;
 
-        public CAgentStaticMethodVoid(FunctionPointer f)
+        public CAgentStaticMethodVoid(FunctionPointer f, Workspace workspace) : base(workspace)
         {
             _fp = f;
         }
 
-        public CAgentStaticMethodVoid(CAgentStaticMethodVoid<P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12, P13> rhs)
-        : base(rhs)
+        public CAgentStaticMethodVoid(CAgentStaticMethodVoid<P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12, P13> rhs, Workspace workspace)
+        : base(workspace, rhs)
         {
             _fp = rhs._fp;
             _p1 = rhs._p1;
@@ -6649,12 +6666,12 @@ namespace behaviac
 
         public override IMethod Clone()
         {
-            return new CAgentStaticMethodVoid<P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12, P13>(this);
+            return new CAgentStaticMethodVoid<P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12, P13>(this, Workspace);
         }
 
         public override void Load(string instance, string[] paramStrs)
         {
-            Debug.Check(paramStrs.Length == 13);
+            Debugs.Check(paramStrs.Length == 13);
 
             _instance = instance;
             _p1 = AgentMeta.ParseProperty<P1>(paramStrs[0]);
@@ -6674,19 +6691,19 @@ namespace behaviac
 
         public override void Run(Agent self)
         {
-            Debug.Check(_p1 != null);
-            Debug.Check(_p2 != null);
-            Debug.Check(_p3 != null);
-            Debug.Check(_p4 != null);
-            Debug.Check(_p5 != null);
-            Debug.Check(_p6 != null);
-            Debug.Check(_p7 != null);
-            Debug.Check(_p8 != null);
-            Debug.Check(_p9 != null);
-            Debug.Check(_p10 != null);
-            Debug.Check(_p11 != null);
-            Debug.Check(_p12 != null);
-            Debug.Check(_p13 != null);
+            Debugs.Check(_p1 != null);
+            Debugs.Check(_p2 != null);
+            Debugs.Check(_p3 != null);
+            Debugs.Check(_p4 != null);
+            Debugs.Check(_p5 != null);
+            Debugs.Check(_p6 != null);
+            Debugs.Check(_p7 != null);
+            Debugs.Check(_p8 != null);
+            Debugs.Check(_p9 != null);
+            Debugs.Check(_p10 != null);
+            Debugs.Check(_p11 != null);
+            Debugs.Check(_p12 != null);
+            Debugs.Check(_p13 != null);
 
             _fp(((CInstanceMember<P1>)_p1).GetValue(self),
                 ((CInstanceMember<P2>)_p2).GetValue(self),
@@ -6766,13 +6783,13 @@ namespace behaviac
         IInstanceMember _p13;
         IInstanceMember _p14;
 
-        public CAgentStaticMethodVoid(FunctionPointer f)
+        public CAgentStaticMethodVoid(FunctionPointer f, Workspace workspace) : base(workspace)
         {
             _fp = f;
         }
 
-        public CAgentStaticMethodVoid(CAgentStaticMethodVoid<P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12, P13, P14> rhs)
-        : base(rhs)
+        public CAgentStaticMethodVoid(CAgentStaticMethodVoid<P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12, P13, P14> rhs, Workspace workspace)
+        : base(workspace, rhs)
         {
             _fp = rhs._fp;
             _p1 = rhs._p1;
@@ -6793,12 +6810,12 @@ namespace behaviac
 
         public override IMethod Clone()
         {
-            return new CAgentStaticMethodVoid<P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12, P13, P14>(this);
+            return new CAgentStaticMethodVoid<P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12, P13, P14>(this, Workspace);
         }
 
         public override void Load(string instance, string[] paramStrs)
         {
-            Debug.Check(paramStrs.Length == 14);
+            Debugs.Check(paramStrs.Length == 14);
 
             _instance = instance;
             _p1 = AgentMeta.ParseProperty<P1>(paramStrs[0]);
@@ -6819,20 +6836,20 @@ namespace behaviac
 
         public override void Run(Agent self)
         {
-            Debug.Check(_p1 != null);
-            Debug.Check(_p2 != null);
-            Debug.Check(_p3 != null);
-            Debug.Check(_p4 != null);
-            Debug.Check(_p5 != null);
-            Debug.Check(_p6 != null);
-            Debug.Check(_p7 != null);
-            Debug.Check(_p8 != null);
-            Debug.Check(_p9 != null);
-            Debug.Check(_p10 != null);
-            Debug.Check(_p11 != null);
-            Debug.Check(_p12 != null);
-            Debug.Check(_p13 != null);
-            Debug.Check(_p14 != null);
+            Debugs.Check(_p1 != null);
+            Debugs.Check(_p2 != null);
+            Debugs.Check(_p3 != null);
+            Debugs.Check(_p4 != null);
+            Debugs.Check(_p5 != null);
+            Debugs.Check(_p6 != null);
+            Debugs.Check(_p7 != null);
+            Debugs.Check(_p8 != null);
+            Debugs.Check(_p9 != null);
+            Debugs.Check(_p10 != null);
+            Debugs.Check(_p11 != null);
+            Debugs.Check(_p12 != null);
+            Debugs.Check(_p13 != null);
+            Debugs.Check(_p14 != null);
 
             _fp(((CInstanceMember<P1>)_p1).GetValue(self),
                 ((CInstanceMember<P2>)_p2).GetValue(self),

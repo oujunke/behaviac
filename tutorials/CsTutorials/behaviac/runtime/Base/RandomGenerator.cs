@@ -11,53 +11,25 @@
 // See the License for the specific language governing permissions and limitations under the License.
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+using System;
+
 namespace behaviac
 {
     internal class RandomGenerator
     {
-        private static RandomGenerator Instance = null;
-
-        public static RandomGenerator GetInstance()
-        {
-            if (Instance == null)
-            {
-                Instance = new RandomGenerator(0);
-            }
-
-            return RandomGenerator.Instance;
-        }
-
+        private static Random random = new Random();
         //[0, 1)
-        public float GetRandom()
+        public static float GetRandom()
         {
-            m_seed = 214013 * m_seed + 2531011;
-            float r = (m_seed * (1.0f / 4294967296.0f));
-
-            Debug.Check(r >= 0.0f && r < 1.0f);
-            return r;
+            return (float)random.NextDouble();
         }
 
         //[low, high)
-        public float InRange(float low, float high)
+        public static float InRange(float low, float high)
         {
-            float r = this.GetRandom();
+            float r = GetRandom();
             float ret = r * (high - low) + low;
             return ret;
         }
-
-        public void SetSeed(uint seed)
-        {
-            this.m_seed = seed;
-        }
-
-        protected RandomGenerator(uint seed)
-        {
-            m_seed = seed;
-        }
-
-        //~RandomGenerator()
-        //{ }
-
-        private uint m_seed;
     };
 }

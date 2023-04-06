@@ -21,6 +21,7 @@ using UnityEngine;
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 
 #if BEHAVIAC_USE_SYSTEM_XML
@@ -52,24 +53,44 @@ namespace behaviac
         private Dictionary<uint, ICustomizedProperty> _customizedStaticProperties = new Dictionary<uint, ICustomizedProperty>();
         private Dictionary<uint, IInstantiatedVariable> _customizedStaticVars = null;
         private Dictionary<uint, IMethod> _methods = new Dictionary<uint, IMethod>();
-
-        private static Dictionary<uint, AgentMeta> _agentMetas = new Dictionary<uint, AgentMeta>();
-        private static Dictionary<string, TypeCreator> _Creators = new Dictionary<string, TypeCreator>();
-        private static Dictionary<string, Type> _typesRegistered = new Dictionary<string, Type>();
-
-        private static uint _totalSignature = 0;
-        public static uint TotalSignature
+        internal class MetaGlobal
         {
-            set
+            internal static Dictionary<uint, AgentMeta> _agentMetas = new Dictionary<uint, AgentMeta>();
+            internal static Dictionary<string, TypeCreator> _Creators = new Dictionary<string, TypeCreator>();
+            internal static Dictionary<string, Type> _typesRegistered = new Dictionary<string, Type>();
+
+            internal static uint _totalSignature = 0;
+            public static uint TotalSignature
             {
-                _totalSignature = value;
+                set
+                {
+                    _totalSignature = value;
+                }
+
+                get
+                {
+                    return _totalSignature;
+                }
+            }
+            public static Dictionary<uint, AgentMeta> _AgentMetas_
+            {
+                get
+                {
+                    return _agentMetas;
+                }
             }
 
-            get
+            private static BehaviorLoader _behaviorLoader;
+            public static BehaviorLoader _BehaviorLoader_
             {
-                return _totalSignature;
+                set
+                {
+                    _behaviorLoader = value;
+                }
             }
+
         }
+
 
         private uint _signature = 0;
         public uint Signature
@@ -80,25 +101,14 @@ namespace behaviac
             }
         }
 
-        public static Dictionary<uint, AgentMeta> _AgentMetas_
+        public Workspace Workspace { get; private set; }
+        public Config Configs { set; get; }
+        public Debug Debugs { set; get; }
+        public AgentMeta(Workspace workspace,uint signature = 0)
         {
-            get
-            {
-                return _agentMetas;
-            }
-        }
-
-        private static BehaviorLoader _behaviorLoader;
-        public static BehaviorLoader _BehaviorLoader_
-        {
-            set
-            {
-                _behaviorLoader = value;
-            }
-        }
-
-        public AgentMeta(uint signature = 0)
-        {
+            Workspace = workspace;
+            Configs = workspace.Configs;
+            Debugs = workspace.Debugs;
             _signature = signature;
         }
 
@@ -278,7 +288,7 @@ namespace behaviac
             return null;
         }
 
-        class TypeCreator
+        internal class TypeCreator
         {
             public delegate ICustomizedProperty PropertyCreator(uint propId, string propName, string valueStr);
             public delegate ICustomizedProperty ArrayItemPropertyCreator(uint parentId, string parentName);
@@ -353,7 +363,7 @@ namespace behaviac
                 return creator.CreateProperty(propId, propName, valueStr);
             }
 
-            Debug.Check(false);
+            Debugs.Check(false);
             return null;
         }
 
@@ -366,7 +376,7 @@ namespace behaviac
                 return creator.CreateArrayItemProperty(parentId, parentName);
             }
 
-            Debug.Check(false);
+            Debugs.Check(false);
             return null;
         }
 
@@ -379,7 +389,7 @@ namespace behaviac
                 return creator.CreateInstanceProperty(instance, indexMember, varId);
             }
 
-            Debug.Check(false);
+            Debugs.Check(false);
             return null;
         }
 
@@ -392,7 +402,7 @@ namespace behaviac
                 return creator.CreateInstanceConst(typeName, valueStr);
             }
 
-            Debug.Check(false);
+            Debugs.Check(false);
             return null;
         }
 
@@ -405,7 +415,7 @@ namespace behaviac
                 return creator.CreateCustomizedProperty(id, name, valueStr);
             }
 
-            Debug.Check(false);
+            Debugs.Check(false);
             return null;
         }
 
@@ -418,7 +428,7 @@ namespace behaviac
                 return creator.CreateCustomizedArrayItemProperty(id, name);
             }
 
-            Debug.Check(false);
+            Debugs.Check(false);
             return null;
         }
 
@@ -426,7 +436,7 @@ namespace behaviac
         {
             bool bArrayType = false;
             Type type = Utils.GetTypeFromName(typeName, ref bArrayType);
-            Debug.Check(type != null);
+            Debugs.Check(type != null);
 
             if (bArrayType || !Utils.IsRefNullType(type))
             {
@@ -454,7 +464,7 @@ namespace behaviac
 
                 string propertyName = fullName.Substring(pClassBegin + 1);
                 int variableEnd = propertyName.LastIndexOf(':');
-                Debug.Check(variableEnd != -1);
+                Debugs.Check(variableEnd != -1);
 
                 agentType = propertyName.Substring(0, variableEnd - 1).Replace("::", ".");
                 string variableName = propertyName.Substring(variableEnd + 1);
@@ -640,7 +650,7 @@ namespace behaviac
             }
             catch (System.Exception e)
             {
-                Debug.Check(false, e.Message);
+                Debugs.Check(false, e.Message);
             }
 
             return null;
@@ -665,7 +675,7 @@ namespace behaviac
                 if (tokens[0] == "const")
                 {
                     // const Int32 0
-                    Debug.Check(tokens.Count == 3);
+                    Debugs.Check(tokens.Count == 3);
 
                     const int kConstLength = 5;
                     string strRemaining = value.Substring(kConstLength + 1);
@@ -687,7 +697,7 @@ namespace behaviac
                     {
                         // static float Self.AgentNodeTest::s_float_type_0
                         // static float Self.AgentNodeTest::s_float_type_0[int Self.AgentNodeTest::par_int_type_2]
-                        Debug.Check(tokens.Count == 3 || tokens.Count == 4);
+                        Debugs.Check(tokens.Count == 3 || tokens.Count == 4);
 
                         typeName = tokens[1];
                         propStr = tokens[2];
@@ -701,7 +711,7 @@ namespace behaviac
                     {
                         // float Self.AgentNodeTest::par_float_type_1
                         // float Self.AgentNodeTest::par_float_type_1[int Self.AgentNodeTest::par_int_type_2]
-                        Debug.Check(tokens.Count == 2 || tokens.Count == 3);
+                        Debugs.Check(tokens.Count == 2 || tokens.Count == 3);
 
                         typeName = tokens[0];
                         propStr = tokens[1];
@@ -725,7 +735,7 @@ namespace behaviac
                     propStr = propStr.Replace("::", ".");
 
                     string[] props = propStr.Split('.');
-                    Debug.Check(props.Length >= 3);
+                    Debugs.Check(props.Length >= 3);
 
                     string instantceName = props[0];
                     string propName = props[props.Length - 1];
@@ -738,7 +748,7 @@ namespace behaviac
 
                     uint classId = Utils.MakeVariableId(className);
                     AgentMeta meta = AgentMeta.GetMeta(classId);
-                    Debug.Check(meta != null, "please add the exported 'AgentProperties.cs' and 'customizedtypes.cs' into the project!");
+                    Debugs.Check(meta != null, "please add the exported 'AgentProperties.cs' and 'customizedtypes.cs' into the project!");
 
                     uint propId = Utils.MakeVariableId(propName + arrayItem);
 
@@ -759,7 +769,7 @@ namespace behaviac
             }
             catch (System.Exception e)
             {
-                Debug.Check(false, e.Message);
+                Debugs.Check(false, e.Message);
             }
 
             return null;
@@ -781,7 +791,7 @@ namespace behaviac
             uint methodId = Utils.MakeVariableId(methodName);
 
             AgentMeta meta = AgentMeta.GetMeta(agentClassId);
-            Debug.Check(meta != null);
+            Debugs.Check(meta != null);
 
             if (meta != null)
             {
@@ -789,18 +799,18 @@ namespace behaviac
 
                 if (method == null)
                 {
-                    Debug.Check(false, string.Format("Method of {0}::{1} is not registered!\n", agentClassName, methodName));
+                    Debugs.Check(false, string.Format("Method of {0}::{1} is not registered!\n", agentClassName, methodName));
                 }
                 else
                 {
                     method = (IMethod)(method.Clone());
 
                     string paramsStr = valueStr.Substring(pBeginP);
-                    Debug.Check(paramsStr[0] == '(');
+                    Debugs.Check(paramsStr[0] == '(');
 
                     List<string> paramsTokens = new List<string>();
                     int len = paramsStr.Length;
-                    Debug.Check(paramsStr[len - 1] == ')');
+                    Debugs.Check(paramsStr[len - 1] == ')');
 
                     string text = paramsStr.Substring(1, len - 2);
                     paramsTokens = ParseForParams(text);
@@ -824,20 +834,20 @@ namespace behaviac
         {
             //Self.test_ns::AgentActionTest::Action2(0)
             int pClassBegin = fullName.IndexOf('.');
-            Debug.Check(pClassBegin != -1);
+            Debugs.Check(pClassBegin != -1);
 
             agentIntanceName = fullName.Substring(0, pClassBegin);
 
             int pBeginAgentClass = pClassBegin + 1;
 
             int pBeginP = fullName.IndexOf('(', pBeginAgentClass);
-            Debug.Check(pBeginP != -1);
+            Debugs.Check(pBeginP != -1);
 
             //test_ns::AgentActionTest::Action2(0)
             int pBeginMethod = fullName.LastIndexOf(':', pBeginP);
-            Debug.Check(pBeginMethod != -1);
+            Debugs.Check(pBeginMethod != -1);
             //skip '::'
-            Debug.Check(fullName[pBeginMethod] == ':' && fullName[pBeginMethod - 1] == ':');
+            Debugs.Check(fullName[pBeginMethod] == ':' && fullName[pBeginMethod - 1] == ':');
             pBeginMethod += 1;
 
             int pos1 = pBeginP - pBeginMethod;
@@ -873,7 +883,7 @@ namespace behaviac
                     {
                         //closing quote
                         quoteDepth -= 2;
-                        Debug.Check(quoteDepth >= 0);
+                        Debugs.Check(quoteDepth >= 0);
                     }
                 }
                 else if (quoteDepth == 0 && tsrc[index] == ',')
@@ -948,7 +958,7 @@ namespace behaviac
                 int count = (fileBuffers != null) ? fileBuffers.Count : 0;
                 string errorInfo = string.Format("Load Meta Error: there are {0} meta fiels in {1}", count, metaFolder);
 
-                Debug.LogWarning(errorInfo + ex.Message + ex.StackTrace);
+                Debugs.LogWarning(errorInfo + ex.Message + ex.StackTrace);
             }
         }
 
@@ -971,8 +981,8 @@ namespace behaviac
                 }
 
                 string errorInfo = string.Format("The type of '{0}' has been modified to {1}, which would bring the unpredictable consequences.", propName, typeName);
-                Debug.LogWarning(errorInfo);
-                Debug.Check(false, errorInfo);
+                Debugs.LogWarning(errorInfo);
+                Debugs.Check(false, errorInfo);
             }
 
             if (isStatic)
@@ -1011,8 +1021,8 @@ namespace behaviac
             {
                 string errorInfo = "[meta] The types/AgentProperties.cs should be exported from the behaviac designer, and then integrated into your project!\n";
 
-                Debug.LogWarning(errorInfo);
-                Debug.Check(false, errorInfo);
+                Debugs.LogWarning(errorInfo);
+                Debugs.Check(false, errorInfo);
 
                 return false;
             }
@@ -1020,11 +1030,11 @@ namespace behaviac
             return true;
         }
 
-        private static bool load_xml(byte[] pBuffer)
+        private static bool load_xml(byte[] pBuffer, Workspace workspace)
         {
             try
             {
-                Debug.Check(pBuffer != null);
+                workspace.Debugs.Check(pBuffer != null);
                 string xml = System.Text.Encoding.UTF8.GetString(pBuffer);
 
                 SecurityParser xmlDoc = new SecurityParser();
@@ -1038,7 +1048,7 @@ namespace behaviac
                 }
 
                 string versionStr = rootNode.Attribute("version");
-                Debug.Check(!string.IsNullOrEmpty(versionStr));
+                workspace.Debugs.Check(!string.IsNullOrEmpty(versionStr));
 
                 string signatureStr = rootNode.Attribute("signature");
                 checkSignature(signatureStr);
@@ -1095,18 +1105,18 @@ namespace behaviac
             }
             catch (Exception e)
             {
-                Debug.Check(false, e.Message + e.StackTrace);
+                workspace.Debugs.Check(false, e.Message + e.StackTrace);
             }
 
-            Debug.Check(false);
+            workspace.Debugs.Check(false);
             return false;
         }
 
-        private static bool load_bson(byte[] pBuffer)
+        private static bool load_bson(byte[] pBuffer, Workspace workspace)
         {
             try
             {
-                BsonDeserizer d = new BsonDeserizer();
+                BsonDeserizer d = new BsonDeserizer(workspace);
 
                 if (d.Init(pBuffer))
                 {
@@ -1115,7 +1125,7 @@ namespace behaviac
                     if (type == BsonDeserizer.BsonTypes.BT_AgentsElement)
                     {
                         bool bOk = d.OpenDocument();
-                        Debug.Check(bOk);
+                        workspace.Debugs.Check(bOk);
 
                         string verStr = d.ReadString();
                         int version = int.Parse(verStr);
@@ -1136,7 +1146,7 @@ namespace behaviac
                                 type = d.ReadType();
                             }
 
-                            Debug.Check(type == BsonDeserizer.BsonTypes.BT_None);
+                            workspace.Debugs.Check(type == BsonDeserizer.BsonTypes.BT_None);
                         }
 
                         d.CloseDocument(false);
@@ -1146,10 +1156,10 @@ namespace behaviac
             }
             catch (Exception e)
             {
-                Debug.Check(false, e.Message);
+                workspace.Debugs.Check(false, e.Message);
             }
 
-            Debug.Check(false);
+            workspace.Debugs.Check(false);
             return false;
         }
 
@@ -1161,7 +1171,7 @@ namespace behaviac
 
                 string agentType = d.ReadString().Replace("::", ".");
                 string pBaseName = d.ReadString();
-                Debug.Check(!string.IsNullOrEmpty(pBaseName));
+                d.Debugs.Check(!string.IsNullOrEmpty(pBaseName));
 
                 uint classId = Utils.MakeVariableId(agentType);
                 AgentMeta meta = AgentMeta.GetMeta(classId);
@@ -1221,7 +1231,7 @@ namespace behaviac
                             }
                             else
                             {
-                                Debug.Check(false);
+                                d.Debugs.Check(false);
                             }
 
                             type = d.ReadType();
@@ -1235,7 +1245,7 @@ namespace behaviac
                     }
                     else
                     {
-                        Debug.Check(type == BsonDeserizer.BsonTypes.BT_None);
+                        d.Debugs.Check(type == BsonDeserizer.BsonTypes.BT_None);
                     }
 
                     type = d.ReadType();
@@ -1246,7 +1256,7 @@ namespace behaviac
             }
             catch (Exception ex)
             {
-                Debug.Check(false, ex.Message);
+                d.Debugs.Check(false, ex.Message);
             }
 
             return false;
@@ -1265,7 +1275,7 @@ namespace behaviac
                 /*string methodName = */
                 d.ReadString();
                 string agentStr = d.ReadString();
-                Debug.Check(!string.IsNullOrEmpty(agentStr));
+                d.Debugs.Check(!string.IsNullOrEmpty(agentStr));
 
                 type = d.ReadType();
 
@@ -1274,7 +1284,7 @@ namespace behaviac
                     d.OpenDocument();
 
                     string paramName = d.ReadString();
-                    Debug.Check(!string.IsNullOrEmpty(paramName));
+                    d.Debugs.Check(!string.IsNullOrEmpty(paramName));
                     /*string paramType = */
                     d.ReadString();
 

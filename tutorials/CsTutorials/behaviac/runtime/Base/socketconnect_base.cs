@@ -20,6 +20,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Net.Sockets;
 using System.Runtime.InteropServices;
 
@@ -104,10 +105,10 @@ namespace behaviac
             return (0xFF & i) << 24 | (0xFF00 & i) << 8 | (0xFF0000 & i) >> 8 | (0xFF000000 & i) >> 24;
         }
 
-        public static ulong ByteSwap64(ulong i)
+        public static ulong ByteSwap64(ulong i,Workspace workspace)
         {
             //return (0xFF & i) << 24 | (0xFF00 & i) << 8 | (0xFF0000 & i) >> 8 | (0xFF000000 & i) >> 24;
-            Debug.Check(false, "unimplemented");
+            workspace.Debugs.Check(false, "unimplemented");
             return i;
         }
 
@@ -145,6 +146,7 @@ namespace behaviac
     [StructLayout(LayoutKind.Sequential)]
     public class Packet
     {
+
         public Packet()
         {
         }
@@ -166,7 +168,7 @@ namespace behaviac
 #endif
         }
 
-        public int CalcPacketSize()
+        public int CalcPacketSize(Workspace workspace)
         {
             int packetSize = (0);
 
@@ -183,26 +185,26 @@ namespace behaviac
             }
             else
             {
-                Debug.Check(false, "Unknown command");
+                workspace.Debugs.Check(false, "Unknown command");
             }
 
             packetSize += Marshal.SizeOf(command);
             return packetSize;
         }
 
-        public void SetData(string text)
+        public void SetData(string text,Workspace workspace)
         {
             byte[] ascII = System.Text.Encoding.ASCII.GetBytes(text);
 
-            Debug.Check(ascII.Length < SocketConnection.kMaxPacketDataSize);
+            workspace.Debugs.Check(ascII.Length < SocketConnection.kMaxPacketDataSize);
             this.data = new byte[ascII.Length];
 
             System.Buffer.BlockCopy(ascII, 0, this.data, 0, ascII.Length);
         }
 
-        public byte[] GetData()
+        public byte[] GetData(Workspace workspace)
         {
-            int len = this.PrepareToSend();
+            int len = this.PrepareToSend(workspace);
             byte[] da = new byte[len];
 
             da[0] = messageSize;
@@ -213,10 +215,10 @@ namespace behaviac
             return da;
         }
 
-        public int PrepareToSend()
+        public int PrepareToSend(Workspace workspace)
         {
-            int packetSize = CalcPacketSize();
-            Debug.Check(packetSize < SocketConnection.kMaxPacketSize);
+            int packetSize = CalcPacketSize(workspace);
+            workspace.Debugs.Check(packetSize < SocketConnection.kMaxPacketSize);
             messageSize = (byte)packetSize;
             return messageSize + 1;
         }
@@ -332,7 +334,7 @@ namespace behaviac
         private static uint gs_packetsSent = 0;
         private static uint gs_packetsReceived = 0;
 
-        public static bool Write(Socket h, byte[] buffer, ref int outBytesWritten)
+        public static bool Write(Socket h, byte[] buffer, ref int outBytesWritten,Workspace workspace)
         {
             int bytes = buffer != null ? buffer.Length : 0;
 
@@ -362,7 +364,7 @@ namespace behaviac
             }
             catch (Exception ex)
             {
-                Debug.Log(ex.Message);
+                workspace.Debugs.Log(ex.Message);
             }
 
             return outBytesWritten != 0;
@@ -431,8 +433,14 @@ namespace behaviac
 
     public class PacketCollection
     {
-        public PacketCollection()
+        public Workspace Workspace { get; private set; }
+        public Config Configs { set; get; }
+        public Debug Debugs { set; get; }
+        public PacketCollection(Workspace workspace)
         {
+            Workspace = workspace;
+            Configs = workspace.Configs;
+            Debugs = workspace.Debugs;
             m_packets = null;
             m_packetsEnd = (0);
             m_packetsCapacity = (0);
@@ -445,7 +453,7 @@ namespace behaviac
 
         public void Init(int capacity)
         {
-            Debug.Check(m_packets == null);
+            Debugs.Check(m_packets == null);
             m_packets = new Packet[capacity];
             m_packetsEnd = 0;
             m_packetsCapacity = capacity;
@@ -472,7 +480,7 @@ namespace behaviac
         {
             if (m_packetsEnd == m_packetsCapacity)
             {
-                behaviac.Debug.LogWarning("buffer overflow...\n");
+                Debugs.LogWarning("buffer overflow...\n");
                 return false;
             }
 
@@ -538,9 +546,12 @@ namespace behaviac
     public class PacketBuffer
     {
         private ConnectorInterface _conector;
-
+        public Debug Debugs { set; get; }
+        public Workspace Workspace { set; get; }
         public PacketBuffer(ConnectorInterface c)
         {
+            Debugs = c.Debugs;
+            Workspace = c.Workspace;
             _conector = c;
             m_free = true;
         }
@@ -630,14 +641,14 @@ namespace behaviac
                 while (packet != null)
                 {
                     int bytesWritten = (0);
-                    bool success = SocketBase.Write(h, packet.GetData(), ref bytesWritten);
+                    bool success = SocketBase.Write(h, packet.GetData(Workspace), ref bytesWritten, Workspace);
 
                     // Failed to send data. Most probably sending too much, break and
                     // hope for the best next time
                     if (!success)
                     {
-                        Debug.Check(false);
-                        behaviac.Debug.LogWarning("A packet is not correctly sent...\n");
+                        Debugs.Check(false);
+                        Debugs.LogWarning("A packet is not correctly sent...\n");
                         break;
                     }
 
@@ -833,22 +844,27 @@ namespace behaviac
     public abstract class ConnectorInterface
     {
         private const int kMaxTextLength = 228;
-
-        public ConnectorInterface()
+        public Workspace Workspace { get; private set; }
+        public Config Configs { set; get; }
+        public Debug Debugs { set; get; }
+        public ConnectorInterface(Workspace workspace)
         {
-            Debug.Check(Marshal.SizeOf(typeof(Text)) < SocketConnection.kMaxPacketDataSize);
-            Debug.Check(Marshal.SizeOf(typeof(Packet)) < SocketConnection.kMaxPacketSize);
+            Workspace = workspace;
+            Configs = workspace.Configs;
+            Debugs = workspace.Debugs;
+            Debugs.Check(Marshal.SizeOf(typeof(Text)) < SocketConnection.kMaxPacketDataSize);
+            Debugs.Check(Marshal.SizeOf(typeof(Packet)) < SocketConnection.kMaxPacketSize);
 
 #if !USING_BEHAVIAC_SEQUENTIAL
-            Debug.Check(sizeof(Packet) == sizeof(AllocInfo) + 2);
+            Debugs.Check(sizeof(Packet) == sizeof(AllocInfo) + 2);
 #endif
 
 #if USING_BEHAVIAC_SEQUENTIAL
             //Debug.Check(sizeof(Packet) == sizeof(Text) + 2 + 4);
-            Debug.Check((int)Marshal.OffsetOf(typeof(Packet), "seq") == Marshal.SizeOf(typeof(Packet)) - Marshal.SizeOf(typeof(Atomic32)));	// seq must be the last member
+            Debugs.Check((int)Marshal.OffsetOf(typeof(Packet), "seq") == Marshal.SizeOf(typeof(Packet)) - Marshal.SizeOf(typeof(Atomic32)));	// seq must be the last member
 #endif
             // Local queue size must be power of two.
-            Debug.Check((SocketConnection.kLocalQueueSize & (SocketConnection.kLocalQueueSize - 1)) == 0);
+            Debugs.Check((SocketConnection.kLocalQueueSize & (SocketConnection.kLocalQueueSize - 1)) == 0);
 
             m_port = (0);
             m_writeSocket = null;
@@ -882,7 +898,7 @@ namespace behaviac
                 {
                     pP.Init((byte)CommandId.CMDID_TEXT, SocketConnection.GetNextSeq().Next());
 
-                    pP.SetData(text);
+                    pP.SetData(text, Workspace);
                 }
             }
         }
@@ -933,7 +949,7 @@ namespace behaviac
                 else
                 {
                     //Debug.Check(false);
-                    Debug.LogError("invalid bufferIndex");
+                    Debugs.LogError("invalid bufferIndex");
                 }
             }
         }
@@ -944,7 +960,7 @@ namespace behaviac
             int bufferIndex = (int)t_packetBufferIndex;
             //WHEN bReserve is false, it is unsafe to allocate memory as other threads might be allocating
             //you can avoid the following assert to malloc a block of memory in your thread at the very beginning
-            Debug.Check(bufferIndex > 0 || bReserve);
+            Debugs.Check(bufferIndex > 0 || bReserve);
 
             //bufferIndex initially is 0
             if (bufferIndex <= 0 && bReserve)
@@ -995,7 +1011,7 @@ namespace behaviac
                     Packet p = packets[i];
 
                     int bytesWritten = (0);
-                    SocketBase.Write(this.m_writeSocket, p.GetData(), ref bytesWritten);
+                    SocketBase.Write(this.m_writeSocket, p.GetData(Workspace), ref bytesWritten, Workspace);
 
                     if (this.m_writeSocket == null || !this.m_writeSocket.Connected || bytesWritten <= 0)
                     {
@@ -1085,7 +1101,7 @@ namespace behaviac
             {
                 this.ReserveThreadPacketBuffer();
                 int bufferIndex = t_packetBufferIndex;
-                Debug.Check(bufferIndex > 0);
+                Debugs.Check(bufferIndex > 0);
 
                 bool blockingSocket = true;
                 Socket serverSocket = null;
@@ -1113,7 +1129,7 @@ namespace behaviac
                 }
                 catch (Exception ex)
                 {
-                    Debug.LogError(ex.Message);
+                    Debugs.LogError(ex.Message);
                 }
 
                 while (m_terminating.Get() == 0)
@@ -1146,7 +1162,7 @@ namespace behaviac
                         }
                         catch (Exception ex)
                         {
-                            Debug.LogError(ex.Message);
+                            Debugs.LogError(ex.Message);
                         }
 
                         try
@@ -1165,7 +1181,7 @@ namespace behaviac
                         }
                         catch (Exception ex)
                         {
-                            Debug.LogError(ex.Message);
+                            Debugs.LogError(ex.Message);
                         }
 
                         try
@@ -1191,7 +1207,7 @@ namespace behaviac
                         }
                         catch (Exception ex)
                         {
-                            Debug.LogError(ex.Message + ex.StackTrace);
+                            Debugs.LogError(ex.Message + ex.StackTrace);
                         }
                     }
                 }//while (!m_terminating)
@@ -1202,7 +1218,7 @@ namespace behaviac
             }
             catch (Exception ex)
             {
-                Debug.LogError(ex.Message);
+                Debugs.LogError(ex.Message);
             }
 
             Log("behaviac: ThreadFunc exited. \n");
@@ -1252,7 +1268,7 @@ namespace behaviac
             {
                 Packet packet = new Packet(commandId, SocketConnection.GetNextSeq().Next());
 
-                packet.SetData(text);
+                packet.SetData(text, Workspace);
                 this.AddPacket(packet, true);
                 gs_packetsStats.texts++;
             }
@@ -1322,7 +1338,7 @@ namespace behaviac
                     else
                     {
                         Log("behaviac: Couldn't reserve packet buffer, too many active threads.\n");
-                        Debug.Check(false);
+                        Debugs.Check(false);
                     }
 
                     bufferIndex = retIndex;
@@ -1336,7 +1352,7 @@ namespace behaviac
 
         protected void Log(string msg)
         {
-            behaviac.Debug.Log(msg);
+            Debugs.Log(msg);
         }
 
         protected virtual void Clear()
@@ -1376,7 +1392,7 @@ namespace behaviac
             foreach (Packet p in this.m_packetPool)
             {
                 int bytesWritten = (0);
-                SocketBase.Write(m_writeSocket, p.GetData(), ref bytesWritten);
+                SocketBase.Write(m_writeSocket, p.GetData(Workspace), ref bytesWritten,Workspace);
                 packetsCount++;
             }
 
@@ -1421,7 +1437,7 @@ namespace behaviac
             m_port = ushort.MaxValue;
 
             m_packetPool = new CustomObjectPool(4096);
-            m_packetCollection = new PacketCollection();
+            m_packetCollection = new PacketCollection(Workspace);
             m_packetBuffers = new PacketBuffer[maxTracedThreads];
             m_maxTracedThreads = maxTracedThreads;
             m_packetCollection.Init(SocketConnection.kGlobalQueueSize);
@@ -1433,9 +1449,9 @@ namespace behaviac
             }
 
             {
-                behaviac.Debug.Log("behaviac: ConnectorInterface.Init Enter\n");
+                Debugs.Log("behaviac: ConnectorInterface.Init Enter\n");
                 string portMsg = string.Format("behaviac: listing at port {0}\n", port);
-                behaviac.Debug.Log(portMsg);
+                Debugs.Log(portMsg);
 
                 this.ReserveThreadPacketBuffer();
                 this.SetConnectPort(port);
@@ -1446,7 +1462,7 @@ namespace behaviac
 
                 if (bBlocking)
                 {
-                    Debug.LogWarning("behaviac: SetupConnection is blocked, please Choose 'Connect' in the Designer to continue");
+                    Debugs.LogWarning("behaviac: SetupConnection is blocked, please Choose 'Connect' in the Designer to continue");
 
                     while (!this.IsConnected() || !this.IsConnectedFinished())
                     {
@@ -1456,15 +1472,15 @@ namespace behaviac
 
                     System.Threading.Thread.Sleep(1);
 
-                    Debug.Check(this.IsConnected() && this.IsConnectedFinished());
+                    Debugs.Check(this.IsConnected() && this.IsConnectedFinished());
                 }
 
-                behaviac.Debug.Log("behaviac: ConnectorInterface.Init Connected\n");
+                Debugs.Log("behaviac: ConnectorInterface.Init Connected\n");
 
                 //wait for the OnConnection ends
                 System.Threading.Thread.Sleep(200);
 
-                behaviac.Debug.Log("behaviac: ConnectorInterface.Init successful\n");
+                Debugs.Log("behaviac: ConnectorInterface.Init successful\n");
             }
 
             m_isInited.AtomicInc();

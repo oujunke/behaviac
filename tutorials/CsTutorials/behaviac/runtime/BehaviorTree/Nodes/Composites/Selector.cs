@@ -90,7 +90,7 @@ namespace behaviac
 
             for (; ;)
             {
-                Debug.Check(activeChildIndex < children.Count);
+                Debugs.Check(activeChildIndex < children.Count);
 
                 if (s == EBTStatus.BT_RUNNING)
                 {
@@ -164,7 +164,7 @@ namespace behaviac
 
             protected override bool onenter(Agent pAgent)
             {
-                Debug.Check(this.m_children.Count > 0);
+                Debugs.Check(this.m_children.Count > 0);
                 this.m_activeChildIndex = 0;
                 return true;
             }
@@ -176,7 +176,7 @@ namespace behaviac
 
             protected override EBTStatus update(Agent pAgent, EBTStatus childStatus)
             {
-                Debug.Check(this.m_activeChildIndex < this.m_children.Count);
+                Debugs.Check(this.m_activeChildIndex < this.m_children.Count);
                 Selector node = this.m_node as Selector;
 
                 return node.SelectorUpdate(pAgent, childStatus, ref this.m_activeChildIndex, this.m_children);

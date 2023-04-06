@@ -96,9 +96,9 @@ namespace behaviac
 
             protected override EBTStatus update(Agent pAgent, EBTStatus childStatus)
             {
-                Debug.Check(childStatus == EBTStatus.BT_RUNNING);
+                Debugs.Check(childStatus == EBTStatus.BT_RUNNING);
 
-                Debug.Check(this.GetNode() is Assignment);
+                Debugs.Check(this.GetNode() is Assignment);
                 Assignment pAssignmentNode = (Assignment)(this.GetNode());
 
                 EBTStatus result = EBTStatus.BT_SUCCESS;

@@ -60,7 +60,7 @@ namespace behaviac
                 type = type.BaseType;
             }
 
-            Debug.Check(false, "No property can be found!");
+            agent.Workspace.Debugs.Check(false, "No property can be found!");
             return null;
         }
 
@@ -104,7 +104,7 @@ namespace behaviac
                 type = type.BaseType;
             }
 
-            Debug.Check(false, "No property can be found!");
+            agent.Workspace.Debugs.Check(false, "No property can be found!");
         }
 
         public static object ExecuteMethod(behaviac.Agent agent, string method, object[] args)
@@ -130,7 +130,7 @@ namespace behaviac
                 type = type.BaseType;
             }
 
-            Debug.Check(false, "No method can be found!");
+            agent.Workspace.Debugs.Check(false, "No method can be found!");
             return null;
         }
     }
@@ -202,7 +202,7 @@ namespace behaviac
     //        {
     //            Type type1 = typeof(TArg1);
     //            Type type2 = typeof(TArg1);
-    //            Debug.Check(Utils.IsCustomStructType(type1));
+    //            agent.Workspace.Debugs.Check(Utils.IsCustomStructType(type1));
 
     //            ParameterExpression pThis = Expression.Parameter(type1, "lhs");
     //            ParameterExpression pThat = Expression.Parameter(type2, "rhs");
@@ -322,14 +322,14 @@ namespace behaviac
     //        }
     //    }
 
-    //    //Debug.Log(System.Enviroment.Version);
+    //    //agent.Workspace.Debugs.Log(System.Enviroment.Version);
     //    public static Func<TArg1, TArg2, bool> MakeItemEqualsMethod<TArg1, TArg2>()
     //    {
     //        try
     //        {
     //            Type type1 = typeof(TArg1);
     //            Type type2 = typeof(TArg1);
-    //            Debug.Check(Utils.IsArrayType(type1));
+    //            agent.Workspace.Debugs.Check(Utils.IsArrayType(type1));
 
     //            ParameterExpression pThis = Expression.Parameter(type1, "lhs");
     //            ParameterExpression pThat = Expression.Parameter(type2, "rhs");
@@ -425,6 +425,15 @@ namespace behaviac
 
     public class ICompareValue<T> :  ICompareValue
     {
+        public Workspace Workspace { get; private set; }
+        public Config Configs { set; get; }
+        public Debug Debugs { set; get; }
+        public ICompareValue(Workspace workspace)
+        {
+            Workspace = workspace;
+            Configs = workspace.Configs;
+            Debugs = workspace.Debugs;
+        }
         public bool ItemEqual(IList ll, IList rl, int index)
         {
             List<T> llt = (List<T>)ll;
@@ -433,7 +442,7 @@ namespace behaviac
             T l = llt[index];
             T r = rlt[index];
 
-            return OperationUtils.Compare<T>(l, r, EOperatorType.E_EQUAL);
+            return OperationUtils.Compare<T>(l, r, EOperatorType.E_EQUAL,Workspace);
         }
 
         public bool MemberEqual<U>(U lo, U ro, FieldInfo field)
@@ -442,7 +451,7 @@ namespace behaviac
             T l = (T)field.GetValue(lo);
             T r = (T)field.GetValue(ro);
 
-            return OperationUtils.Compare<T>(l, r, EOperatorType.E_EQUAL);
+            return OperationUtils.Compare<T>(l, r, EOperatorType.E_EQUAL,Workspace);
         }
 
         public virtual bool Equal(T lhs, T rhs)
@@ -478,6 +487,10 @@ namespace behaviac
 
     public class CompareValueBool : ICompareValue<bool>
     {
+        public CompareValueBool(Workspace workspace) : base(workspace)
+        {
+        }
+
         public override bool Equal(bool lhs, bool rhs)
         {
             return lhs == rhs;
@@ -489,31 +502,35 @@ namespace behaviac
 
         public override bool Greater(bool lhs, bool rhs)
         {
-            Debug.Check(false);
+            Debugs.Check(false);
             return false;
         }
 
         public override bool GreaterEqual(bool lhs, bool rhs)
         {
-            Debug.Check(false);
+            Debugs.Check(false);
             return false;
         }
 
         public override bool Less(bool lhs, bool rhs)
         {
-            Debug.Check(false);
+            Debugs.Check(false);
             return false;
         }
 
         public override bool LessEqual(bool lhs, bool rhs)
         {
-            Debug.Check(false);
+            Debugs.Check(false);
             return false;
         }
 
     }
     public class CompareValueInt : ICompareValue<int>
     {
+        public CompareValueInt(Workspace workspace) : base(workspace)
+        {
+        }
+
         public override bool Equal(int lhs, int rhs)
         {
             return lhs == rhs;
@@ -547,6 +564,10 @@ namespace behaviac
 
     public class CompareValueLong : ICompareValue<long>
     {
+        public CompareValueLong(Workspace workspace) : base(workspace)
+        {
+        }
+
         public override bool Equal(long lhs, long rhs)
         {
             return lhs == rhs;
@@ -580,6 +601,10 @@ namespace behaviac
 
     public class CompareValueShort : ICompareValue<short>
     {
+        public CompareValueShort(Workspace workspace) : base(workspace)
+        {
+        }
+
         public override bool Equal(short lhs, short rhs)
         {
             return lhs == rhs;
@@ -613,6 +638,10 @@ namespace behaviac
 
     public class CompareValueByte : ICompareValue<sbyte>
     {
+        public CompareValueByte(Workspace workspace) : base(workspace)
+        {
+        }
+
         public override bool Equal(sbyte lhs, sbyte rhs)
         {
             return lhs == rhs;
@@ -647,6 +676,10 @@ namespace behaviac
 
     public class CompareValueUInt : ICompareValue<uint>
     {
+        public CompareValueUInt(Workspace workspace) : base(workspace)
+        {
+        }
+
         public override bool Equal(uint lhs, uint rhs)
         {
             return lhs == rhs;
@@ -680,6 +713,10 @@ namespace behaviac
 
     public class CompareValueULong : ICompareValue<ulong>
     {
+        public CompareValueULong(Workspace workspace) : base(workspace)
+        {
+        }
+
         public override bool Equal(ulong lhs, ulong rhs)
         {
             return lhs == rhs;
@@ -713,6 +750,10 @@ namespace behaviac
 
     public class CompareValueUShort : ICompareValue<ushort>
     {
+        public CompareValueUShort(Workspace workspace) : base(workspace)
+        {
+        }
+
         public override bool Equal(ushort lhs, ushort rhs)
         {
             return lhs == rhs;
@@ -746,6 +787,10 @@ namespace behaviac
 
     public class CompareValueUByte : ICompareValue<byte>
     {
+        public CompareValueUByte(Workspace workspace) : base(workspace)
+        {
+        }
+
         public override bool Equal(byte lhs, byte rhs)
         {
             return lhs == rhs;
@@ -779,6 +824,10 @@ namespace behaviac
 
     public class CompareValueChar : ICompareValue<char>
     {
+        public CompareValueChar(Workspace workspace) : base(workspace)
+        {
+        }
+
         public override bool Equal(char lhs, char rhs)
         {
             return lhs == rhs;
@@ -812,6 +861,10 @@ namespace behaviac
 
     public class CompareValueFloat : ICompareValue<float>
     {
+        public CompareValueFloat(Workspace workspace) : base(workspace)
+        {
+        }
+
         public override bool Equal(float lhs, float rhs)
         {
             return lhs == rhs;
@@ -845,6 +898,10 @@ namespace behaviac
 
     public class CompareValueDouble : ICompareValue<double>
     {
+        public CompareValueDouble(Workspace workspace) : base(workspace)
+        {
+        }
+
         public override bool Equal(double lhs, double rhs)
         {
             return lhs == rhs;
@@ -876,50 +933,12 @@ namespace behaviac
 
     }
 
-    public class CompareValueString : ICompareValue<string>
-    {
-        public CompareValueString()
-        {
-
-        }
-
-        public override bool Equal(string lhs, string rhs)
-        {
-            return lhs == rhs;
-        }
-        public override bool NotEqual(string lhs, string rhs)
-        {
-            return lhs != rhs;
-        }
-
-        public override bool Greater(string lhs, string rhs)
-        {
-            Debug.Check(false);
-            return false;
-        }
-
-        public override bool GreaterEqual(string lhs, string rhs)
-        {
-            Debug.Check(false);
-            return false;
-        }
-
-        public override bool Less(string lhs, string rhs)
-        {
-            Debug.Check(false);
-            return false;
-        }
-
-        public override bool LessEqual(string lhs, string rhs)
-        {
-            Debug.Check(false);
-            return false;
-        }
-
-    }
-
     public class CompareValueObject : ICompareValue<object>
     {
+        public CompareValueObject(Workspace workspace) : base(workspace)
+        {
+        }
+
         public override bool Equal(object lhs, object rhs)
         {
             return lhs == rhs;
@@ -931,25 +950,25 @@ namespace behaviac
 
         public override bool Greater(object lhs, object rhs)
         {
-            Debug.Check(false);
+            Debugs.Check(false);
             return false;
         }
 
         public override bool GreaterEqual(object lhs, object rhs)
         {
-            Debug.Check(false);
+            Debugs.Check(false);
             return false;
         }
 
         public override bool Less(object lhs, object rhs)
         {
-            Debug.Check(false);
+            Debugs.Check(false);
             return false;
         }
 
         public override bool LessEqual(object lhs, object rhs)
         {
-            Debug.Check(false);
+            Debugs.Check(false);
             return false;
         }
 
@@ -957,73 +976,77 @@ namespace behaviac
 
     public class ComparerRegister
     {
-        private static Dictionary<Type, ICompareValue> ms_valueComparers = null;
-
-        private static void Register()
+        private Dictionary<Type, ICompareValue> ms_valueComparers = null;
+        public Workspace Workspace { set; get; }
+        public ComparerRegister(Workspace workspace)
+        {
+            Workspace = workspace;
+        }
+        private void Register()
         {
             {
-                CompareValueBool pComparer = new CompareValueBool();
+                CompareValueBool pComparer = new CompareValueBool(Workspace);
                 ms_valueComparers.Add(typeof(bool), pComparer);
             }
 
             {
-                CompareValueInt pComparer = new CompareValueInt();
+                CompareValueInt pComparer = new CompareValueInt(Workspace);
                 ms_valueComparers.Add(typeof(int), pComparer);
             }
             {
-                CompareValueLong pComparer = new CompareValueLong();
+                CompareValueLong pComparer = new CompareValueLong(Workspace);
                 ms_valueComparers.Add(typeof(long), pComparer);
             }
             {
-                CompareValueShort pComparer = new CompareValueShort();
+                CompareValueShort pComparer = new CompareValueShort(Workspace);
                 ms_valueComparers.Add(typeof(short), pComparer);
             }
             {
-                CompareValueByte pComparer = new CompareValueByte();
+                CompareValueByte pComparer = new CompareValueByte(Workspace);
                 ms_valueComparers.Add(typeof(sbyte), pComparer);
             }
 
             {
-                CompareValueUInt pComparer = new CompareValueUInt();
+                CompareValueUInt pComparer = new CompareValueUInt(Workspace);
                 ms_valueComparers.Add(typeof(uint), pComparer);
             }
             {
-                CompareValueULong pComparer = new CompareValueULong();
+                CompareValueULong pComparer = new CompareValueULong(Workspace);
                 ms_valueComparers.Add(typeof(ulong), pComparer);
             }
             {
-                CompareValueUShort pComparer = new CompareValueUShort();
+                CompareValueUShort pComparer = new CompareValueUShort(Workspace);
                 ms_valueComparers.Add(typeof(ushort), pComparer);
             }
             {
-                CompareValueUByte pComparer = new CompareValueUByte();
+                CompareValueUByte pComparer = new CompareValueUByte(Workspace);
                 ms_valueComparers.Add(typeof(byte), pComparer);
             }
 
             {
-                CompareValueChar pComparer = new CompareValueChar();
+                CompareValueChar pComparer = new CompareValueChar(Workspace);
                 ms_valueComparers.Add(typeof(char), pComparer);
             }
 
             {
-                CompareValueFloat pComparer = new CompareValueFloat();
+                CompareValueFloat pComparer = new CompareValueFloat(Workspace);
                 ms_valueComparers.Add(typeof(float), pComparer);
             }
             {
-                CompareValueDouble pComparer = new CompareValueDouble();
+                CompareValueDouble pComparer = new CompareValueDouble(Workspace);
                 ms_valueComparers.Add(typeof(double), pComparer);
             }
             {
-                CompareValueString pComparer = new CompareValueString();
+                CompareValueString pComparer = new CompareValueString(Workspace);
                 ms_valueComparers.Add(typeof(string), pComparer);
             }
             {
-                CompareValueObject pComparer = new CompareValueObject();
+                CompareValueObject pComparer = new CompareValueObject(Workspace);
                 ms_valueComparers.Add(typeof(object), pComparer);
             }
         }
 
-        public static void Init()
+        public void Init()
         {
             if (ms_valueComparers == null)
             {
@@ -1033,7 +1056,7 @@ namespace behaviac
             }
         }
 
-        public static void Cleanup()
+        public void Cleanup()
         {
             if (ms_valueComparers != null)
             {
@@ -1044,13 +1067,13 @@ namespace behaviac
             }
         }
 
-        public static void RegisterType<T, TCOMPARER>() where TCOMPARER : ICompareValue, new()
+        public void RegisterType<T, TCOMPARER>() where TCOMPARER : ICompareValue, new()
         {
             TCOMPARER pComparer = new TCOMPARER();
             ms_valueComparers.Add(typeof(T), pComparer);
         }
 
-        public static ICompareValue<T> Get<T>()
+        public ICompareValue<T> Get<T>()
         {
             Type type = typeof(T);
 
@@ -1063,7 +1086,7 @@ namespace behaviac
             return null;
         }
 
-        public static ICompareValue Get(Type type)
+        public ICompareValue Get(Type type)
         {
             if (ms_valueComparers.ContainsKey(type))
             {
@@ -1388,9 +1411,17 @@ namespace behaviac
 
     public class ComputerRegister
     {
-        private static Dictionary<Type, IComputeValue> ms_valueComputers = null;
-
-        private static void Register()
+        private  Dictionary<Type, IComputeValue> ms_valueComputers = null;
+        public Workspace Workspace { get; private set; }
+        public Config Configs { set; get; }
+        public Debug Debugs { set; get; }
+        public ComputerRegister(Workspace workspace)
+        {
+            Workspace = workspace;
+            Configs = workspace.Configs;
+            Debugs = workspace.Debugs;
+        }
+        private  void Register()
         {
             {
                 ComputeValueInt pComparer = new ComputeValueInt();
@@ -1437,7 +1468,7 @@ namespace behaviac
 
         }
 
-        public static void Init()
+        public void Init()
         {
             if (ms_valueComputers == null)
             {
@@ -1446,7 +1477,7 @@ namespace behaviac
             }
         }
 
-        public static void Cleanup()
+        public void Cleanup()
         {
             if (ms_valueComputers != null)
             {
@@ -1455,7 +1486,7 @@ namespace behaviac
             }
         }
 
-        public static IComputeValue<T> Get<T>()
+        public IComputeValue<T> Get<T>()
         {
             Type type = typeof(T);
 
@@ -1465,7 +1496,7 @@ namespace behaviac
                 return (IComputeValue<T>)pComparer;
             }
 
-            Debug.Check(false);
+            Debugs.Check(false);
 
             return null;
         }
@@ -1476,10 +1507,10 @@ namespace behaviac
 
     public static class Operator<T>
     {
-        public static T Add(T left, T right)
+        public static T Add(T left, T right,Workspace workspace)
         {
-            IComputeValue<T> c = ComputerRegister.Get<T>();
-            Debug.Check(c != null);
+            IComputeValue<T> c = workspace.ComputerRegisters.Get<T>();
+            workspace.Debugs.Check(c != null);
 
             if (c != null)
             {
@@ -1489,10 +1520,10 @@ namespace behaviac
             return default(T);
         }
 
-        public static T Subtract(T left, T right)
+        public static T Subtract(T left, T right, Workspace workspace)
         {
-            IComputeValue<T> c = ComputerRegister.Get<T>();
-            Debug.Check(c != null);
+            IComputeValue<T> c = workspace.ComputerRegisters.Get<T>();
+            workspace.Debugs.Check(c != null);
 
             if (c != null)
             {
@@ -1502,10 +1533,10 @@ namespace behaviac
             return default(T);
         }
 
-        public static T Multiply(T left, T right)
+        public static T Multiply(T left, T right, Workspace workspace)
         {
-            IComputeValue<T> c = ComputerRegister.Get<T>();
-            Debug.Check(c != null);
+            IComputeValue<T> c = workspace.ComputerRegisters.Get<T>();
+            workspace.Debugs.Check(c != null);
 
             if (c != null)
             {
@@ -1515,10 +1546,10 @@ namespace behaviac
             return default(T);
         }
 
-        public static T Divide(T left, T right)
+        public static T Divide(T left, T right, Workspace workspace)
         {
-            IComputeValue<T> c = ComputerRegister.Get<T>();
-            Debug.Check(c != null);
+            IComputeValue<T> c = workspace.ComputerRegisters.Get<T>();
+            workspace.Debugs.Check(c != null);
 
             if (c != null)
             {
@@ -1528,10 +1559,10 @@ namespace behaviac
             return default(T);
         }
 
-        private static bool EqualByMember(T left, T right)
+        private static bool EqualByMember(T left, T right, Workspace workspace)
         {
             //not a list
-            Debug.Check(!(left is IList));
+            workspace.Debugs.Check(!(left is IList));
             Type type = typeof(T);
 
             BindingFlags bindingFlags = BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance;
@@ -1546,7 +1577,7 @@ namespace behaviac
                     continue;
                 }
 
-                ICompareValue c = ComparerRegister.Get(field.FieldType);
+                ICompareValue c = workspace.ComparerRegisters.Get(field.FieldType);
 
                 if (c != null)
                 {
@@ -1559,7 +1590,7 @@ namespace behaviac
                 }
                 else
                 {
-                    //Debug.LogWarning(string.Format("Type {0} Equal might cause GC, please provide ComparerRegister for it!", field.FieldType.Name));
+                    //agent.Workspace.Debugs.LogWarning(string.Format("Type {0} Equal might cause GC, please provide ComparerRegister for it!", field.FieldType.Name));
 
                     object l = field.GetValue(left);
                     object r = field.GetValue(right);
@@ -1587,21 +1618,21 @@ namespace behaviac
             return true;
         }
 
-        public static bool ClassEqual(T left, T right)
+        public static bool ClassEqual(T left, T right, Workspace workspace)
         {
-            ICompareValue<T> c = ComparerRegister.Get<T>();
+            ICompareValue<T> c = workspace.ComparerRegisters.Get<T>();
 
             if (c == null)
             {
                 //class as a struct, it might cause low performance
-                return EqualByMember(left, right);
+                return EqualByMember(left, right,workspace);
             }
 
             //if ICompareValue<T> is generated and registered, it will run to here to avoid possible boxing
             return c.Equal(left, right);
         }
 
-        public static bool ListEqual(T left, T right)
+        public static bool ListEqual(T left, T right,Workspace workspace)
         {
             IList ll = (left as IList);
 
@@ -1617,7 +1648,7 @@ namespace behaviac
                 Type type = typeof(T);
 
                 Type elementType = type.GetGenericArguments()[0];
-                ICompareValue c = ComparerRegister.Get(elementType);
+                ICompareValue c = workspace.ComparerRegisters.Get(elementType);
 
                 if (c != null)
                 {
@@ -1634,9 +1665,9 @@ namespace behaviac
             return true;
         }
 
-        public static bool Equal(T left, T right)
+        public static bool Equal(T left, T right, Workspace workspace)
         {
-            ICompareValue<T> c = ComparerRegister.Get<T>();
+            ICompareValue<T> c = workspace.ComparerRegisters.Get<T>();
 
             if (c == null)
             {
@@ -1644,7 +1675,7 @@ namespace behaviac
 
                 if (!type.IsValueType)
                 {
-                    ICompareValue<object> co = ComparerRegister.Get<object>();
+                    ICompareValue<object> co = workspace.ComparerRegisters.Get<object>();
 
                     if (co != null)
                     {
@@ -1653,12 +1684,12 @@ namespace behaviac
                 }
                 else
                 {
-                    //Debug.LogWarning(string.Format("Type {0} Equal might cause GC, please provide ComparerRegister for it!", typeof(T).Name));
+                    //agent.Workspace.Debugs.LogWarning(string.Format("Type {0} Equal might cause GC, please provide ComparerRegister for it!", typeof(T).Name));
                     return left.Equals(right);
                 }
             }
 
-            Debug.Check(c != null);
+            workspace.Debugs.Check(c != null);
 
             if (c != null)
             {
@@ -1668,9 +1699,9 @@ namespace behaviac
             return false;
         }
 
-        public static bool NotEqual(T left, T right)
+        public static bool NotEqual(T left, T right, Workspace workspace)
         {
-            ICompareValue<T> c = ComparerRegister.Get<T>();
+            ICompareValue<T> c = workspace.ComparerRegisters.Get<T>();
 
             if (c == null)
             {
@@ -1678,7 +1709,7 @@ namespace behaviac
 
                 if (!type.IsValueType)
                 {
-                    ICompareValue<object> co = ComparerRegister.Get<object>();
+                    ICompareValue<object> co = workspace.ComparerRegisters.Get<object>();
 
                     if (co != null)
                     {
@@ -1687,12 +1718,12 @@ namespace behaviac
                 }
                 else
                 {
-                    //Debug.LogWarning(string.Format("Type {0} Equal might cause GC, please provide ComparerRegister for it!", typeof(T).Name));
+                    //agent.Workspace.Debugs.LogWarning(string.Format("Type {0} Equal might cause GC, please provide ComparerRegister for it!", typeof(T).Name));
                     return !left.Equals(right);
                 }
             }
 
-            Debug.Check(c != null);
+            workspace.Debugs.Check(c != null);
 
             if (c != null)
             {
@@ -1702,10 +1733,10 @@ namespace behaviac
             return false;
         }
 
-        public static bool GreaterThan(T left, T right)
+        public static bool GreaterThan(T left, T right, Workspace workspace)
         {
-            ICompareValue<T> c = ComparerRegister.Get<T>();
-            Debug.Check(c != null);
+            ICompareValue<T> c = workspace.ComparerRegisters.Get<T>();
+            workspace.Debugs.Check(c != null);
 
             if (c != null)
             {
@@ -1715,10 +1746,10 @@ namespace behaviac
             return false;
         }
 
-        public static bool GreaterThanOrEqual(T left, T right)
+        public static bool GreaterThanOrEqual(T left, T right, Workspace workspace)
         {
-            ICompareValue<T> c = ComparerRegister.Get<T>();
-            Debug.Check(c != null);
+            ICompareValue<T> c = workspace.ComparerRegisters.Get<T>();
+            workspace.Debugs.Check(c != null);
 
             if (c != null)
             {
@@ -1728,10 +1759,10 @@ namespace behaviac
             return false;
         }
 
-        public static bool LessThan(T left, T right)
+        public static bool LessThan(T left, T right, Workspace workspace)
         {
-            ICompareValue<T> c = ComparerRegister.Get<T>();
-            Debug.Check(c != null);
+            ICompareValue<T> c = workspace.ComparerRegisters.Get<T>();
+            workspace.Debugs.Check(c != null);
 
             if (c != null)
             {
@@ -1741,10 +1772,10 @@ namespace behaviac
             return false;
         }
 
-        public static bool LessThanOrEqual(T left, T right)
+        public static bool LessThanOrEqual(T left, T right, Workspace workspace)
         {
-            ICompareValue<T> c = ComparerRegister.Get<T>();
-            Debug.Check(c != null);
+            ICompareValue<T> c = workspace.ComparerRegisters.Get<T>();
+            workspace.Debugs.Check(c != null);
 
             if (c != null)
             {
@@ -1774,7 +1805,7 @@ namespace behaviac
 
     public static class OperationUtils
     {
-        public static EOperatorType ParseOperatorType(string operatorType)
+        public static EOperatorType ParseOperatorType(string operatorType, Workspace workspace)
         {
             switch (operatorType)
             {
@@ -1818,11 +1849,11 @@ namespace behaviac
                     return EOperatorType.E_LESSEQUAL;
             }
 
-            Debug.Check(false);
+            workspace.Debugs.Check(false);
             return EOperatorType.E_INVALID;
         }
 
-        public static bool Compare<T>(T left, T right, EOperatorType comparisonType)
+        public static bool Compare<T>(T left, T right, EOperatorType comparisonType, Workspace workspace)
         {
             Type type = typeof(T);
             if (!type.IsValueType)
@@ -1842,7 +1873,7 @@ namespace behaviac
                     }
                     else
                     {
-                        Debug.Check(false);
+                        workspace.Debugs.Check(false);
                     }
                 }
                 else if (bLeftNull || bRightNull) // one is null and the other is not null
@@ -1857,34 +1888,34 @@ namespace behaviac
                     }
                     else
                     {
-                        Debug.Check(false);
+                        workspace.Debugs.Check(false);
                     }
                 }
             }
 
-            ICompareValue<T> c = ComparerRegister.Get<T>();
+            ICompareValue<T> c = workspace.ComparerRegisters.Get<T>();
 
             if (c != null)
             {
                 switch (comparisonType)
                 {
                     case EOperatorType.E_EQUAL:
-                        return Operator<T>.Equal(left, right);
+                        return Operator<T>.Equal(left, right,workspace);
 
                     case EOperatorType.E_NOTEQUAL:
-                        return Operator<T>.NotEqual(left, right);
+                        return Operator<T>.NotEqual(left, right, workspace);
 
                     case EOperatorType.E_GREATER:
-                        return Operator<T>.GreaterThan(left, right);
+                        return Operator<T>.GreaterThan(left, right, workspace);
 
                     case EOperatorType.E_GREATEREQUAL:
-                        return Operator<T>.GreaterThanOrEqual(left, right);
+                        return Operator<T>.GreaterThanOrEqual(left, right, workspace);
 
                     case EOperatorType.E_LESS:
-                        return Operator<T>.LessThan(left, right);
+                        return Operator<T>.LessThan(left, right, workspace);
 
                     case EOperatorType.E_LESSEQUAL:
-                        return Operator<T>.LessThanOrEqual(left, right);
+                        return Operator<T>.LessThanOrEqual(left, right, workspace);
                 }
             }
 
@@ -1901,7 +1932,7 @@ namespace behaviac
 
             if (Utils.IsCustomStructType(type))
             {
-                bool bEqual = Operator<T>.ClassEqual(left, right);
+                bool bEqual = Operator<T>.ClassEqual(left, right, workspace);
 
                 switch (comparisonType)
                 {
@@ -1914,7 +1945,7 @@ namespace behaviac
             }
             else if (Utils.IsArrayType(type))
             {
-                bool bEqual = Operator<T>.ListEqual(left, right);
+                bool bEqual = Operator<T>.ListEqual(left, right,workspace);
 
                 switch (comparisonType)
                 {
@@ -1930,35 +1961,35 @@ namespace behaviac
                 switch (comparisonType)
                 {
                     case EOperatorType.E_EQUAL:
-                        return Operator<T>.Equal(left, right);
+                        return Operator<T>.Equal(left, right, workspace);
 
                     case EOperatorType.E_NOTEQUAL:
-                        return Operator<T>.NotEqual(left, right);
+                        return Operator<T>.NotEqual(left, right, workspace);
                         //case EOperatorType.E_GREATER: return Operator<int>.GreaterThan(iLeft, iRight);
                         //case EOperatorType.E_GREATEREQUAL: return Operator<int>.GreaterThanOrEqual(iLeft, iRight);
                         //case EOperatorType.E_LESS: return Operator<int>.LessThan(iLeft, iRight);
                         //case EOperatorType.E_LESSEQUAL: return Operator<int>.LessThanOrEqual(iLeft, iRight);
                 }
 
-                Debug.Check(false, "enum only supports eq or neq");
+                workspace.Debugs.Workspace.Debugs.Check(false, "enum only supports eq or neq");
             }
             else
             {
-                Debug.Check(false, "unsupported type for compare");
+                workspace.Debugs.Workspace.Debugs.Check(false, "unsupported type for compare");
             }
 
             return false;
         }
 
-        public static T Compute<T>(T left, T right, EOperatorType computeType)
+        public static T Compute<T>(T left, T right, EOperatorType computeType,Workspace workspace)
         {
             Type type = typeof(T);
 
-            if (!Utils.IsAgentType(type) && !Utils.IsCustomClassType(type) && !Utils.IsCustomStructType(type) && !Utils.IsArrayType(type) && !Utils.IsStringType(type))
+            if (!Utils.IsAgentType(type,workspace) && !Utils.IsCustomClassType(type) && !Utils.IsCustomStructType(type) && !Utils.IsArrayType(type) && !Utils.IsStringType(type))
             {
                 if (Utils.IsEnumType(type) || type == typeof(char))
                 {
-                    Debug.Check(false);
+                    workspace.Debugs.Check(false);
                     //int iLeft = Convert.ToInt32(left);
                     //int iRight = Convert.ToInt32(right);
 
@@ -1975,30 +2006,30 @@ namespace behaviac
                     switch (computeType)
                     {
                         case EOperatorType.E_ADD:
-                            return Operator<T>.Add(left, right);
+                            return Operator<T>.Add(left, right, workspace);
 
                         case EOperatorType.E_SUB:
-                            return Operator<T>.Subtract(left, right);
+                            return Operator<T>.Subtract(left, right, workspace);
 
                         case EOperatorType.E_MUL:
-                            return Operator<T>.Multiply(left, right);
+                            return Operator<T>.Multiply(left, right, workspace);
 
                         case EOperatorType.E_DIV:
-                            return Operator<T>.Divide(left, right);
+                            return Operator<T>.Divide(left, right, workspace);
                     }
                 }
             }
 
-            Debug.Check(false);
+            workspace.Debugs.Check(false);
             return left;
         }
     }
 
     public class ValueConverter<T>
     {
-        public static bool Convert(string valueStr, out T result)
+        public static bool Convert(string valueStr, out T result, Workspace workspace)
         {
-            result = (T)StringUtils.FromString(typeof(T), valueStr, false);
+            result = (T)StringUtils.FromString(typeof(T), valueStr, false,workspace);
 
             return true;
         }

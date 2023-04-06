@@ -100,7 +100,7 @@ namespace behaviac
                     {
                         IValue returnValue = this.m_method.GetIValue(pAgent);
 
-                        Debug.Check(returnValue is TValue<EBTStatus>, "method's return type is not EBTStatus");
+                        Debugs.Check(returnValue is TValue<EBTStatus>, "method's return type is not EBTStatus");
 
                         result = ((TValue<EBTStatus>)returnValue).value;
                     }
@@ -149,9 +149,9 @@ namespace behaviac
 
             protected override EBTStatus update(Agent pAgent, EBTStatus childStatus)
             {
-                Debug.Check(childStatus == EBTStatus.BT_RUNNING);
+                Debugs.Check(childStatus == EBTStatus.BT_RUNNING);
 
-                Debug.Check(this.GetNode() is Action, "node is not an Action");
+                Debugs.Check(this.GetNode() is Action, "node is not an Action");
                 Action pActionNode = (Action)(this.GetNode());
 
                 EBTStatus result = pActionNode.Execute(pAgent, childStatus);

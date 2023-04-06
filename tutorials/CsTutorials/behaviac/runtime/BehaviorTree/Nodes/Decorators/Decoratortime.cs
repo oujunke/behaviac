@@ -100,7 +100,7 @@ namespace behaviac
             {
                 base.copyto(target);
 
-                Debug.Check(target is DecoratorTimeTask);
+                Debugs.Check(target is DecoratorTimeTask);
                 DecoratorTimeTask ttask = (DecoratorTimeTask)target;
 
                 ttask.m_start = this.m_start;
@@ -134,7 +134,7 @@ namespace behaviac
 
             private double GetTime(Agent pAgent)
             {
-                Debug.Check(this.GetNode() is DecoratorTime);
+                Debugs.Check(this.GetNode() is DecoratorTime);
                 DecoratorTime pNode = (DecoratorTime)(this.GetNode());
 
                 return pNode != null ? pNode.GetTime(pAgent) : 0;
@@ -142,7 +142,7 @@ namespace behaviac
 
             private int GetIntTime(Agent pAgent)
             {
-                Debug.Check(this.GetNode() is DecoratorTime);
+                Debugs.Check(this.GetNode() is DecoratorTime);
                 DecoratorTime pNode = (DecoratorTime)(this.GetNode());
 
                 return pNode != null ? pNode.GetIntTime(pAgent) : 0;
@@ -152,16 +152,16 @@ namespace behaviac
             {
                 base.onenter(pAgent);
 
-                if (Workspace.Instance.UseIntValue)
+                if (Workspace.UseIntValue)
                 {
-                    this.m_intStart = Workspace.Instance.IntValueSinceStartup;
+                    this.m_intStart = Workspace.IntValueSinceStartup;
                     this.m_intTime = this.GetIntTime(pAgent);
 
                     return (this.m_intTime >= 0);
                 }
                 else
                 {
-                    this.m_start = Workspace.Instance.DoubleValueSinceStartup;
+                    this.m_start = Workspace.DoubleValueSinceStartup;
                     this.m_time = this.GetTime(pAgent);
 
                     return (this.m_time >= 0);
@@ -170,16 +170,16 @@ namespace behaviac
 
             protected override EBTStatus decorate(EBTStatus status)
             {
-                if (Workspace.Instance.UseIntValue)
+                if (Workspace.UseIntValue)
                 {
-                    if (Workspace.Instance.IntValueSinceStartup - this.m_intStart >= this.m_intTime)
+                    if (Workspace.IntValueSinceStartup - this.m_intStart >= this.m_intTime)
                     {
                         return EBTStatus.BT_SUCCESS;
                     }
                 }
                 else
                 {
-                    if (Workspace.Instance.DoubleValueSinceStartup - this.m_start >= this.m_time)
+                    if (Workspace.DoubleValueSinceStartup - this.m_start >= this.m_time)
                     {
                         return EBTStatus.BT_SUCCESS;
                     }

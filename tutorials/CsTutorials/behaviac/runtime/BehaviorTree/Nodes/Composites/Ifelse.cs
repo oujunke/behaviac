@@ -12,6 +12,7 @@
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 using System.Collections.Generic;
+using System.Diagnostics;
 
 namespace behaviac
 {
@@ -87,7 +88,7 @@ namespace behaviac
                     return true;
                 }
 
-                Debug.Check(false, "IfElseTask has to have three children: condition, if, else");
+                Debugs.Check(false, "IfElseTask has to have three children: condition, if, else");
 
                 return false;
             }
@@ -99,8 +100,8 @@ namespace behaviac
 
             protected override EBTStatus update(Agent pAgent, EBTStatus childStatus)
             {
-                Debug.Check(childStatus != EBTStatus.BT_INVALID);
-                Debug.Check(this.m_children.Count == 3);
+                Debugs.Check(childStatus != EBTStatus.BT_INVALID);
+                Debugs.Check(this.m_children.Count == 3);
 
                 EBTStatus conditionResult = EBTStatus.BT_INVALID;
 

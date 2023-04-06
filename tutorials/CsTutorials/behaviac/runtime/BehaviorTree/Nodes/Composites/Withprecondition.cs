@@ -80,7 +80,7 @@ namespace behaviac
             BehaviorTask pParent = this.GetParent();
 
             //when as child of SelctorLoop, it is not ticked normally
-            Debug.Check(pParent is SelectorLoop.SelectorLoopTask);
+            Debugs.Check(pParent is SelectorLoop.SelectorLoopTask);
 
             return true;
         }
@@ -89,14 +89,14 @@ namespace behaviac
         {
             BehaviorTask pParent = this.GetParent();
 
-            Debug.Check(pParent is SelectorLoop.SelectorLoopTask);
+            Debugs.Check(pParent is SelectorLoop.SelectorLoopTask);
         }
 
         public BehaviorTask PreconditionNode
         {
             get
             {
-                Debug.Check(this.m_children.Count == 2);
+                Debugs.Check(this.m_children.Count == 2);
 
                 return (this.m_children)[0];
             }
@@ -106,7 +106,7 @@ namespace behaviac
         {
             get
             {
-                Debug.Check(this.m_children.Count == 2);
+                Debugs.Check(this.m_children.Count == 2);
 
                 return (this.m_children)[1];
             }
@@ -120,9 +120,9 @@ namespace behaviac
         protected override EBTStatus update(Agent pAgent, EBTStatus childStatus)
         {
             BehaviorTask pParent = this.GetParent();
-            Debug.Check(pParent is SelectorLoop.SelectorLoopTask);
+            Debugs.Check(pParent is SelectorLoop.SelectorLoopTask);
 
-            Debug.Check(false);
+            Debugs.Check(false);
 
             return EBTStatus.BT_RUNNING;
         }

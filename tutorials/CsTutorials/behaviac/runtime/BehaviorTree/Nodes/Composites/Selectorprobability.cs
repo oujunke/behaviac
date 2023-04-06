@@ -34,7 +34,7 @@ namespace behaviac
 
         public override void AddChild(BehaviorNode pBehavior)
         {
-            Debug.Check(pBehavior is DecoratorWeight);
+            Debugs.Check(pBehavior is DecoratorWeight);
             DecoratorWeight pDW = (DecoratorWeight)(pBehavior);
 
             if (pDW != null)
@@ -43,7 +43,7 @@ namespace behaviac
             }
             else
             {
-                Debug.Check(false, "only DecoratorWeightTask can be children");
+                Debugs.Check(false, "only DecoratorWeightTask can be children");
             }
         }
 
@@ -92,7 +92,7 @@ namespace behaviac
 
             protected override bool onenter(Agent pAgent)
             {
-                Debug.Check(this.m_children.Count > 0);
+                Debugs.Check(this.m_children.Count > 0);
 				
 				//if the following assert failed, just comment it out
                 //Debug.Check(this.m_activeChildIndex == CompositeTask.InvalidChildIndex);
@@ -109,7 +109,7 @@ namespace behaviac
                 {
                     BehaviorTask task = this.m_children[i];
 
-                    Debug.Check(task is DecoratorWeight.DecoratorWeightTask);
+                    Debugs.Check(task is DecoratorWeight.DecoratorWeightTask);
                     DecoratorWeight.DecoratorWeightTask pWT = (DecoratorWeight.DecoratorWeightTask)task;
 
                     int weight = pWT.GetWeight(pAgent);
@@ -117,7 +117,7 @@ namespace behaviac
                     this.m_totalSum += weight;
                 }
 
-                Debug.Check(this.m_weightingMap.Count == this.m_children.Count);
+                Debugs.Check(this.m_weightingMap.Count == this.m_children.Count);
 
                 return true;
             }
@@ -130,7 +130,7 @@ namespace behaviac
 
             protected override EBTStatus update(Agent pAgent, EBTStatus childStatus)
             {
-                Debug.Check(this.GetNode() is SelectorProbability);
+                Debugs.Check(this.GetNode() is SelectorProbability);
                 SelectorProbability pSelectorProbabilityNode = (SelectorProbability)(this.GetNode());
 
                 if (childStatus != EBTStatus.BT_RUNNING)
@@ -148,7 +148,7 @@ namespace behaviac
                     return status;
                 }
 
-                Debug.Check(this.m_weightingMap.Count == this.m_children.Count);
+                Debugs.Check(this.m_weightingMap.Count == this.m_children.Count);
 
                 //generate a number between 0 and the sum of the weights
                 float chosen = this.m_totalSum * CompositeStochastic.CompositeStochasticTask.GetRandomValue(pSelectorProbabilityNode.m_method, pAgent);

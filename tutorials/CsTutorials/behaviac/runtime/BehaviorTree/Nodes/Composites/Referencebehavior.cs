@@ -23,14 +23,14 @@ namespace behaviac
         {
             ReferencedBehavior taskSubTree = (ReferencedBehavior)node;
             bool bOk = false;
-            Debug.Check(taskSubTree != null);
+            Debugs.Check(taskSubTree != null);
             int depth2 = planner.GetAgent().Variables.Depth;
             using(AgentState currentState = planner.GetAgent().Variables.Push(false))
             {
                 Agent pAgent = planner.GetAgent();
 
                 string szTreePath = taskSubTree.GetReferencedTree(pAgent);
-                BehaviorTreeTask subTreeTask = Workspace.Instance.CreateBehaviorTreeTask(szTreePath);
+                BehaviorTreeTask subTreeTask = Workspace.CreateBehaviorTreeTask(szTreePath);
 
                 taskSubTree.SetTaskParams(pAgent, subTreeTask);
 
@@ -58,11 +58,11 @@ namespace behaviac
 
                     //task.Parent.UnInstantiatePars(this.LocalVars);
                     planner.LogPlanReferenceTreeExit(planner.GetAgent(), taskSubTree);
-                    Debug.Check(true);
+                    Debugs.Check(true);
                 }
             }
 
-            Debug.Check(planner.GetAgent().Variables.Depth == depth2);
+            Debugs.Check(planner.GetAgent().Variables.Depth == depth2);
             return bOk;
         }
 #endif//
@@ -95,10 +95,10 @@ namespace behaviac
 
                     if (!string.IsNullOrEmpty(szTreePath))
                     {
-                        if (Config.PreloadBehaviors)
+                        if (Configs.PreloadBehaviors)
                         {
-                            BehaviorTree behaviorTree = Workspace.Instance.LoadBehaviorTree(szTreePath);
-                            Debug.Check(behaviorTree != null);
+                            BehaviorTree behaviorTree = Workspace.LoadBehaviorTree(szTreePath);
+                            Debugs.Check(behaviorTree != null);
 
                             if (behaviorTree != null)
                             {
@@ -120,7 +120,7 @@ namespace behaviac
         {
             if (bIsTransition)
             {
-                Debug.Check(!bIsEffector && !bIsPrecondition);
+                Debugs.Check(!bIsEffector && !bIsPrecondition);
 
                 if (this.m_transitions == null)
                 {
@@ -128,13 +128,13 @@ namespace behaviac
                 }
 
                 Transition pTransition = pAttachment as Transition;
-                Debug.Check(pTransition != null);
+                Debugs.Check(pTransition != null);
                 this.m_transitions.Add(pTransition);
 
                 return;
             }
 
-            Debug.Check(bIsTransition == false);
+            Debugs.Check(bIsTransition == false);
             base.Attach(pAttachment, bIsPrecondition, bIsEffector, bIsTransition);
         }
 
@@ -159,7 +159,7 @@ namespace behaviac
         {
             if (this.m_referencedBehaviorPath != null)
             {
-                Debug.Check(this.m_referencedBehaviorPath is CInstanceMember<string>);
+                Debugs.Check(this.m_referencedBehaviorPath is CInstanceMember<string>);
                 return ((CInstanceMember<string>)this.m_referencedBehaviorPath).GetValue(pAgent);
             }
 
@@ -185,7 +185,7 @@ namespace behaviac
             if (this.m_taskNode == null)
             {
                 string szTreePath = this.GetReferencedTree(pAgent);
-                BehaviorTree bt = Workspace.Instance.LoadBehaviorTree(szTreePath);
+                BehaviorTree bt = Workspace.LoadBehaviorTree(szTreePath);
 
                 if (bt != null && bt.GetChildrenCount() == 1)
                 {
@@ -204,7 +204,7 @@ namespace behaviac
 #endif//
             //~ReferencedBehaviorTask()
             //{
-            //    Workspace.Instance.DestroyBehaviorTreeTask(this.m_subTree, null);
+            //    Workspace.DestroyBehaviorTreeTask(this.m_subTree, null);
             //    this.m_subTree = null;
             //}
 
@@ -212,7 +212,7 @@ namespace behaviac
             {
 #if BEHAVIAC_USE_HTN
                 this.currentState = pAgent.Variables.Push(false);
-                Debug.Check(currentState != null);
+                Debugs.Check(currentState != null);
 #endif//
 
                 bool bOk = base.CheckPreconditions(pAgent, bIsAlive);
@@ -240,7 +240,7 @@ namespace behaviac
             {
                 if (this.m_status == EBTStatus.BT_RUNNING && this.m_node.HasEvents())
                 {
-                    Debug.Check(this.m_subTree != null);
+                    Debugs.Check(this.m_subTree != null);
 
                     if (!this.m_subTree.onevent(pAgent, eventName, eventPrams))
                     {
@@ -254,7 +254,7 @@ namespace behaviac
             protected override bool onenter(Agent pAgent)
             {
                 ReferencedBehavior pNode = this.GetNode() as ReferencedBehavior;
-                Debug.Check(pNode != null);
+                Debugs.Check(pNode != null);
 
                 if (pNode != null)
                 {
@@ -267,10 +267,10 @@ namespace behaviac
                     {
                         if (this.m_subTree != null)
                         {
-                            Workspace.Instance.DestroyBehaviorTreeTask(this.m_subTree, pAgent);
+                            Workspace.DestroyBehaviorTreeTask(this.m_subTree, pAgent);
                         }
 
-                        this.m_subTree = Workspace.Instance.CreateBehaviorTreeTask(szTreePath);
+                        this.m_subTree = Workspace.CreateBehaviorTreeTask(szTreePath);
                         pNode.SetTaskParams(pAgent, this.m_subTree);
                     }
                     else if (this.m_subTree != null)
@@ -289,7 +289,7 @@ namespace behaviac
             protected override void onexit(Agent pAgent, EBTStatus s)
             {
 #if BEHAVIAC_USE_HTN
-                Debug.Check(this.currentState != null);
+                Debugs.Check(this.currentState != null);
                 this.currentState.Pop();
 #endif
                 base.onexit(pAgent, s);
@@ -298,7 +298,7 @@ namespace behaviac
             protected override EBTStatus update(Agent pAgent, EBTStatus childStatus)
             {
                 ReferencedBehavior pNode = this.GetNode() as ReferencedBehavior;
-                Debug.Check(pNode != null);
+                Debugs.Check(pNode != null);
 
                 if (pNode != null)
                 {
@@ -307,8 +307,8 @@ namespace behaviac
 
                     if (pAgent.m_debug_count > 20)
                     {
-                        Debug.LogWarning(string.Format("{0} might be in a recurrsive inter calling of trees\n", pAgent.GetName()));
-                        Debug.Check(false);
+                        Debugs.LogWarning(string.Format("{0} might be in a recurrsive inter calling of trees\n", pAgent.GetName()));
+                        Debugs.Check(false);
                     }
 #endif
 

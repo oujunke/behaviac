@@ -17,8 +17,12 @@ namespace behaviac
 {
     public class Event : ConditionBase
     {
-        public Event()
+        public Workspace Workspace { get; private set; }
+        private Config Configs { set; get; }
+        public Event(Workspace workspace)
         {
+            Workspace = workspace;
+            Configs = workspace.Configs;
             m_eventName = null;
             m_bTriggeredOnce = false;
             m_triggerMode = TriggerMode.TM_Transfer;
@@ -40,10 +44,10 @@ namespace behaviac
                 {
                     this.m_referencedBehaviorPath = p.value;
 
-                    if (Config.PreloadBehaviors)
+                    if (Configs.PreloadBehaviors)
                     {
-                        BehaviorTree behaviorTree = Workspace.Instance.LoadBehaviorTree(this.m_referencedBehaviorPath);
-                        Debug.Check(behaviorTree != null);
+                        BehaviorTree behaviorTree = Workspace.LoadBehaviorTree(this.m_referencedBehaviorPath);
+                        Debugs.Check(behaviorTree != null);
                     }
                 }
                 else if (p.name == "TriggeredOnce")
@@ -62,7 +66,7 @@ namespace behaviac
                     }
                     else
                     {
-                        Debug.Check(false, string.Format("unrecognised trigger mode {0}", p.value));
+                        Debugs.Check(false, string.Format("unrecognised trigger mode {0}", p.value));
                     }
                 }
             }
@@ -93,7 +97,7 @@ namespace behaviac
 
                     pAgent.bteventtree(pAgent, this.m_referencedBehaviorPath, tm);
 
-                    Debug.Check(pAgent.CurrentTreeTask != null);
+                    Debugs.Check(pAgent.CurrentTreeTask != null);
                     pAgent.CurrentTreeTask.AddVariables(eventParams);
 
                     pAgent.btexec();
@@ -113,7 +117,7 @@ namespace behaviac
 
         protected override BehaviorTask createTask()
         {
-            Debug.Check(false);
+            Debugs.Check(false);
             return null;
         }
 

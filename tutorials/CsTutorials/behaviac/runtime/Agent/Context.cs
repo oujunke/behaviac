@@ -63,9 +63,10 @@ namespace behaviac
 
         private int m_context_id = -1;
         private bool m_IsExecuting = false;
-
-        private Context(int contextId)
+        public Workspace Workspace { get; private set; }
+        public Context(int contextId, Workspace workspace)
         {
+            Workspace = workspace;
             m_context_id = contextId;
             m_IsExecuting = false;
         }
@@ -85,9 +86,9 @@ namespace behaviac
             return this.m_context_id;
         }
 
-        public static Context GetContext(int contextId)
+        public Context GetContext(int contextId)
         {
-            Debug.Check(contextId >= 0);
+            Workspace.Debugs.Check(contextId >= 0);
 
             if (ms_contexts.ContainsKey(contextId))
             {
@@ -95,13 +96,13 @@ namespace behaviac
                 return pContext;
             }
 
-            Context pC = new Context(contextId);
+            Context pC = new Context(contextId, Workspace);
             ms_contexts[contextId] = pC;
 
             return pC;
         }
 
-        public static void Cleanup(int contextId)
+        public void Cleanup(int contextId)
         {
             if (ms_contexts != null)
             {
@@ -118,7 +119,7 @@ namespace behaviac
                     }
                     else
                     {
-                        Debug.Check(false, "unused context id");
+                        Workspace.Debugs.Check(false, "unused context id");
                     }
                 }
             }
@@ -127,11 +128,11 @@ namespace behaviac
         private List<Agent> delayAddedAgents = new List<Agent>();
         private List<Agent> delayRemovedAgents = new List<Agent>();
 
-        public static void AddAgent(Agent pAgent)
+        public void AddAgent(Agent pAgent)
         {
             if (!Object.ReferenceEquals(pAgent, null))
             {
-                Context c = Context.GetContext(pAgent.GetContextId());
+                Context c = GetContext(pAgent.GetContextId());
 
                 if (c != null)
                 {
@@ -147,11 +148,11 @@ namespace behaviac
             }
         }
 
-        public static void RemoveAgent(Agent pAgent)
+        public void RemoveAgent(Agent pAgent)
         {
             if (!Object.ReferenceEquals(pAgent, null))
             {
-                Context c = Context.GetContext(pAgent.GetContextId());
+                Context c = GetContext(pAgent.GetContextId());
 
                 if (c != null)
                 {
@@ -194,7 +195,7 @@ namespace behaviac
         {
             int agentId = pAgent.GetId();
             int priority = pAgent.GetPriority();
-            int itemIndex = this.Agents.FindIndex(delegate(HeapItem_t h)
+            int itemIndex = this.Agents.FindIndex(delegate (HeapItem_t h)
             {
                 return h.priority == priority;
             });
@@ -217,7 +218,7 @@ namespace behaviac
         {
             int agentId = pAgent.GetId();
             int priority = pAgent.GetPriority();
-            int itemIndex = this.Agents.FindIndex(delegate(HeapItem_t h)
+            int itemIndex = this.Agents.FindIndex(delegate (HeapItem_t h)
             {
                 return h.priority == priority;
             });
@@ -231,11 +232,11 @@ namespace behaviac
             }
         }
 
-        public static void execAgents(int contextId)
+        public void execAgents(int contextId)
         {
             if (contextId >= 0)
             {
-                Context pContext = Context.GetContext(contextId);
+                Context pContext = GetContext(contextId);
 
                 if (pContext != null)
                 {
@@ -260,7 +261,7 @@ namespace behaviac
 
         private void execAgents_()
         {
-            if (!Workspace.Instance.IsExecAgents)
+            if (!Workspace.IsExecAgents)
             {
                 return;
             }
@@ -282,7 +283,7 @@ namespace behaviac
                         pAgent.btexec();
 
                         // in case IsExecAgents was set to false by pA's bt
-                        if (!Workspace.Instance.IsExecAgents)
+                        if (!Workspace.IsExecAgents)
                         {
                             break;
                         }
@@ -298,7 +299,7 @@ namespace behaviac
         private void LogCurrentState()
         {
             string msg = string.Format("LogCurrentStates {0} {1}", this.m_context_id, this.Agents.Count);
-            behaviac.Debug.Log(msg);
+            Workspace.Debugs.Log(msg);
 
             //force to log vars
             for (int i = 0; i < this.Agents.Count; ++i)
@@ -318,13 +319,13 @@ namespace behaviac
             }
         }
 
-        public static void LogCurrentStates(int contextId)
+        public void LogCurrentStates(int contextId)
         {
-            Debug.Check(ms_contexts != null);
+            Workspace.Debugs.Check(ms_contexts != null);
 
             if (contextId >= 0)
             {
-                Context pContext = Context.GetContext(contextId);
+                Context pContext = GetContext(contextId);
 
                 if (pContext != null)
                 {
@@ -355,15 +356,15 @@ namespace behaviac
             m_namedAgents.Clear();
         }
 
-        private static bool GetClassNameString(string variableName, ref string className)
+        private bool GetClassNameString(string variableName, ref string className)
         {
-            Debug.Check(!string.IsNullOrEmpty(variableName));
+            Workspace.Debugs.Check(!string.IsNullOrEmpty(variableName));
 
             int pSep = variableName.LastIndexOf(':');
 
             if (pSep > 0)
             {
-                Debug.Check(variableName[pSep - 1] == ':');
+                Workspace.Debugs.Check(variableName[pSep - 1] == ':');
                 className = variableName.Substring(0, pSep - 1);
 
                 return true;
@@ -389,7 +390,7 @@ namespace behaviac
 
             if (Agent.IsNameRegistered(agentInstanceName))
             {
-                Debug.Check(GetInstance(agentInstanceName) == null, "the name has been bound to an instance already!");
+                Workspace.Debugs.Check(GetInstance(agentInstanceName) == null, "the name has been bound to an instance already!");
 
                 string className = Agent.GetRegisteredClassName(agentInstanceName);
 
@@ -402,7 +403,7 @@ namespace behaviac
             }
             else
             {
-                Debug.Check(false);
+                Workspace.Debugs.Check(false);
             }
 
             return false;
@@ -422,7 +423,7 @@ namespace behaviac
 
         public bool UnbindInstance(string agentInstanceName)
         {
-            Debug.Check(!string.IsNullOrEmpty(agentInstanceName));
+            Workspace.Debugs.Check(!string.IsNullOrEmpty(agentInstanceName));
 
             if (Agent.IsNameRegistered(agentInstanceName))
             {
@@ -435,7 +436,7 @@ namespace behaviac
             }
             else
             {
-                Debug.Check(false);
+                Workspace.Debugs.Check(false);
             }
 
             return false;

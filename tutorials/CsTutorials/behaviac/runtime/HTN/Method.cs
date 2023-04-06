@@ -38,7 +38,7 @@ namespace behaviac
 
         protected override BehaviorTask createTask()
         {
-            Debug.Check(false);
+            Debugs.Check(false);
             return null;
         }
 

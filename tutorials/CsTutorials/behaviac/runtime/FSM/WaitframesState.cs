@@ -93,7 +93,7 @@ namespace behaviac
             {
                 this.m_nextStateId = -1;
 
-                this.m_start = Workspace.Instance.FrameSinceStartup;
+                this.m_start = Workspace.FrameSinceStartup;
                 this.m_frames = this.GetFrames(pAgent);
 
                 return (this.m_frames >= 0);
@@ -109,7 +109,7 @@ namespace behaviac
                 Debug.Check(this.m_node is WaitFramesState, "node is not an WaitFramesState");
                 WaitFramesState pStateNode = (WaitFramesState)this.m_node;
 
-                if (Workspace.Instance.FrameSinceStartup - this.m_start + 1 >= this.m_frames)
+                if (Workspace.FrameSinceStartup - this.m_start + 1 >= this.m_frames)
                 {
                     pStateNode.Update(pAgent, out this.m_nextStateId);
                     return EBTStatus.BT_SUCCESS;

@@ -41,7 +41,7 @@ namespace behaviac
         {
             if (bIsTransition)
             {
-                Debug.Check(!bIsEffector && !bIsPrecondition);
+                Debugs.Check(!bIsEffector && !bIsPrecondition);
 
                 if (this.m_transitions == null)
                 {
@@ -49,13 +49,13 @@ namespace behaviac
                 }
 
                 Transition pTransition = pAttachment as Transition;
-                Debug.Check(pTransition != null);
+                Debugs.Check(pTransition != null);
                 this.m_transitions.Add(pTransition);
 
                 return;
             }
 
-            Debug.Check(bIsTransition == false);
+            Debugs.Check(bIsTransition == false);
             base.Attach(pAttachment, bIsPrecondition, bIsEffector, bIsTransition);
         }
 
@@ -140,14 +140,14 @@ namespace behaviac
                     if (transition.Evaluate(pAgent, result))
                     {
                         nextStateId = transition.TargetStateId;
-                        Debug.Check(nextStateId != -1);
+                        pAgent.Debugs.Check(nextStateId != -1);
 
                         //transition actions
                         transition.ApplyEffects(pAgent, Effector.EPhase.E_BOTH);
 
 #if !BEHAVIAC_RELEASE
 
-                        if (Config.IsLoggingOrSocketing)
+                        if (pAgent.Configs.IsLoggingOrSocketing)
                         {
                             BehaviorTask.CHECK_BREAKPOINT(pAgent, node, "transition", EActionResult.EAR_none);
                         }
@@ -195,7 +195,7 @@ namespace behaviac
             {
                 get
                 {
-                    Debug.Check(this.GetNode() is State, "node is not an State");
+                    Debugs.Check(this.GetNode() is State, "node is not an State");
                     State pStateNode = (State)(this.GetNode());
 
                     return pStateNode.IsEndState;
@@ -214,9 +214,9 @@ namespace behaviac
 
             protected override EBTStatus update(Agent pAgent, EBTStatus childStatus)
             {
-                Debug.Check(childStatus == EBTStatus.BT_RUNNING);
+                Debugs.Check(childStatus == EBTStatus.BT_RUNNING);
 
-                Debug.Check(this.GetNode() is State, "node is not an State");
+                Debugs.Check(this.GetNode() is State, "node is not an State");
                 State pStateNode = (State)(this.GetNode());
 
                 EBTStatus result = pStateNode.Update(pAgent, out this.m_nextStateId);

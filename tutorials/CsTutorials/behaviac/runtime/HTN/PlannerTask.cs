@@ -428,7 +428,7 @@ namespace behaviac
             _logged = false;
 #endif
 
-            //this.m_subTree = Workspace.Instance.CreateBehaviorTreeTask(pNode.GetReferencedTree(pAgent));
+            //this.m_subTree = Workspace.CreateBehaviorTreeTask(pNode.GetReferencedTree(pAgent));
             Debug.Check(this.m_subTree != null);
             pNode.SetTaskParams(pAgent, this.m_subTree);
 

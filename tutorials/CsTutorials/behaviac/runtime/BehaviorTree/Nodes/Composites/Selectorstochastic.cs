@@ -86,7 +86,7 @@ namespace behaviac
             protected override EBTStatus update(Agent pAgent, EBTStatus childStatus)
             {
                 EBTStatus s = childStatus;
-                Debug.Check(this.m_activeChildIndex < this.m_children.Count);
+                Debugs.Check(this.m_activeChildIndex < this.m_children.Count);
 
                 SelectorStochastic node = this.m_node as SelectorStochastic;
 

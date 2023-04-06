@@ -100,7 +100,7 @@ namespace behaviac
             {
                 base.copyto(target);
 
-                Debug.Check(target is WaitTask);
+                Debugs.Check(target is WaitTask);
                 WaitTask ttask = (WaitTask)target;
 
                 ttask.m_start = this.m_start;
@@ -148,16 +148,16 @@ namespace behaviac
 
             protected override bool onenter(Agent pAgent)
             {
-                if (Workspace.Instance.UseIntValue)
+                if (Workspace.UseIntValue)
                 {
-                    this.m_intStart = Workspace.Instance.IntValueSinceStartup;
+                    this.m_intStart = Workspace.IntValueSinceStartup;
                     this.m_intTime = this.GetIntTime(pAgent);
 
                     return (this.m_intTime >= 0);
                 }
                 else
                 {
-                    this.m_start = Workspace.Instance.DoubleValueSinceStartup;
+                    this.m_start = Workspace.DoubleValueSinceStartup;
                     this.m_time = this.GetTime(pAgent);
 
                     return (this.m_time >= 0);
@@ -170,18 +170,18 @@ namespace behaviac
 
             protected override EBTStatus update(Agent pAgent, EBTStatus childStatus)
             {
-                Debug.Check(childStatus == EBTStatus.BT_RUNNING);
+                Debugs.Check(childStatus == EBTStatus.BT_RUNNING);
 
-                if (Workspace.Instance.UseIntValue)
+                if (Workspace.UseIntValue)
                 {
-                    if (Workspace.Instance.IntValueSinceStartup - this.m_intStart >= this.m_intTime)
+                    if (Workspace.IntValueSinceStartup - this.m_intStart >= this.m_intTime)
                     {
                         return EBTStatus.BT_SUCCESS;
                     }
                 }
                 else
                 {
-                    if (Workspace.Instance.DoubleValueSinceStartup - this.m_start >= this.m_time)
+                    if (Workspace.DoubleValueSinceStartup - this.m_start >= this.m_time)
                     {
                         return EBTStatus.BT_SUCCESS;
                     }

@@ -44,7 +44,7 @@ namespace behaviac
                 }
 
                 //clear the log cache so that the next node can log all properites
-                LogManager.Instance.PLanningClearCache();
+                Workspace.LogManagers.PLanningClearCache();
                 seqTask.AddChild(childTask);
             }
 
@@ -95,7 +95,7 @@ namespace behaviac
 
             for (; ;)
             {
-                Debug.Check(activeChildIndex < children.Count);
+                Debugs.Check(activeChildIndex < children.Count);
 
                 if (s == EBTStatus.BT_RUNNING)
                 {
@@ -178,7 +178,7 @@ namespace behaviac
 
             protected override EBTStatus update(Agent pAgent, EBTStatus childStatus)
             {
-                Debug.Check(this.m_activeChildIndex < this.m_children.Count);
+                Debugs.Check(this.m_activeChildIndex < this.m_children.Count);
 
                 Sequence node = this.m_node as Sequence;
 

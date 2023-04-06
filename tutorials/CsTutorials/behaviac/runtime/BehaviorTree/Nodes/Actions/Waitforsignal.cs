@@ -71,7 +71,7 @@ namespace behaviac
         {
             base.copyto(target);
 
-            Debug.Check(target is WaitforSignalTask);
+            Debugs.Check(target is WaitforSignalTask);
             WaitforSignalTask ttask = (WaitforSignalTask)target;
 
             ttask.m_bTriggered = this.m_bTriggered;

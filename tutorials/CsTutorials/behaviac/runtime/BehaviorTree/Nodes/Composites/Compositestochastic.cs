@@ -64,10 +64,10 @@ namespace behaviac
                 }
                 else
                 {
-                    value = RandomGenerator.GetInstance().GetRandom();
+                    value = RandomGenerator.GetRandom();
                 }
 
-                Debug.Check(value >= 0.0f && value < 1.0f);
+                pAgent.Workspace.Debugs.Check(value >= 0.0f && value < 1.0f);
                 return value;
             }
 
@@ -75,7 +75,7 @@ namespace behaviac
             {
                 base.copyto(target);
 
-                Debug.Check(target is CompositeStochasticTask);
+                Debugs.Check(target is CompositeStochasticTask);
                 CompositeStochasticTask ttask = (CompositeStochasticTask)target;
 
                 ttask.m_set = this.m_set;
@@ -96,7 +96,7 @@ namespace behaviac
 
             protected override bool onenter(Agent pAgent)
             {
-                Debug.Check(this.m_children.Count > 0);
+                Debugs.Check(this.m_children.Count > 0);
 
                 this.random_child(pAgent);
 
@@ -111,7 +111,7 @@ namespace behaviac
 
             private void random_child(Agent pAgent)
             {
-                Debug.Check(this.GetNode() == null || this.GetNode() is CompositeStochastic);
+                Debugs.Check(this.GetNode() == null || this.GetNode() is CompositeStochastic);
                 CompositeStochastic pNode = (CompositeStochastic)(this.GetNode());
 
                 int n = this.m_children.Count;
@@ -129,10 +129,10 @@ namespace behaviac
                 for (int i = 0; i < n; ++i)
                 {
                     int index1 = (int)(n * GetRandomValue(pNode != null ? pNode.m_method : null, pAgent));
-                    Debug.Check(index1 < n);
+                    Debugs.Check(index1 < n);
 
                     int index2 = (int)(n * GetRandomValue(pNode != null ? pNode.m_method : null, pAgent));
-                    Debug.Check(index2 < n);
+                    Debugs.Check(index2 < n);
 
                     //swap
                     if (index1 != index2)

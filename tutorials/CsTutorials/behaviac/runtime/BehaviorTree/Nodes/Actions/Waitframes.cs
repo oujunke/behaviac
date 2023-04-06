@@ -45,7 +45,7 @@ namespace behaviac
         {
             if (this.m_frames != null)
             {
-                Debug.Check(this.m_frames is CInstanceMember<int>);
+                Debugs.Check(this.m_frames is CInstanceMember<int>);
                 return ((CInstanceMember<int>)this.m_frames).GetValue(pAgent);
             }
 
@@ -67,7 +67,7 @@ namespace behaviac
             {
                 base.copyto(target);
 
-                Debug.Check(target is WaitFramesTask);
+                Debugs.Check(target is WaitFramesTask);
                 WaitFramesTask ttask = (WaitFramesTask)target;
                 ttask.m_start = this.m_start;
                 ttask.m_frames = this.m_frames;
@@ -91,7 +91,7 @@ namespace behaviac
 
             protected override bool onenter(Agent pAgent)
             {
-                this.m_start = Workspace.Instance.FrameSinceStartup;
+                this.m_start = Workspace.FrameSinceStartup;
                 this.m_frames = this.GetFrames(pAgent);
 
                 return (this.m_frames >= 0);
@@ -103,9 +103,9 @@ namespace behaviac
 
             protected override EBTStatus update(Agent pAgent, EBTStatus childStatus)
             {
-                Debug.Check(childStatus == EBTStatus.BT_RUNNING);
+                Debugs.Check(childStatus == EBTStatus.BT_RUNNING);
 
-                if (Workspace.Instance.FrameSinceStartup - this.m_start + 1 >= this.m_frames)
+                if (Workspace.FrameSinceStartup - this.m_start + 1 >= this.m_frames)
                 {
                     return EBTStatus.BT_SUCCESS;
                 }
@@ -115,7 +115,7 @@ namespace behaviac
 
             private int GetFrames(Agent pAgent)
             {
-                Debug.Check(this.GetNode() is WaitFrames);
+                Debugs.Check(this.GetNode() is WaitFrames);
                 WaitFrames pWaitNode = (WaitFrames)(this.GetNode());
 
                 return pWaitNode != null ? pWaitNode.GetFrames(pAgent) : 0;

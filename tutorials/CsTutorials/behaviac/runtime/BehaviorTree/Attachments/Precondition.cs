@@ -30,6 +30,10 @@ namespace behaviac
             public EPhase m_phase = EPhase.E_ENTER;
             public bool m_bAnd = false;
 
+            public PreconditionConfig(Workspace workspace) : base(workspace)
+            {
+            }
+
             public override bool load(List<property_t> properties)
             {
                 bool loaded = base.load(properties);
@@ -52,7 +56,7 @@ namespace behaviac
                             }
                             else
                             {
-                                Debug.Check(false);
+                                Debugs.Check(false);
                             }
                         }
                         else if (p.name == "Phase")
@@ -71,7 +75,7 @@ namespace behaviac
                             }
                             else
                             {
-                                Debug.Check(false);
+                                Debugs.Check(false);
                             }
 
                             break;
@@ -80,7 +84,7 @@ namespace behaviac
                 }
                 catch (Exception ex)
                 {
-                    Debug.Check(false, ex.Message);
+                    Debugs.Check(false, ex.Message);
                     loaded = false;
                 }
 
@@ -88,9 +92,9 @@ namespace behaviac
             }
         }
 
-        public Precondition()
+        public Precondition(Workspace workspace)
         {
-            m_ActionConfig = new PreconditionConfig();
+            m_ActionConfig = new PreconditionConfig(workspace);
         }
 
         public EPhase Phase

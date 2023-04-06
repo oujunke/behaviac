@@ -72,7 +72,7 @@ namespace behaviac
             {
                 End pEndNode = this.GetNode() as End;
                 EBTStatus status = pEndNode != null ? pEndNode.GetStatus(pAgent) : EBTStatus.BT_SUCCESS;
-                Debug.Check(status == EBTStatus.BT_SUCCESS || status == EBTStatus.BT_FAILURE);
+                Debugs.Check(status == EBTStatus.BT_SUCCESS || status == EBTStatus.BT_FAILURE);
                 return status;
             }
 

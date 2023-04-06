@@ -42,6 +42,7 @@
     <Compile Include="runtime\Agent\Agent.cs" />
     <Compile Include="runtime\Agent\Context.cs" />
     <Compile Include="runtime\Base\Attributs.cs" />
+    <Compile Include="runtime\Base\CompareValueString.cs" />
     <Compile Include="runtime\Base\CRC32.cs" />
     <Compile Include="runtime\Base\FileManager.cs" />
     <Compile Include="runtime\Base\LogManager.cs" />
@@ -54,6 +55,7 @@
     <Compile Include="runtime\Base\socketconnect.cs" />
     <Compile Include="runtime\Base\socketconnect_base.cs" />
     <Compile Include="runtime\Base\Utils.cs" />
+    <Compile Include="runtime\Base\WorkspaceGlobalData.cs" />
     <Compile Include="runtime\BehaviorTree\Attachments\AttachAction.cs" />
     <Compile Include="runtime\BehaviorTree\Attachments\Effector.cs" />
     <Compile Include="runtime\BehaviorTree\Attachments\Event.cs" />

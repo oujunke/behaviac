@@ -23,9 +23,14 @@ namespace behaviac
             protected IInstanceMember m_opr1;
             protected IInstanceMember m_opr2;
             public EOperatorType m_operator = EOperatorType.E_INVALID;
-
-            protected ActionConfig()
+            public Workspace Workspace { get; private set; }
+            public Config Configs { set; get; }
+            public Debug Debugs { set; get; }
+            protected ActionConfig(Workspace workspace)
             {
+                Workspace = workspace;
+                Configs = workspace.Configs;
+                Debugs = workspace.Debugs;
             }
 
             public virtual bool load(List<property_t> properties)
@@ -68,7 +73,7 @@ namespace behaviac
                     }
                     else if (p.name == "Operator")
                     {
-                        this.m_operator = OperationUtils.ParseOperatorType(p.value);
+                        this.m_operator = OperationUtils.ParseOperatorType(p.value,Workspace);
                     }
                     else if (p.name == "Opr2")
                     {
@@ -100,7 +105,7 @@ namespace behaviac
                 {
                     if (this.m_opl != null)
                     {
-                        Debug.Check(this.m_opl is IMethod);
+                        Debugs.Check(this.m_opl is IMethod);
                         IMethod method = this.m_opl as IMethod;
 
                         if (method != null)
@@ -186,7 +191,7 @@ namespace behaviac
 
         protected override BehaviorTask createTask()
         {
-            Debug.Check(false);
+            Debugs.Check(false);
             return null;
         }
     }

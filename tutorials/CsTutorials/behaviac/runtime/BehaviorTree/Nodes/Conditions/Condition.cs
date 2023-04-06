@@ -40,7 +40,7 @@ namespace behaviac
                 }
                 else if (p.name == "Operator")
                 {
-                    this.m_operator = OperationUtils.ParseOperatorType(p.value);
+                    this.m_operator = OperationUtils.ParseOperatorType(p.value,Workspace);
                 }
                 else if (p.name == "Opr")
                 {
@@ -121,9 +121,9 @@ namespace behaviac
 
             protected override EBTStatus update(Agent pAgent, EBTStatus childStatus)
             {
-                Debug.Check(childStatus == EBTStatus.BT_RUNNING);
+                Debugs.Check(childStatus == EBTStatus.BT_RUNNING);
 
-                Debug.Check(this.GetNode() is Condition);
+                Debugs.Check(this.GetNode() is Condition);
                 Condition pConditionNode = (Condition)(this.GetNode());
 
                 bool ret = pConditionNode.Evaluate(pAgent);

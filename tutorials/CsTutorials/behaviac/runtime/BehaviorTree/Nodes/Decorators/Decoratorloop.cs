@@ -132,20 +132,20 @@ namespace behaviac
                     return EBTStatus.BT_RUNNING;
                 }
 
-                Debug.Check(this.m_n == 0);
+                Debugs.Check(this.m_n == 0);
 
                 return EBTStatus.BT_SUCCESS;
             }
 
             protected override EBTStatus update(Agent pAgent, EBTStatus childStatus)
             {
-                Debug.Check(this.m_node is DecoratorLoop);
+                Debugs.Check(this.m_node is DecoratorLoop);
                 DecoratorLoop node = (DecoratorLoop)this.m_node;
 
                 if (node.m_bDoneWithinFrame)
                 {
-                    Debug.Check(this.m_n >= 0);
-                    Debug.Check(this.m_root != null);
+                    Debugs.Check(this.m_n >= 0);
+                    Debugs.Check(this.m_root != null);
 
                     EBTStatus status = EBTStatus.BT_INVALID;
 

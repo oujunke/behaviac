@@ -100,7 +100,7 @@ namespace behaviac
             {
                 base.copyto(target);
 
-                Debug.Check(target is WaitStateTask);
+                Debugs.Check(target is WaitStateTask);
                 WaitStateTask ttask = (WaitStateTask)target;
 
                 ttask.m_start = this.m_start;
@@ -150,16 +150,16 @@ namespace behaviac
             {
                 this.m_nextStateId = -1;
 
-                if (Workspace.Instance.UseIntValue)
+                if (Workspace.UseIntValue)
                 {
-                    this.m_intStart = Workspace.Instance.IntValueSinceStartup;
+                    this.m_intStart = Workspace.IntValueSinceStartup;
                     this.m_intTime = this.GetIntTime(pAgent);
 
                     return (this.m_intTime >= 0);
                 }
                 else
                 {
-                    this.m_start = Workspace.Instance.DoubleValueSinceStartup;
+                    this.m_start = Workspace.DoubleValueSinceStartup;
                     this.m_time = this.GetTime(pAgent);
 
                     return (this.m_time >= 0);
@@ -172,13 +172,13 @@ namespace behaviac
 
             protected override EBTStatus update(Agent pAgent, EBTStatus childStatus)
             {
-                Debug.Check(childStatus == EBTStatus.BT_RUNNING);
-                Debug.Check(this.m_node is WaitState, "node is not an WaitState");
+                Debugs.Check(childStatus == EBTStatus.BT_RUNNING);
+                Debugs.Check(this.m_node is WaitState, "node is not an WaitState");
                 WaitState pStateNode = (WaitState)this.m_node;
 
-                if (Workspace.Instance.UseIntValue)
+                if (Workspace.UseIntValue)
                 {
-                    if (Workspace.Instance.IntValueSinceStartup - this.m_intStart >= this.m_intTime)
+                    if (Workspace.IntValueSinceStartup - this.m_intStart >= this.m_intTime)
                     {
                         pStateNode.Update(pAgent, out this.m_nextStateId);
                         return EBTStatus.BT_SUCCESS;
@@ -186,7 +186,7 @@ namespace behaviac
                 }
                 else
                 {
-                    if (Workspace.Instance.DoubleValueSinceStartup - this.m_start >= this.m_time)
+                    if (Workspace.DoubleValueSinceStartup - this.m_start >= this.m_time)
                     {
                         pStateNode.Update(pAgent, out this.m_nextStateId);
                         return EBTStatus.BT_SUCCESS;

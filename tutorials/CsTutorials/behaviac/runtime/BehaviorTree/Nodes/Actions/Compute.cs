@@ -32,9 +32,9 @@ namespace behaviac
                 }
                 else if (p.name == "Operator")
                 {
-                    Debug.Check(p.value == "Add" || p.value == "Sub" || p.value == "Mul" || p.value == "Div");
+                    Debugs.Check(p.value == "Add" || p.value == "Sub" || p.value == "Mul" || p.value == "Div");
 
-                    this.m_operator = OperationUtils.ParseOperatorType(p.value);
+                    this.m_operator = OperationUtils.ParseOperatorType(p.value,Workspace);
                 }
                 else if (p.name == "Opr1")
                 {
@@ -113,11 +113,11 @@ namespace behaviac
 
             protected override EBTStatus update(Agent pAgent, EBTStatus childStatus)
             {
-                Debug.Check(childStatus == EBTStatus.BT_RUNNING);
+                Debugs.Check(childStatus == EBTStatus.BT_RUNNING);
 
                 EBTStatus result = EBTStatus.BT_SUCCESS;
 
-                Debug.Check(this.GetNode() is Compute);
+                Debugs.Check(this.GetNode() is Compute);
                 Compute pComputeNode = (Compute)(this.GetNode());
 
 #if !BEHAVIAC_RELEASE
@@ -131,21 +131,21 @@ namespace behaviac
 
                     if (Math.Abs(f) < 0.00001f)
                     {
-                        Debug.LogError(string.Format("Compute {0}: right is 0", this.m_id));
+                        Debugs.LogError(string.Format("Compute {0}: right is 0", this.m_id));
                     }
 
                     double d = Convert.ToDouble(v);
 
                     if (Math.Abs(d) < 0.00001)
                     {
-                        Debug.LogError(string.Format("Compute {0}: right is 0", this.m_id));
+                        Debugs.LogError(string.Format("Compute {0}: right is 0", this.m_id));
                     }
 
                     int n = Convert.ToInt32(v);
 
                     if (n == 0)
                     {
-                        Debug.LogError(string.Format("Compute {0} has right is 0", this.m_id));
+                        Debugs.LogError(string.Format("Compute {0} has right is 0", this.m_id));
                     }
                 }
 

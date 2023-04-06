@@ -113,7 +113,7 @@ namespace behaviac
                     }
                     else
                     {
-                        Debug.Check(false);
+                        Debugs.Check(false);
                     }
                 }
                 else if (p.name == "SuccessPolicy")
@@ -128,7 +128,7 @@ namespace behaviac
                     }
                     else
                     {
-                        Debug.Check(false);
+                        Debugs.Check(false);
                     }
                 }
                 else if (p.name == "ExitPolicy")
@@ -143,7 +143,7 @@ namespace behaviac
                     }
                     else
                     {
-                        Debug.Check(false);
+                        Debugs.Check(false);
                     }
                 }
                 else if (p.name == "ChildFinishPolicy")
@@ -158,7 +158,7 @@ namespace behaviac
                     }
                     else
                     {
-                        Debug.Check(false);
+                        Debugs.Check(false);
                     }
                 }
                 else
@@ -245,7 +245,7 @@ namespace behaviac
                 }
                 else
                 {
-                    Debug.Check(treeStatus == EBTStatus.BT_FAILURE);
+                    Debugs.Check(treeStatus == EBTStatus.BT_FAILURE);
 
                     sawFail = true;
                     sawAllSuccess = false;
@@ -305,7 +305,7 @@ namespace behaviac
 
             protected override bool onenter(Agent pAgent)
             {
-                Debug.Check(this.m_activeChildIndex == CompositeTask.InvalidChildIndex);
+                Debugs.Check(this.m_activeChildIndex == CompositeTask.InvalidChildIndex);
 
                 // reset the status cache of the children
                 //for (int i = 0; i < this.m_children.Count; ++i)
@@ -333,9 +333,9 @@ namespace behaviac
 
             protected override EBTStatus update(Agent pAgent, EBTStatus childStatus)
             {
-                Debug.Check(childStatus == EBTStatus.BT_RUNNING);
+                Debugs.Check(childStatus == EBTStatus.BT_RUNNING);
 
-                Debug.Check(this.GetNode() is Parallel);
+                Debugs.Check(this.GetNode() is Parallel);
                 Parallel pParallelNode = (Parallel)(this.GetNode());
 
                 return pParallelNode.ParallelUpdate(pAgent, this.m_children);
