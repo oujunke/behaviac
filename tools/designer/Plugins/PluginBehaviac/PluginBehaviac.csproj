@@ -113,6 +113,8 @@
     <Compile Include="NodeExporters\Cs\Actions\AssignmentCsExporter.cs" />
     <Compile Include="NodeExporters\Cs\Actions\ComputeCsExporter.cs" />
     <Compile Include="NodeExporters\Cs\Actions\EndCsExporter.cs" />
+    <Compile Include="NodeExporters\Cs\Actions\IntervalTimesCsExporter.cs" />
+    <Compile Include="NodeExporters\Cs\Actions\IntervalFramesCsExporter.cs" />
     <Compile Include="NodeExporters\Cs\Actions\WaitCsExporter.cs" />
     <Compile Include="NodeExporters\Cs\Actions\WaitFramesCsExporter.cs" />
     <Compile Include="NodeExporters\Cs\AttachmentCsExporter.cs" />
@@ -169,6 +171,8 @@
     <Compile Include="NodeExporters\NodeExporter.cs" />
     <Compile Include="Nodes\Actions\Compute.cs" />
     <Compile Include="Nodes\Actions\ConnectorCondition.cs" />
+    <Compile Include="Nodes\Actions\IntervalTimes.cs" />
+    <Compile Include="Nodes\Actions\IntervalFrames.cs" />
     <Compile Include="Nodes\Actions\Noop.cs" />
     <Compile Include="Nodes\Actions\Action.cs" />
     <Compile Include="Nodes\Actions\Assignment.cs" />

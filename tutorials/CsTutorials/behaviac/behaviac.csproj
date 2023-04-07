@@ -101,6 +101,8 @@
     <Compile Include="runtime\BehaviorTree\Nodes\Decorators\Decoratorsuccessuntil.cs" />
     <Compile Include="runtime\BehaviorTree\Nodes\Decorators\Decoratortime.cs" />
     <Compile Include="runtime\BehaviorTree\Nodes\Decorators\Decoratorweight.cs" />
+    <Compile Include="runtime\BehaviorTree\Nodes\Decorators\IntervalFrames.cs" />
+    <Compile Include="runtime\BehaviorTree\Nodes\Decorators\IntervalTimes.cs" />
     <Compile Include="runtime\FSM\AlwaysTransition.cs" />
     <Compile Include="runtime\FSM\FSM.cs" />
     <Compile Include="runtime\FSM\StartCondition.cs" />
