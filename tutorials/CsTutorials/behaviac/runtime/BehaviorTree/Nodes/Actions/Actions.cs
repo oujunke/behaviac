@@ -16,7 +16,7 @@ using System.Collections.Generic;
 namespace behaviac
 {
     // ============================================================================
-    public class Action : BehaviorNode
+    public class Actions : BehaviorNode
     {
         protected IMethod m_method;
         protected IMethod m_resultFunctor;
@@ -34,7 +34,7 @@ namespace behaviac
                 {
                     if (!string.IsNullOrEmpty(p.value))
                     {
-                        this.m_method = AgentMeta.ParseMethod(p.value);
+                        this.m_method = AgentMeta.ParseMethod(p.value, Workspace);
                     }
                 }
                 else if (p.name == "ResultOption")
@@ -60,7 +60,7 @@ namespace behaviac
                 {
                     if (!string.IsNullOrEmpty(p.value))
                     {
-                        this.m_resultFunctor = AgentMeta.ParseMethod(p.value); ;
+                        this.m_resultFunctor = AgentMeta.ParseMethod(p.value, Workspace);
                     }
                 }
             }
@@ -68,7 +68,7 @@ namespace behaviac
 
         public override bool IsValid(Agent pAgent, BehaviorTask pTask)
         {
-            if (!(pTask.GetNode() is Action))
+            if (!(pTask.GetNode() is Actions))
             {
                 return false;
             }
@@ -147,12 +147,12 @@ namespace behaviac
             {
             }
 
-            protected override EBTStatus update(Agent pAgent, EBTStatus childStatus)
+            protected override Task<EBTStatus> update(Agent pAgent, EBTStatus childStatus)
             {
                 Debugs.Check(childStatus == EBTStatus.BT_RUNNING);
 
-                Debugs.Check(this.GetNode() is Action, "node is not an Action");
-                Action pActionNode = (Action)(this.GetNode());
+                Debugs.Check(this.GetNode() is Actions, "node is not an Action");
+                Actions pActionNode = (Actions)(this.GetNode());
 
                 EBTStatus result = pActionNode.Execute(pAgent, childStatus);
 

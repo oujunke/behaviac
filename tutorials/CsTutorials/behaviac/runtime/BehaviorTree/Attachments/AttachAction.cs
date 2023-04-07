@@ -47,11 +47,11 @@ namespace behaviac
 
                             if (pParenthesis == -1)
                             {
-                                this.m_opl = AgentMeta.ParseProperty(p.value);
+                                this.m_opl = AgentMeta.ParseProperty(p.value, Workspace);
                             }
                             else
                             {
-                                this.m_opl = AgentMeta.ParseMethod(p.value);
+                                this.m_opl = AgentMeta.ParseMethod(p.value, Workspace);
                             }
                         }
                     }
@@ -63,11 +63,11 @@ namespace behaviac
 
                             if (pParenthesis == -1)
                             {
-                                this.m_opr1 = AgentMeta.ParseProperty(p.value);
+                                this.m_opr1 = AgentMeta.ParseProperty(p.value, Workspace);
                             }
                             else
                             {
-                                this.m_opr1 = AgentMeta.ParseMethod(p.value);
+                                this.m_opr1 = AgentMeta.ParseMethod(p.value, Workspace);
                             }
                         }
                     }
@@ -83,11 +83,11 @@ namespace behaviac
 
                             if (pParenthesis == -1)
                             {
-                                this.m_opr2 = AgentMeta.ParseProperty(p.value);
+                                this.m_opr2 = AgentMeta.ParseProperty(p.value, Workspace);
                             }
                             else
                             {
-                                this.m_opr2 = AgentMeta.ParseMethod(p.value);
+                                this.m_opr2 = AgentMeta.ParseMethod(p.value,Workspace);
                             }
                         }
                     }

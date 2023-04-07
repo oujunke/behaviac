@@ -476,7 +476,7 @@ namespace behaviac
                         pAgent.Workspace.LogManagers.Log(errorInfo);
 
 #if !BEHAVIAC_NOT_USE_UNITY
-                        UnityEngine.Debug.LogError(errorInfo);
+                        UnityEngine.Debug.LogError(errorInfo, workspace);
 #else
                         Console.WriteLine(errorInfo);
 #endif
@@ -824,7 +824,7 @@ namespace behaviac
             return Utils.GetType(typeName);
         }
 
-        public static Type GetElementTypeFromName(string typeName)
+        public static Type GetElementTypeFromName(string typeName, Workspace workspace)
         {
             bool bArrayType = false;
 
@@ -841,7 +841,7 @@ namespace behaviac
                 int len = bracket1 - bracket0 - 1;
 
                 string elementTypeName = typeName.Substring(bracket0 + 1, len);
-                Type elementType = Utils.GetTypeFromName(elementTypeName);
+                Type elementType = Utils.GetTypeFromName(elementTypeName, workspace);
 
                 return elementType;
             }
@@ -849,7 +849,7 @@ namespace behaviac
             return null;
         }
 
-        public static Type GetTypeFromName(string typeName)
+        public static Type GetTypeFromName(string typeName, Workspace workspace)
         {
             if (typeName == "void*")
             {
@@ -857,7 +857,7 @@ namespace behaviac
             }
 
             //Type type = Agent.GetTypeFromName(typeName);
-            Type type = AgentMeta.GetTypeFromName(typeName);
+            Type type = AgentMeta.GetTypeFromName(typeName, workspace);
 
             if (type == null)
             {
@@ -865,7 +865,7 @@ namespace behaviac
 
                 if (type == null)
                 {
-                    Type elementType = Utils.GetElementTypeFromName(typeName);
+                    Type elementType = Utils.GetElementTypeFromName(typeName, workspace);
 
                     if (elementType != null)
                     {
@@ -884,9 +884,9 @@ namespace behaviac
         }
 
         //if it is an array, return the element type
-        public Type GetTypeFromName(string typeName, ref bool bIsArrayType)
+        public static Type GetTypeFromName(string typeName, ref bool bIsArrayType, Workspace workspace)
         {
-            Type elementType = Utils.GetElementTypeFromName(typeName);
+            Type elementType = Utils.GetElementTypeFromName(typeName, workspace);
 
             if (elementType != null)
             {
@@ -894,7 +894,7 @@ namespace behaviac
                 return elementType;
             }
 
-            Type type = Utils.GetTypeFromName(typeName);
+            Type type = Utils.GetTypeFromName(typeName, workspace);
 
             return type;
         }
@@ -1140,7 +1140,7 @@ namespace behaviac
                 }
 
                 var array = c as IList;
-                o = (T)Activator.CreateInstance(type);
+                o = (T)Activator.CreateInstance(type, workspace);
 
                 for (int i = 0; i < array.Count; i++)
                 {
@@ -1166,7 +1166,7 @@ namespace behaviac
 
                     if (o == null)
                     {
-                        o = (T)Activator.CreateInstance(type);
+                        o = (T)Activator.CreateInstance(type, workspace);
                     }
 
                     if (isStruct || isClass)
@@ -1249,7 +1249,7 @@ namespace behaviac
         public void Log(string message)
         {
 #if !BEHAVIAC_NOT_USE_UNITY
-            UnityEngine.Debug.Log(message);
+            UnityEngine.Debug.Log(message, workspace);
 #else
             Console.WriteLine(message);
 #endif
@@ -1259,7 +1259,7 @@ namespace behaviac
         public void LogWarning(string message)
         {
 #if !BEHAVIAC_NOT_USE_UNITY
-            UnityEngine.Debug.LogWarning(message);
+            UnityEngine.Debug.LogWarning(message, workspace);
 #else
             Console.WriteLine(message);
 #endif
@@ -1270,7 +1270,7 @@ namespace behaviac
         {
             Workspace.LogManagers.Flush(null);
 #if !BEHAVIAC_NOT_USE_UNITY
-            UnityEngine.Debug.LogError(message);
+            UnityEngine.Debug.LogError(message, workspace);
 #else
             Console.WriteLine(message);
 #endif
@@ -1488,7 +1488,7 @@ namespace behaviac
 
         private static object FromStringStruct(Type type, string src,Workspace workspace)
         {
-            object objValue = Activator.CreateInstance(type);
+            object objValue = Activator.CreateInstance(type, workspace);
             Dictionary<string, FieldInfo> structMembers = new Dictionary<string, FieldInfo>();
             FieldInfo[] fields = type.GetFields(BindingFlags.DeclaredOnly | BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static);
 
@@ -1586,7 +1586,7 @@ namespace behaviac
         private static object FromStringVector(Type type, string src,Workspace workspace)
         {
             Type vectorType = typeof(List<>).MakeGenericType(type);
-            IList objVector = (IList)Activator.CreateInstance(vectorType);
+            IList objVector = (IList)Activator.CreateInstance(vectorType, workspace);
 
             if (string.IsNullOrEmpty(src))
             {
@@ -1688,7 +1688,7 @@ namespace behaviac
             }
             else if (type == typeof(behaviac.IProperty))
             {
-                v = AgentMeta.ParseProperty(valStr);
+                v = AgentMeta.ParseProperty(valStr, workspace);
             }
             else if (Utils.IsCustomClassType(type))
             {
@@ -1975,7 +1975,7 @@ namespace behaviac
                         parName += str[i++];
                     }
 
-                    props[propName] = AgentMeta.ParseProperty(valueStr);
+                    props[propName] = AgentMeta.ParseProperty(valueStr, workspace);
 
                     //skip ';'
                     workspace.Debugs.Check(str[i] == ';');

@@ -12,6 +12,7 @@
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace behaviac
 {
@@ -91,7 +92,7 @@ namespace behaviac
 
             protected override bool onenter(Agent pAgent)
             {
-                Debug.Check(this.m_node != null);
+                Debugs.Check(this.m_node != null);
                 FSM fsm = (FSM)this.m_node;
 
                 this.m_activeChildIndex = 0;
@@ -108,10 +109,10 @@ namespace behaviac
                 base.onexit(pAgent, s);
             }
 
-            private EBTStatus UpdateFSM(Agent pAgent, EBTStatus childStatus)
+            private async Task<EBTStatus> UpdateFSM(Agent pAgent, EBTStatus childStatus)
             {
-                Debug.Check(this.m_node != null);
-                Debug.Check(this.m_currentNodeId != -1);
+                Debugs.Check(this.m_node != null);
+                Debugs.Check(this.m_currentNodeId != -1);
 
 #if !BEHAVIAC_RELEASE
                 int kMaxCount = 10;
@@ -128,7 +129,7 @@ namespace behaviac
 
                     if (currentState != null)
                     {
-                        currentState.exec(pAgent);
+                        await currentState.exec(pAgent);
 
                         if (currentState is State.StateTask)
                         {
@@ -164,8 +165,8 @@ namespace behaviac
                         if (state_update_count[this.m_currentNodeId] > kMaxCount)
                         {
                             string treeName = BehaviorTask.GetParentTreeName(pAgent, this.GetNode());
-                            Debug.LogError(string.Format("{0} might be updating an FSM('{1}') endlessly, possibly a dead loop, please redesign it!\n", pAgent.GetName(), treeName));
-                            Debug.Check(false);
+                            Debugs.LogError(string.Format("{0} might be updating an FSM('{1}') endlessly, possibly a dead loop, please redesign it!\n", pAgent.GetName(), treeName));
+                            Debugs.Check(false);
                         }
 
 #endif
@@ -178,21 +179,19 @@ namespace behaviac
                 return status;
             }
 
-            protected override EBTStatus update_current(Agent pAgent, EBTStatus childStatus)
+            protected override Task<EBTStatus> update_current(Agent pAgent, EBTStatus childStatus)
             {
                 EBTStatus status = this.update(pAgent, childStatus);
 
                 return status;
             }
 
-            protected override EBTStatus update(Agent pAgent, EBTStatus childStatus)
+            protected override Task<EBTStatus> update(Agent pAgent, EBTStatus childStatus)
             {
-                Debug.Check(this.m_activeChildIndex < this.m_children.Count);
-                Debug.Check(this.m_node is FSM);
+                Debugs.Check(this.m_activeChildIndex < this.m_children.Count);
+                Debugs.Check(this.m_node is FSM);
 
-                EBTStatus s = this.UpdateFSM(pAgent, childStatus);
-
-                return s;
+                return this.UpdateFSM(pAgent, childStatus);
             }
         }
     }

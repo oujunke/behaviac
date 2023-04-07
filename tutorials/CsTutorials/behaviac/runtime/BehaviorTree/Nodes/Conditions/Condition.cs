@@ -31,11 +31,11 @@ namespace behaviac
 
                     if (pParenthesis == -1)
                     {
-                        this.m_opl = AgentMeta.ParseProperty(p.value);
+                        this.m_opl = AgentMeta.ParseProperty(p.value, Workspace);
                     }
                     else
                     {
-                        this.m_opl = AgentMeta.ParseMethod(p.value);
+                        this.m_opl = AgentMeta.ParseMethod(p.value, Workspace);
                     }
                 }
                 else if (p.name == "Operator")
@@ -48,11 +48,11 @@ namespace behaviac
 
                     if (pParenthesis == -1)
                     {
-                        this.m_opr = AgentMeta.ParseProperty(p.value);
+                        this.m_opr = AgentMeta.ParseProperty(p.value, Workspace);
                     }
                     else
                     {
-                        this.m_opr = AgentMeta.ParseMethod(p.value);
+                        this.m_opr = AgentMeta.ParseMethod(p.value, Workspace);
                     }
                 }
             }
@@ -119,7 +119,7 @@ namespace behaviac
             {
             }
 
-            protected override EBTStatus update(Agent pAgent, EBTStatus childStatus)
+            protected override Task<EBTStatus> update(Agent pAgent, EBTStatus childStatus)
             {
                 Debugs.Check(childStatus == EBTStatus.BT_RUNNING);
 

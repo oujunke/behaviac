@@ -22,6 +22,10 @@ namespace behaviac
         protected List<Effector.EffectorConfig> m_effectors = new List<Effector.EffectorConfig>();
         protected int m_targetId = -1;
 
+        public StartCondition(Workspace workspace) : base(workspace)
+        {
+        }
+
         public int TargetStateId
         {
             get
@@ -61,7 +65,7 @@ namespace behaviac
 
         protected override BehaviorTask createTask()
         {
-            Debug.Check(false);
+            Debugs.Check(false);
             return null;
         }
 
@@ -69,7 +73,7 @@ namespace behaviac
         {
             if (this.m_loadAttachment)
             {
-                Effector.EffectorConfig effectorConfig = new Effector.EffectorConfig();
+                Effector.EffectorConfig effectorConfig = new Effector.EffectorConfig(Workspace);
 
                 if (effectorConfig.load(properties))
                 {

@@ -97,7 +97,7 @@ namespace behaviac
             base.onexit(pAgent, s);
         }
 
-        protected override EBTStatus update(Agent pAgent, EBTStatus childStatus)
+        protected override Task<EBTStatus> update(Agent pAgent, EBTStatus childStatus)
         {
             if (childStatus != EBTStatus.BT_RUNNING)
             {

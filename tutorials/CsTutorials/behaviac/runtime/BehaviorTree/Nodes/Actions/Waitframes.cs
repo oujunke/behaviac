@@ -31,11 +31,11 @@ namespace behaviac
 
                     if (pParenthesis == -1)
                     {
-                        this.m_frames = AgentMeta.ParseProperty(p.value);
+                        this.m_frames = AgentMeta.ParseProperty(p.value, Workspace);
                     }
                     else
                     {
-                        this.m_frames = AgentMeta.ParseMethod(p.value);
+                        this.m_frames = AgentMeta.ParseMethod(p.value, Workspace);
                     }
                 }
             }
@@ -101,7 +101,7 @@ namespace behaviac
             {
             }
 
-            protected override EBTStatus update(Agent pAgent, EBTStatus childStatus)
+            protected override Task<EBTStatus> update(Agent pAgent, EBTStatus childStatus)
             {
                 Debugs.Check(childStatus == EBTStatus.BT_RUNNING);
 

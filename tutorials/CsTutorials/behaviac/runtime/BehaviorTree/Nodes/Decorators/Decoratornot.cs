@@ -42,7 +42,7 @@ namespace behaviac
 
         public override bool Evaluate(Agent pAgent)
         {
-            Debug.Check(this.m_children.Count == 1);
+            Debugs.Check(this.m_children.Count == 1);
             bool ret = this.m_children[0].Evaluate(pAgent);
             return !ret;
         }

@@ -16,7 +16,7 @@ namespace behaviac
 			IInstanceMember _param0;
 			IInstanceMember _param1;
 
-			public CMethod_behaviac_Agent_VectorAdd()
+			public CMethod_behaviac_Agent_VectorAdd(Workspace workspace)
 			{
 			}
 

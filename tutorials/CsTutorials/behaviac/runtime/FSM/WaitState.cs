@@ -13,6 +13,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace behaviac
 {
@@ -32,11 +33,11 @@ namespace behaviac
 
                     if (pParenthesis == -1)
                     {
-                        this.m_time = AgentMeta.ParseProperty(p.value);
+                        this.m_time = AgentMeta.ParseProperty(p.value, Workspace);
                     }
                     else
                     {
-                        this.m_time = AgentMeta.ParseMethod(p.value);
+                        this.m_time = AgentMeta.ParseMethod(p.value, Workspace);
                     }
                 }
             }
@@ -170,7 +171,7 @@ namespace behaviac
             {
             }
 
-            protected override EBTStatus update(Agent pAgent, EBTStatus childStatus)
+            protected override async Task<EBTStatus> update(Agent pAgent, EBTStatus childStatus)
             {
                 Debugs.Check(childStatus == EBTStatus.BT_RUNNING);
                 Debugs.Check(this.m_node is WaitState, "node is not an WaitState");
@@ -180,7 +181,7 @@ namespace behaviac
                 {
                     if (Workspace.IntValueSinceStartup - this.m_intStart >= this.m_intTime)
                     {
-                        pStateNode.Update(pAgent, out this.m_nextStateId);
+                        await pStateNode.Update(pAgent, out this.m_nextStateId);
                         return EBTStatus.BT_SUCCESS;
                     }
                 }
@@ -188,7 +189,7 @@ namespace behaviac
                 {
                     if (Workspace.DoubleValueSinceStartup - this.m_start >= this.m_time)
                     {
-                        pStateNode.Update(pAgent, out this.m_nextStateId);
+                        await pStateNode.Update(pAgent, out this.m_nextStateId);
                         return EBTStatus.BT_SUCCESS;
                     }
                 }

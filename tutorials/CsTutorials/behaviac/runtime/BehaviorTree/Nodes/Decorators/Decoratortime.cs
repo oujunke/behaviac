@@ -34,11 +34,11 @@ namespace behaviac
 
                     if (pParenthesis == -1)
                     {
-                        this.m_time = AgentMeta.ParseProperty(p.value);
+                        this.m_time = AgentMeta.ParseProperty(p.value, Workspace);
                     }
                     else
                     {
-                        this.m_time = AgentMeta.ParseMethod(p.value);
+                        this.m_time = AgentMeta.ParseMethod(p.value, Workspace);
                     }
                 }
             }

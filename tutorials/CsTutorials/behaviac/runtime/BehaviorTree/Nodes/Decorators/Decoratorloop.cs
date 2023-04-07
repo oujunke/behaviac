@@ -137,7 +137,7 @@ namespace behaviac
                 return EBTStatus.BT_SUCCESS;
             }
 
-            protected override EBTStatus update(Agent pAgent, EBTStatus childStatus)
+            protected override Task<EBTStatus> update(Agent pAgent, EBTStatus childStatus)
             {
                 Debugs.Check(this.m_node is DecoratorLoop);
                 DecoratorLoop node = (DecoratorLoop)this.m_node;

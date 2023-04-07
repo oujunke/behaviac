@@ -27,7 +27,7 @@ namespace behaviac
 	}
 
 	[behaviac.GeneratedTypeMetaInfo()]
-	class Action_bt_LoopBT_node0 : behaviac.Action
+	class Action_bt_LoopBT_node0 : behaviac.Actions
 	{
 		public Action_bt_LoopBT_node0()
 		{
@@ -109,7 +109,7 @@ namespace behaviac
 	}
 
 	[behaviac.GeneratedTypeMetaInfo()]
-	class Action_bt_SelectBT_node0 : behaviac.Action
+	class Action_bt_SelectBT_node0 : behaviac.Actions
 	{
 		public Action_bt_SelectBT_node0()
 		{
@@ -221,7 +221,7 @@ namespace behaviac
 	}
 
 	[behaviac.GeneratedTypeMetaInfo()]
-	class Action_bt_SequenceBT_node0 : behaviac.Action
+	class Action_bt_SequenceBT_node0 : behaviac.Actions
 	{
 		public Action_bt_SequenceBT_node0()
 		{

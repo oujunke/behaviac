@@ -2,7 +2,7 @@ using System.Collections.Generic;
 
 namespace behaviac
 {
-    public class Task : BehaviorNode
+    public class Tasks : BehaviorNode
     {
         public const string LOCAL_TASK_PARAM_PRE = "_$local_task_param_$_";
 
@@ -17,7 +17,7 @@ namespace behaviac
             }
         }
 
-        public int FindMethodIndex(Method method)
+        public int FindMethodIndex(Methods method)
         {
             for (int i = 0; i < this.GetChildrenCount(); ++i)
             {
@@ -34,7 +34,7 @@ namespace behaviac
 
         public override bool IsValid(Agent pAgent, BehaviorTask pTask)
         {
-            if (!(pTask.GetNode() is Task))
+            if (!(pTask.GetNode() is Tasks))
             {
                 return false;
             }
@@ -76,7 +76,7 @@ namespace behaviac
 
                 if (p.name == "Prototype")
                 {
-                    this.m_task = AgentMeta.ParseMethod(p.value);
+                    this.m_task = AgentMeta.ParseMethod(p.value, Workspace);
                 }
                 else if (p.name == "IsHTN")
                 {
@@ -99,8 +99,8 @@ namespace behaviac
 
         public override void Init(BehaviorNode node)
         {
-            Debugs.Check(node is Task, "node is not an Method");
-            Task pTaskNode = (Task)(node);
+            Debugs.Check(node is Tasks, "node is not an Method");
+            Tasks pTaskNode = (Tasks)(node);
 
             if (pTaskNode.IsHTN)
             {
@@ -138,14 +138,14 @@ namespace behaviac
             base.onexit(pAgent, s);
         }
 
-        protected override EBTStatus update(Agent pAgent, EBTStatus childStatus)
+        protected override Task<EBTStatus> update(Agent pAgent, EBTStatus childStatus)
         {
             EBTStatus status = childStatus;
 
             if (childStatus == EBTStatus.BT_RUNNING)
             {
-                Debugs.Check(this.GetNode() is Task, "node is not an Method");
-                Task pTaskNode = (Task)(this.GetNode());
+                Debugs.Check(this.GetNode() is Tasks, "node is not an Method");
+                Tasks pTaskNode = (Tasks)(this.GetNode());
 
                 if (pTaskNode.IsHTN)
                 {

@@ -31,11 +31,11 @@ namespace behaviac
 
                     if (pParenthesis == -1)
                     {
-                        this.m_frames = AgentMeta.ParseProperty(p.value);
+                        this.m_frames = AgentMeta.ParseProperty(p.value, Workspace);
                     }
                     else
                     {
-                        this.m_frames = AgentMeta.ParseMethod(p.value);
+                        this.m_frames = AgentMeta.ParseMethod(p.value, Workspace);
                     }
                 }
             }
@@ -45,7 +45,7 @@ namespace behaviac
         {
             if (this.m_frames != null)
             {
-                Debug.Check(this.m_frames is CInstanceMember<int>);
+                Debugs.Check(this.m_frames is CInstanceMember<int>);
                 return ((CInstanceMember<int>)this.m_frames).GetValue(pAgent);
             }
 
@@ -67,7 +67,7 @@ namespace behaviac
             {
                 base.copyto(target);
 
-                Debug.Check(target is WaitFramesStateTask);
+                Debugs.Check(target is WaitFramesStateTask);
                 WaitFramesStateTask ttask = (WaitFramesStateTask)target;
                 ttask.m_start = this.m_start;
                 ttask.m_frames = this.m_frames;
@@ -103,10 +103,10 @@ namespace behaviac
             {
             }
 
-            protected override EBTStatus update(Agent pAgent, EBTStatus childStatus)
+            protected override Task<EBTStatus> update(Agent pAgent, EBTStatus childStatus)
             {
-                Debug.Check(childStatus == EBTStatus.BT_RUNNING);
-                Debug.Check(this.m_node is WaitFramesState, "node is not an WaitFramesState");
+                Debugs.Check(childStatus == EBTStatus.BT_RUNNING);
+                Debugs.Check(this.m_node is WaitFramesState, "node is not an WaitFramesState");
                 WaitFramesState pStateNode = (WaitFramesState)this.m_node;
 
                 if (Workspace.FrameSinceStartup - this.m_start + 1 >= this.m_frames)
@@ -120,7 +120,7 @@ namespace behaviac
 
             private int GetFrames(Agent pAgent)
             {
-                Debug.Check(this.GetNode() is WaitFramesState);
+                Debugs.Check(this.GetNode() is WaitFramesState);
                 WaitFramesState pWaitNode = (WaitFramesState)(this.GetNode());
 
                 return pWaitNode != null ? pWaitNode.GetFrames(pAgent) : 0;

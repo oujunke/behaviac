@@ -92,7 +92,7 @@ namespace behaviac
                 }
                 else
                 {
-                    Debug.Check(true);
+                    Debugs.Check(true);
                 }
 
                 return true;
@@ -117,7 +117,7 @@ namespace behaviac
                     return EBTStatus.BT_FAILURE;
                 }
 
-                Debug.Check(this.m_n == 0);
+                Debugs.Check(this.m_n == 0);
 
                 return EBTStatus.BT_SUCCESS;
             }

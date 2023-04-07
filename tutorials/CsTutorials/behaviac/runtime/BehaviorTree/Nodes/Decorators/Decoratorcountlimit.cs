@@ -12,6 +12,7 @@
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace behaviac
 {
@@ -47,9 +48,9 @@ namespace behaviac
             return pTask;
         }
 
-        public bool CheckIfReInit(Agent pAgent)
+        public async Task<bool> CheckIfReInit(Agent pAgent)
         {
-            bool bTriggered = this.EvaluteCustomCondition(pAgent);
+            bool bTriggered =await this.EvaluteCustomCondition(pAgent);
 
             return bTriggered;
         }
@@ -65,7 +66,7 @@ namespace behaviac
             {
                 base.copyto(target);
 
-                Debug.Check(target is DecoratorCountLimitTask);
+                Debugs.Check(target is DecoratorCountLimitTask);
                 DecoratorCountLimitTask ttask = (DecoratorCountLimitTask)target;
 
                 ttask.m_bInited = this.m_bInited;
@@ -84,11 +85,11 @@ namespace behaviac
                 base.load(node);
             }
 
-            protected override bool onenter(Agent pAgent)
+            protected override async Task<bool> onenter(Agent pAgent)
             {
                 DecoratorCountLimit node = this.m_node as DecoratorCountLimit;
 
-                if (node.CheckIfReInit(pAgent))
+                if (await node.CheckIfReInit(pAgent))
                 {
                     this.m_bInited = false;
                 }
@@ -117,14 +118,14 @@ namespace behaviac
                     return true;
                 }
 
-                Debug.Check(false);
+                Debugs.Check(false);
 
                 return false;
             }
 
             protected override EBTStatus decorate(EBTStatus status)
             {
-                Debug.Check(this.m_n >= 0 || this.m_n == -1);
+                Debugs.Check(this.m_n >= 0 || this.m_n == -1);
 
                 return status;
             }

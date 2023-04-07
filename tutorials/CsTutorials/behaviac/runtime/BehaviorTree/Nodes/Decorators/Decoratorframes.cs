@@ -17,6 +17,15 @@ namespace behaviac
 {
     public class DecoratorFrames : DecoratorNode
     {
+        public Workspace Workspace { get; private set; }
+        public Config Configs { set; get; }
+        public Debug Node { set; get; }
+        public DecoratorFrames(Workspace workspace)
+        {
+            Workspace = workspace;
+            Configs = workspace.Configs;
+            Debugs = workspace.Debugs;
+        }
         protected override void load(int version, string agentType, List<property_t> properties)
         {
             base.load(version, agentType, properties);
@@ -31,11 +40,11 @@ namespace behaviac
 
                     if (pParenthesis == -1)
                     {
-                        this.m_frames = AgentMeta.ParseProperty(p.value);
+                        this.m_frames = AgentMeta.ParseProperty(p.value,Workspace);
                     }
                     else
                     {
-                        this.m_frames = AgentMeta.ParseMethod(p.value);
+                        this.m_frames = AgentMeta.ParseMethod(p.value, Workspace);
                     }
                 }
             }
@@ -45,7 +54,7 @@ namespace behaviac
         {
             if (this.m_frames != null)
             {
-                Debug.Check(this.m_frames is CInstanceMember<int>);
+                Debugs.Check(this.m_frames is CInstanceMember<int>);
                 return ((CInstanceMember<int>)this.m_frames).GetValue(pAgent);
             }
 
@@ -67,7 +76,7 @@ namespace behaviac
             {
                 base.copyto(target);
 
-                Debug.Check(target is DecoratorFramesTask);
+                Debugs.Check(target is DecoratorFramesTask);
                 DecoratorFramesTask ttask = (DecoratorFramesTask)target;
 
                 ttask.m_start = this.m_start;
@@ -112,7 +121,7 @@ namespace behaviac
 
             private int GetFrames(Agent pAgent)
             {
-                Debug.Check(this.GetNode() is DecoratorFrames);
+                Debugs.Check(this.GetNode() is DecoratorFrames);
                 DecoratorFrames pNode = (DecoratorFrames)(this.GetNode());
 
                 return pNode != null ? pNode.GetFrames(pAgent) : 0;

@@ -27,7 +27,7 @@ namespace behaviac
 
                 if (p.name == "Weight")
                 {
-                    this.m_weight = AgentMeta.ParseProperty(p.value);
+                    this.m_weight = AgentMeta.ParseProperty(p.value,Workspace);
                 }
             }
         }
@@ -36,7 +36,7 @@ namespace behaviac
         {
             if (this.m_weight != null)
             {
-                Debug.Check(this.m_weight is CInstanceMember<int>);
+                Debugs.Check(this.m_weight is CInstanceMember<int>);
                 return ((CInstanceMember<int>)this.m_weight).GetValue(pAgent);
             }
 
@@ -61,7 +61,7 @@ namespace behaviac
         {
             public int GetWeight(Agent pAgent)
             {
-                Debug.Check(this.GetNode() is DecoratorWeight);
+                Debugs.Check(this.GetNode() is DecoratorWeight);
                 DecoratorWeight pNode = (DecoratorWeight)(this.GetNode());
 
                 return pNode != null ? pNode.GetWeight(pAgent) : 0;

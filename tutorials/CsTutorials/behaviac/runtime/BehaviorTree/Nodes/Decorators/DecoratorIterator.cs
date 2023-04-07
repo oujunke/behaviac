@@ -80,11 +80,11 @@ namespace behaviac
 
                     if (pParenthesis == -1)
                     {
-                        this.m_opl = AgentMeta.ParseProperty(p.value);
+                        this.m_opl = AgentMeta.ParseProperty(p.value,Workspace);
                     }
                     else
                     {
-                        Debug.Check(false);
+                        Debugs.Check(false);
                     }
                 }
                 else if (p.name == "Opr")
@@ -93,11 +93,11 @@ namespace behaviac
 
                     if (pParenthesis == -1)
                     {
-                        this.m_opr = AgentMeta.ParseProperty(p.value);
+                        this.m_opr = AgentMeta.ParseProperty(p.value, Workspace);
                     }
                     else
                     {
-                        this.m_opr = AgentMeta.ParseMethod(p.value);
+                        this.m_opr = AgentMeta.ParseMethod(p.value, Workspace);
                     }
                 }
             }
@@ -128,7 +128,7 @@ namespace behaviac
             }
             else
             {
-                Debug.Check(false);
+                Debugs.Check(false);
             }
 
             return false;
@@ -136,7 +136,7 @@ namespace behaviac
 
         protected override BehaviorTask createTask()
         {
-            Debug.Check(false);
+            Debugs.Check(false);
             return null;
         }
 

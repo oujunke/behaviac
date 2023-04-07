@@ -48,8 +48,10 @@ namespace behaviac
 
         public class State_t
         {
-            protected Variables m_vars = new Variables();
-
+            protected Variables m_vars;
+            public Workspace Workspace { get; private set; }
+            public Config Configs { set; get; }
+            public Debug Debugs { set; get; }
             public Variables Vars
             {
                 get
@@ -72,8 +74,19 @@ namespace behaviac
                 }
             }
 
-            public State_t(State_t c)
+            public State_t(Workspace workspace)
             {
+                m_vars = new Variables(workspace);
+                Workspace = workspace;
+                Configs = workspace.Configs;
+                Debugs = workspace.Debugs;
+            }
+            public State_t(Workspace workspace,State_t c)
+            {
+                m_vars = new Variables(workspace);
+                Workspace = workspace;
+                Configs = workspace.Configs;
+                Debugs = workspace.Debugs;
                 c.m_vars.CopyTo(null, this.m_vars);
 
                 if (c.m_bt != null)
@@ -400,7 +413,7 @@ namespace behaviac
                 {
                     typeName = typeFullName;
                 }
-                var ms_agent_type_index = GetAgentGlobal(Workspace).ms_agent_type_index
+                var ms_agent_type_index = GetAgentGlobal(Workspace).ms_agent_type_index;
                 if (!ms_agent_type_index.ContainsKey(typeFullName))
                 {
                     typeId = 0;
@@ -955,7 +968,7 @@ namespace behaviac
         {
             string agentClassName = this.GetClassTypeName();
             uint agentClassId = Utils.MakeVariableId(agentClassName);
-            AgentMeta meta = AgentMeta.GetMeta(agentClassId);
+            AgentMeta meta = AgentMeta.GetMeta(agentClassId,Workspace);
 
             if (meta != null)
             {
@@ -994,7 +1007,7 @@ namespace behaviac
                 {
                     Dictionary<uint, IInstantiatedVariable> vars = this.GetCustomizedVariables();
 
-                    this.m_variables = new Variables(vars);
+                    this.m_variables = new Variables(vars, Workspace);
                 }
 
                 return m_variables;
@@ -1027,7 +1040,7 @@ namespace behaviac
         {
             string className = this.GetClassTypeName();
             uint classId = Utils.MakeVariableId(className);
-            AgentMeta meta = AgentMeta.GetMeta(classId);
+            AgentMeta meta = AgentMeta.GetMeta(classId, Workspace);
 
             if (meta != null)
             {
@@ -1319,7 +1332,7 @@ namespace behaviac
                 // property
                 string className = this.GetClassTypeName();
                 uint classId = Utils.MakeVariableId(className);
-                AgentMeta meta = AgentMeta.GetMeta(classId);
+                AgentMeta meta = AgentMeta.GetMeta(classId, Workspace);
 
                 if (meta != null)
                 {
@@ -1932,7 +1945,7 @@ namespace behaviac
             {
                 string agentClassName = this.GetClassTypeName();
                 uint agentClassId = Utils.MakeVariableId(agentClassName);
-                AgentMeta meta = AgentMeta.GetMeta(agentClassId);
+                AgentMeta meta = AgentMeta.GetMeta(agentClassId,Workspace);
 
                 if (meta != null)
                 {
@@ -1963,7 +1976,7 @@ namespace behaviac
         {
             Dictionary<uint, IInstantiatedVariable> eventParams = new Dictionary<uint, IInstantiatedVariable>();
 
-            string paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 0);
+            string paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 0);
             uint paramId = Utils.MakeVariableId(paramName);
             eventParams[paramId] = new CVariable<ParamType>(paramName, param, Workspace);
 
@@ -1974,11 +1987,11 @@ namespace behaviac
         {
             Dictionary<uint, IInstantiatedVariable> eventParams = new Dictionary<uint, IInstantiatedVariable>();
 
-            string paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 0);
+            string paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 0);
             uint paramId = Utils.MakeVariableId(paramName);
             eventParams[paramId] = new CVariable<ParamType1>(paramName, param1,Workspace);
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 1);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 1);
             paramId = Utils.MakeVariableId(paramName);
             eventParams[paramId] = new CVariable<ParamType2>(paramName, param2,Workspace);
 
@@ -1989,15 +2002,15 @@ namespace behaviac
         {
             Dictionary<uint, IInstantiatedVariable> eventParams = new Dictionary<uint, IInstantiatedVariable>();
 
-            string paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 0);
+            string paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 0);
             uint paramId = Utils.MakeVariableId(paramName);
             eventParams[paramId] = new CVariable<ParamType1>(paramName, param1, Workspace);
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 1);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 1);
             paramId = Utils.MakeVariableId(paramName);
             eventParams[paramId] = new CVariable<ParamType2>(paramName, param2, Workspace);
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 2);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 2);
             paramId = Utils.MakeVariableId(paramName);
             eventParams[paramId] = new CVariable<ParamType3>(paramName, param3, Workspace);
 

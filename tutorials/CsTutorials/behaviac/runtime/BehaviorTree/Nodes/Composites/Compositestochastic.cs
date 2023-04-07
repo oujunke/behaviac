@@ -27,7 +27,7 @@ namespace behaviac
 
                 if (p.name == "RandomGenerator")
                 {
-                    this.m_method = AgentMeta.ParseMethod(p.value);
+                    this.m_method = AgentMeta.ParseMethod(p.value, Workspace);
                 }
             }
         }

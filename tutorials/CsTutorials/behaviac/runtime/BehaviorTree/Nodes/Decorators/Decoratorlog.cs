@@ -83,9 +83,9 @@ namespace behaviac
 
             protected override EBTStatus decorate(EBTStatus status)
             {
-                Debug.Check(this.GetNode() is DecoratorLog);
+                Debugs.Check(this.GetNode() is DecoratorLog);
                 DecoratorLog pDecoratorLogNode = (DecoratorLog)(this.GetNode());
-                behaviac.Debug.Log(string.Format("DecoratorLogTask:{0}\n", pDecoratorLogNode.m_message));
+                Debugs.Log(string.Format("DecoratorLogTask:{0}\n", pDecoratorLogNode.m_message));
 
                 return status;
             }

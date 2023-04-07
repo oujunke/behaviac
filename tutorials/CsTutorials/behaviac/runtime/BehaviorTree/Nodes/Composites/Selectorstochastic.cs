@@ -83,7 +83,7 @@ namespace behaviac
                 base.onexit(pAgent, s);
             }
 
-            protected override EBTStatus update(Agent pAgent, EBTStatus childStatus)
+            protected override Task<EBTStatus> update(Agent pAgent, EBTStatus childStatus)
             {
                 EBTStatus s = childStatus;
                 Debugs.Check(this.m_activeChildIndex < this.m_children.Count);

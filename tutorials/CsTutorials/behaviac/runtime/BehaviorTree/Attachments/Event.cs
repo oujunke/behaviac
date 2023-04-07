@@ -38,7 +38,7 @@ namespace behaviac
 
                 if (p.name == "Task")
                 {
-                    this.m_event = AgentMeta.ParseMethod(p.value, ref this.m_eventName);
+                    this.m_event = AgentMeta.ParseMethod(p.value, ref this.m_eventName, Workspace);
                 }
                 else if (p.name == "ReferenceFilename")
                 {

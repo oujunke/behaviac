@@ -17,6 +17,10 @@ namespace behaviac
 {
     public class Transition : StartCondition
     {
+        public Transition(Workspace workspace) : base(workspace)
+        {
+        }
+
         protected override void load(int version, string agentType, List<property_t> properties)
         {
             base.load(version, agentType, properties);
@@ -35,7 +39,7 @@ namespace behaviac
         protected override BehaviorTask createTask()
         {
             //return new StartConditionTask();
-            Debug.Check(false);
+            Debugs.Check(false);
             return null;
         }
     }

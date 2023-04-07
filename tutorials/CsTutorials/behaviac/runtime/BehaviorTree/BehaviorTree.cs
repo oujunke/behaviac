@@ -1156,7 +1156,7 @@ namespace behaviac
             this.m_children.Add(pChild);
         }
 
-        protected virtual EBTStatus update_impl(Agent pAgent, EBTStatus childStatus)
+        protected virtual Task<EBTStatus> update_impl(Agent pAgent, EBTStatus childStatus)
         {
             return EBTStatus.BT_FAILURE;
         }
@@ -1498,15 +1498,15 @@ namespace behaviac
             }
 
             uint varId = Utils.MakeVariableId(name);
-            ICustomizedProperty prop = AgentMeta.CreateProperty(typeName, varId, name, valueStr);
+            ICustomizedProperty prop = AgentMeta.CreateProperty(typeName, varId, name, valueStr,Workspace);
             this.m_localProps[varId] = prop;
 
-            Type type = Utils.GetElementTypeFromName(typeName);
+            Type type = Utils.GetElementTypeFromName(typeName,Workspace);
 
             if (type != null)
             {
                 typeName = Utils.GetNativeTypeName(type, Workspace);
-                prop = AgentMeta.CreateArrayItemProperty(typeName, varId, name);
+                prop = AgentMeta.CreateArrayItemProperty(typeName, varId, name, Workspace);
                 varId = Utils.MakeVariableId(name + "[]");
                 this.m_localProps[varId] = prop;
             }

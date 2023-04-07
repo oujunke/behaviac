@@ -115,14 +115,14 @@ namespace behaviac
             }
 
             //no current task, as it needs to update every child for every update
-            protected override EBTStatus update_current(Agent pAgent, EBTStatus childStatus)
+            protected override Task<EBTStatus> update_current(Agent pAgent, EBTStatus childStatus)
             {
                 EBTStatus s = this.update(pAgent, childStatus);
 
                 return s;
             }
 
-            protected override EBTStatus update(Agent pAgent, EBTStatus childStatus)
+            protected override Task<EBTStatus> update(Agent pAgent, EBTStatus childStatus)
             {
                 int idx = -1;
 

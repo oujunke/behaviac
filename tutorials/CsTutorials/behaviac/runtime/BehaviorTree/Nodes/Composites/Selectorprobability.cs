@@ -27,7 +27,7 @@ namespace behaviac
 
                 if (p.name == "RandomGenerator")
                 {
-                    this.m_method = AgentMeta.ParseMethod(p.value);
+                    this.m_method = AgentMeta.ParseMethod(p.value, Workspace);
                 }
             }
         }
@@ -128,7 +128,7 @@ namespace behaviac
                 base.onexit(pAgent, s);
             }
 
-            protected override EBTStatus update(Agent pAgent, EBTStatus childStatus)
+            protected override Task<EBTStatus> update(Agent pAgent, EBTStatus childStatus)
             {
                 Debugs.Check(this.GetNode() is SelectorProbability);
                 SelectorProbability pSelectorProbabilityNode = (SelectorProbability)(this.GetNode());

@@ -112,12 +112,12 @@ namespace behaviac
             }
         }
 
-        protected override EBTStatus update_current(Agent pAgent, EBTStatus childStatus)
+        protected override Task<EBTStatus> update_current(Agent pAgent, EBTStatus childStatus)
         {
             return this.update(pAgent, childStatus);
         }
 
-        protected override EBTStatus update(Agent pAgent, EBTStatus childStatus)
+        protected override Task<EBTStatus> update(Agent pAgent, EBTStatus childStatus)
         {
             BehaviorTask pParent = this.GetParent();
             Debugs.Check(pParent is SelectorLoop.SelectorLoopTask);

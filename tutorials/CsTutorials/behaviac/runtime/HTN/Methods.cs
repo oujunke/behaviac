@@ -16,9 +16,9 @@ using System.Collections.Generic;
 
 namespace behaviac
 {
-    public class Method : BehaviorNode
+    public class Methods : BehaviorNode
     {
-        public Method()
+        public Methods()
         {
         }
 
@@ -28,7 +28,7 @@ namespace behaviac
 
         public override bool IsValid(Agent pAgent, BehaviorTask pTask)
         {
-            if (!(pTask.GetNode() is Method))
+            if (!(pTask.GetNode() is Methods))
             {
                 return false;
             }

@@ -92,9 +92,9 @@ namespace behaviac
                 base.load(node);
             }
 
-            protected override EBTStatus update(Agent pAgent, EBTStatus childStatus)
+            protected override Task<EBTStatus> update(Agent pAgent, EBTStatus childStatus)
             {
-                Debug.Check(childStatus == EBTStatus.BT_RUNNING);
+                Debugs.Check(childStatus == EBTStatus.BT_RUNNING);
 
                 //Debug.Check(this.m_children.Count == 2);
                 for (int i = 0; i < this.m_children.Count; ++i)
@@ -108,7 +108,7 @@ namespace behaviac
                         return s;
                     }
 
-                    Debug.Check(s == EBTStatus.BT_FAILURE);
+                    Debugs.Check(s == EBTStatus.BT_FAILURE);
                 }
 
                 return EBTStatus.BT_FAILURE;

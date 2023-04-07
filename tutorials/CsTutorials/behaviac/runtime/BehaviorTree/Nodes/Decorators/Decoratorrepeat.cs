@@ -80,18 +80,18 @@ namespace behaviac
 
             protected override EBTStatus decorate(EBTStatus status)
             {
-                Debug.Check(false, "unsurpported");
+                Debugs.Check(false, "unsurpported");
 
                 return EBTStatus.BT_INVALID;
             }
 
-            protected override EBTStatus update(Agent pAgent, EBTStatus childStatus)
+            protected override Task<EBTStatus> update(Agent pAgent, EBTStatus childStatus)
             {
-                Debug.Check(this.m_node is DecoratorNode);
+                Debugs.Check(this.m_node is DecoratorNode);
                 DecoratorNode node = (DecoratorNode)this.m_node;
 
-                Debug.Check(this.m_n >= 0);
-                Debug.Check(this.m_root != null);
+                Debugs.Check(this.m_n >= 0);
+                Debugs.Check(this.m_root != null);
 
                 EBTStatus status = EBTStatus.BT_INVALID;
 

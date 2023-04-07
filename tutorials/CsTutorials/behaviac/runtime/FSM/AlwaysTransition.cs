@@ -25,15 +25,16 @@ namespace behaviac
             ETP_Exit,
         }
 
-        public AlwaysTransition()
-        {
-        }
 
         //~AlwaysTransition()
         //{
         //}
 
         protected ETransitionPhase m_transitionPhase = ETransitionPhase.ETP_Always;
+
+        public AlwaysTransition(Workspace workspace) : base(workspace)
+        {
+        }
 
         public ETransitionPhase TransitionPhase
         {
@@ -76,7 +77,7 @@ namespace behaviac
                     }
                     else
                     {
-                        Debug.Check(false);
+                        Debugs.Check(false);
                     }
                 }
             }
@@ -96,7 +97,7 @@ namespace behaviac
         protected override BehaviorTask createTask()
         {
             //return new StartConditionTask();
-            Debug.Check(false);
+            Debugs.Check(false);
             return null;
         }
 

@@ -27,7 +27,7 @@ namespace behaviac
 
                 if (p.name == "Count")
                 {
-                    this.m_count = AgentMeta.ParseProperty(p.value);
+                    this.m_count = AgentMeta.ParseProperty(p.value, Workspace);
                 }
             }
         }
@@ -36,7 +36,7 @@ namespace behaviac
         {
             if (this.m_count != null)
             {
-                Debug.Check(this.m_count is CInstanceMember<int>);
+                Debugs.Check(this.m_count is CInstanceMember<int>);
                 int count = ((CInstanceMember<int>)this.m_count).GetValue(pAgent);
 
                 return count;
@@ -53,7 +53,7 @@ namespace behaviac
             {
                 base.copyto(target);
 
-                Debug.Check(target is DecoratorCountTask);
+                Debugs.Check(target is DecoratorCountTask);
                 DecoratorCountTask ttask = (DecoratorCountTask)target;
 
                 ttask.m_n = this.m_n;
@@ -90,7 +90,7 @@ namespace behaviac
 
             public int GetCount(Agent pAgent)
             {
-                Debug.Check(this.GetNode() is DecoratorCount);
+                Debugs.Check(this.GetNode() is DecoratorCount);
                 DecoratorCount pDecoratorCountNode = (DecoratorCount)(this.GetNode());
 
                 return pDecoratorCountNode != null ? pDecoratorCountNode.GetCount(pAgent) : 0;

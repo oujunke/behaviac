@@ -286,7 +286,7 @@ namespace behaviac
             Configs = config;
             LogManagers = new LogManager(this);
             SocketUtil = new SocketUtils(this);
-            AgentMetas = new AgentMeta();
+            AgentMetas = new AgentMeta(this);
             Debugs = new Debug(this);
             FileManagers = new FileManager(this);
             Contexts = new Context(-1, this);
@@ -715,7 +715,7 @@ namespace behaviac
             {
                 this.m_bRegistered = true;
 
-                AgentMeta.Register();
+                AgentMeta.Register(this);
 
                 //#if !BEHAVIAC_RELEASE
                 //                this.RegisterMetas();
@@ -732,7 +732,7 @@ namespace behaviac
             //            this.UnRegisterMetas();
             //#endif
 
-            AgentMeta.UnRegister();
+            AgentMeta.UnRegister(this);
 
             this.m_bRegistered = false;
         }
@@ -1192,7 +1192,7 @@ namespace behaviac
         {
 #if !BEHAVIAC_RELEASE
             string agentName = tokens[1];
-            Agent pAgent = Agent.GetAgent(agentName);
+            Agent pAgent = Agent.GetAgent(agentName,this);
 
             //pAgent could be 0
             if (!System.Object.ReferenceEquals(pAgent, null) && tokens.Length == 4)

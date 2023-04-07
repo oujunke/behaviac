@@ -20,6 +20,7 @@ using UnityEngine;
 #endif//!BEHAVIAC_NOT_USE_UNITY
 
 using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace behaviac
 {
@@ -182,14 +183,14 @@ namespace behaviac
         }
 #endif
 
-        public EBTStatus exec(Agent pAgent)
+        public Task<EBTStatus> exec(Agent pAgent)
         {
             EBTStatus childStatus = EBTStatus.BT_RUNNING;
 
             return this.exec(pAgent, childStatus);
         }
 
-        public EBTStatus exec(Agent pAgent, EBTStatus childStatus)
+        public Task<EBTStatus> exec(Agent pAgent, EBTStatus childStatus)
         {
 #if !BEHAVIAC_RELEASE
             Debugs.Check(this.m_node == null || this.m_node.IsValid(pAgent, this),
@@ -526,16 +527,14 @@ namespace behaviac
             m_bHasManagingParent = false;
         }
 
-        protected virtual EBTStatus update_current(Agent pAgent, EBTStatus childStatus)
+        protected virtual Task<EBTStatus> update_current(Agent pAgent, EBTStatus childStatus)
         {
-            EBTStatus s = this.update(pAgent, childStatus);
-
-            return s;
+            return this.update(pAgent, childStatus);
         }
 
-        protected virtual EBTStatus update(Agent pAgent, EBTStatus childStatus)
+        protected virtual Task<EBTStatus> update(Agent pAgent, EBTStatus childStatus)
         {
-            return EBTStatus.BT_SUCCESS;
+            return Task.FromResult(EBTStatus.BT_SUCCESS);
         }
 
         protected virtual bool onenter(Agent pAgent)

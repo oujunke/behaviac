@@ -388,11 +388,11 @@ namespace behaviac
                 agentInstanceName = pAgentInstance.GetType().FullName;
             }
 
-            if (Agent.IsNameRegistered(agentInstanceName))
+            if (Agent.IsNameRegistered(agentInstanceName,pAgentInstance.Workspace))
             {
                 Workspace.Debugs.Check(GetInstance(agentInstanceName) == null, "the name has been bound to an instance already!");
 
-                string className = Agent.GetRegisteredClassName(agentInstanceName);
+                string className = Agent.GetRegisteredClassName(agentInstanceName,pAgentInstance.Workspace);
 
                 if (Agent.IsDerived(pAgentInstance, className))
                 {
@@ -425,7 +425,7 @@ namespace behaviac
         {
             Workspace.Debugs.Check(!string.IsNullOrEmpty(agentInstanceName));
 
-            if (Agent.IsNameRegistered(agentInstanceName))
+            if (Agent.IsNameRegistered(agentInstanceName,Workspace))
             {
                 if (m_namedAgents.ContainsKey(agentInstanceName))
                 {

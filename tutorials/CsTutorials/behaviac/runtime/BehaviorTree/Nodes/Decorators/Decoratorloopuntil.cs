@@ -97,7 +97,7 @@ namespace behaviac
                     return EBTStatus.BT_SUCCESS;
                 }
 
-                Debug.Check(this.GetNode() is DecoratorLoopUntil);
+                Debugs.Check(this.GetNode() is DecoratorLoopUntil);
                 DecoratorLoopUntil pDecoratorLoopUntil = (DecoratorLoopUntil)(this.GetNode());
 
                 if (pDecoratorLoopUntil.m_until)

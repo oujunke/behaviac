@@ -81,11 +81,11 @@ namespace behaviac
 
                     if (pParenthesis == -1)
                     {
-                        this.m_referencedBehaviorPath = AgentMeta.ParseProperty(p.value);
+                        this.m_referencedBehaviorPath = AgentMeta.ParseProperty(p.value, Workspace);
                     }
                     else
                     {
-                        this.m_referencedBehaviorPath = AgentMeta.ParseMethod(p.value);
+                        this.m_referencedBehaviorPath = AgentMeta.ParseMethod(p.value, Workspace);
                     }
 
                     string szTreePath = this.GetReferencedTree(null);
@@ -111,7 +111,7 @@ namespace behaviac
                 }
                 else if (p.name == "Task")
                 {
-                    this.m_taskMethod = AgentMeta.ParseMethod(p.value);
+                    this.m_taskMethod = AgentMeta.ParseMethod(p.value, Workspace);
                 }
             }
         }
@@ -178,9 +178,9 @@ namespace behaviac
         protected IInstanceMember m_referencedBehaviorPath;
         protected IMethod m_taskMethod;
 
-        private Task m_taskNode;
+        private Tasks m_taskNode;
 
-        public Task RootTaskNode(Agent pAgent)
+        public Tasks RootTaskNode(Agent pAgent)
         {
             if (this.m_taskNode == null)
             {
@@ -190,7 +190,7 @@ namespace behaviac
                 if (bt != null && bt.GetChildrenCount() == 1)
                 {
                     BehaviorNode root = bt.GetChild(0);
-                    this.m_taskNode = root as Task;
+                    this.m_taskNode = root as Tasks;
                 }
             }
 
@@ -295,7 +295,7 @@ namespace behaviac
                 base.onexit(pAgent, s);
             }
 
-            protected override EBTStatus update(Agent pAgent, EBTStatus childStatus)
+            protected override Task<EBTStatus> update(Agent pAgent, EBTStatus childStatus)
             {
                 ReferencedBehavior pNode = this.GetNode() as ReferencedBehavior;
                 Debugs.Check(pNode != null);

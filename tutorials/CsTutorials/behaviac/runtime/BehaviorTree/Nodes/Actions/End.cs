@@ -32,11 +32,11 @@ namespace behaviac
 
                     if (pParenthesis == -1)
                     {
-                        this.m_endStatus = AgentMeta.ParseProperty(p.value);
+                        this.m_endStatus = AgentMeta.ParseProperty(p.value, Workspace);
                     }
                     else
                     {
-                        this.m_endStatus = AgentMeta.ParseMethod(p.value);
+                        this.m_endStatus = AgentMeta.ParseMethod(p.value, Workspace);
                     }
                 }
                 else if (p.name == "EndOutside")
@@ -91,7 +91,7 @@ namespace behaviac
             {
             }
 
-            protected override EBTStatus update(Agent pAgent, EBTStatus childStatus)
+            protected override Task<EBTStatus> update(Agent pAgent, EBTStatus childStatus)
             {
                 BehaviorTreeTask rooTask = null;
                 if (!this.GetEndOutside())

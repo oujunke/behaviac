@@ -17,9 +17,10 @@ namespace behaviac
 {
     class WaitTransition : Transition
     {
-        public WaitTransition()
+        public WaitTransition(Workspace workspace) : base(workspace)
         {
         }
+
 
         //~WaitTransition()
         //{
@@ -43,7 +44,7 @@ namespace behaviac
         protected override BehaviorTask createTask()
         {
             //return new StartConditionTask();
-            Debug.Check(false);
+            Debugs.Check(false);
             return null;
         }
 
