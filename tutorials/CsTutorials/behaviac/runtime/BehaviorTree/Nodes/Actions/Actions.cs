@@ -12,6 +12,7 @@
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace behaviac
 {
@@ -76,7 +77,7 @@ namespace behaviac
             return base.IsValid(pAgent, pTask);
         }
 
-        public EBTStatus Execute(Agent pAgent, EBTStatus childStatus)
+        public async Task<EBTStatus> Execute(Agent pAgent, EBTStatus childStatus)
         {
             EBTStatus result = EBTStatus.BT_SUCCESS;
 
@@ -84,7 +85,7 @@ namespace behaviac
             {
                 if (this.m_resultOption != EBTStatus.BT_INVALID)
                 {
-                    this.m_method.Run(pAgent);
+                    await this.m_method.Run(pAgent);
 
                     result = this.m_resultOption;
                 }
@@ -108,7 +109,7 @@ namespace behaviac
             }
             else
             {
-                result = this.update_impl(pAgent, childStatus);
+                result =await this.update_impl(pAgent, childStatus);
             }
 
             return result;
@@ -147,14 +148,14 @@ namespace behaviac
             {
             }
 
-            protected override Task<EBTStatus> update(Agent pAgent, EBTStatus childStatus)
+            protected override async Task<EBTStatus> update(Agent pAgent, EBTStatus childStatus)
             {
                 Debugs.Check(childStatus == EBTStatus.BT_RUNNING);
 
                 Debugs.Check(this.GetNode() is Actions, "node is not an Action");
                 Actions pActionNode = (Actions)(this.GetNode());
 
-                EBTStatus result = pActionNode.Execute(pAgent, childStatus);
+                EBTStatus result =await pActionNode.Execute(pAgent, childStatus);
 
                 return result;
             }

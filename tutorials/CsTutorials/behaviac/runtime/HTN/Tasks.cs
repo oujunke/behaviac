@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace behaviac
 {
@@ -138,7 +139,7 @@ namespace behaviac
             base.onexit(pAgent, s);
         }
 
-        protected override Task<EBTStatus> update(Agent pAgent, EBTStatus childStatus)
+        protected override async Task<EBTStatus> update(Agent pAgent, EBTStatus childStatus)
         {
             EBTStatus status = childStatus;
 
@@ -157,7 +158,7 @@ namespace behaviac
                 {
                     Debugs.Check(this.m_children.Count == 1);
                     BehaviorTask c = this.m_children[0];
-                    status = c.exec(pAgent);
+                    status =await c.exec(pAgent);
                 }
             }
             else

@@ -11,6 +11,8 @@
 // See the License for the specific language governing permissions and limitations under the License.
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+using System.Threading.Tasks;
+
 namespace behaviac
 {
     public abstract class ConditionBase : BehaviorNode
@@ -58,7 +60,7 @@ namespace behaviac
         {
             Debugs.Check(childStatus == EBTStatus.BT_RUNNING);
 
-            return EBTStatus.BT_SUCCESS;
+            return Task.FromResult(EBTStatus.BT_SUCCESS);
         }
     }
 }

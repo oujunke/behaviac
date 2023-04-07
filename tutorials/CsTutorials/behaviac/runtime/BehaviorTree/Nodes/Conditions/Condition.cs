@@ -12,6 +12,7 @@
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace behaviac
 {
@@ -68,7 +69,7 @@ namespace behaviac
             return base.IsValid(pAgent, pTask);
         }
 
-        public override bool Evaluate(Agent pAgent)
+        public override async Task<bool> Evaluate(Agent pAgent)
         {
             if (this.m_opl != null && this.m_opr != null)
             {
@@ -77,7 +78,7 @@ namespace behaviac
             else
             {
                 EBTStatus childStatus = EBTStatus.BT_INVALID;
-                EBTStatus result = this.update_impl(pAgent, childStatus);
+                EBTStatus result =await this.update_impl(pAgent, childStatus);
                 return result == EBTStatus.BT_SUCCESS;
             }
         }
@@ -119,14 +120,14 @@ namespace behaviac
             {
             }
 
-            protected override Task<EBTStatus> update(Agent pAgent, EBTStatus childStatus)
+            protected override async Task<EBTStatus> update(Agent pAgent, EBTStatus childStatus)
             {
                 Debugs.Check(childStatus == EBTStatus.BT_RUNNING);
 
                 Debugs.Check(this.GetNode() is Condition);
                 Condition pConditionNode = (Condition)(this.GetNode());
 
-                bool ret = pConditionNode.Evaluate(pAgent);
+                bool ret =await pConditionNode.Evaluate(pAgent);
 
                 return ret ? EBTStatus.BT_SUCCESS : EBTStatus.BT_FAILURE;
             }

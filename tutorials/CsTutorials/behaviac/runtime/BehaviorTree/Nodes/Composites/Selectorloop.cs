@@ -12,6 +12,7 @@
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace behaviac
 {
@@ -115,14 +116,14 @@ namespace behaviac
             }
 
             //no current task, as it needs to update every child for every update
-            protected override Task<EBTStatus> update_current(Agent pAgent, EBTStatus childStatus)
+            protected override async Task<EBTStatus> update_current(Agent pAgent, EBTStatus childStatus)
             {
-                EBTStatus s = this.update(pAgent, childStatus);
+                EBTStatus s =await this.update(pAgent, childStatus);
 
                 return s;
             }
 
-            protected override Task<EBTStatus> update(Agent pAgent, EBTStatus childStatus)
+            protected override async Task<EBTStatus> update(Agent pAgent, EBTStatus childStatus)
             {
                 int idx = -1;
 
@@ -155,7 +156,7 @@ namespace behaviac
 
                     BehaviorTask pre = pSubTree.PreconditionNode;
 
-                    EBTStatus status = pre.exec(pAgent);
+                    EBTStatus status =await pre.exec(pAgent);
 
                     if (status == EBTStatus.BT_SUCCESS)
                     {
@@ -199,7 +200,7 @@ namespace behaviac
                         if (i > index)
                         {
                             BehaviorTask pre = pSubTree.PreconditionNode;
-                            EBTStatus status = pre.exec(pAgent);
+                            EBTStatus status =await pre.exec(pAgent);
 
                             //to search for the first one whose precondition is success
                             if (status != EBTStatus.BT_SUCCESS)
@@ -209,7 +210,7 @@ namespace behaviac
                         }
 
                         BehaviorTask action = pSubTree.ActionNode;
-                        EBTStatus s = action.exec(pAgent);
+                        EBTStatus s =await action.exec(pAgent);
 
                         if (s == EBTStatus.BT_RUNNING)
                         {

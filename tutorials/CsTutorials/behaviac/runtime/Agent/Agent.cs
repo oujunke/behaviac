@@ -24,6 +24,7 @@ using System.ComponentModel;
 using System.Globalization;
 using System.IO;
 using System.Security.Cryptography;
+using System.Threading.Tasks;
 
 namespace behaviac
 {
@@ -1583,13 +1584,13 @@ namespace behaviac
             }
         }
 
-        private EBTStatus btexec_()
+        private async Task<EBTStatus> btexec_()
         {
             if (this.m_currentBT != null)
             {
                 //the following might modify this.m_currentBT if the invoked function called btsetcurrent/FireEvent
                 BehaviorTreeTask pCurrentBT = this.m_currentBT;
-                EBTStatus s = this.m_currentBT.exec(this);
+                EBTStatus s =await this.m_currentBT.exec(this);
                 //Debugs.Check(s == EBTStatus.BT_RUNNING || pCurrentBT == this.m_currentBT,
                 //    "btsetcurrent/FireEvent is not allowed in the invoked function.");
 
@@ -1611,7 +1612,7 @@ namespace behaviac
                             {
                                 if (this.m_currentBT != pCurrentBT)
                                 {
-                                    s = this.m_currentBT.resume(this, s);
+                                    s =await this.m_currentBT.resume(this, s);
                                 }
                                 else
                                 {
@@ -1633,7 +1634,7 @@ namespace behaviac
                         if (bExecCurrent)
                         {
                             pCurrentBT = this.m_currentBT;
-                            s = this.m_currentBT.exec(this);
+                            s = await this.m_currentBT.exec(this);
                             break;
                         }
                     }
@@ -1675,7 +1676,7 @@ namespace behaviac
 #endif
         }
 
-        public virtual EBTStatus btexec()
+        public virtual async Task<EBTStatus> btexec()
         {
             if (this.m_bActive)
             {
@@ -1688,12 +1689,12 @@ namespace behaviac
                 this.m_debug_count = 0;
 #endif
 
-                EBTStatus s = this.btexec_();
+                EBTStatus s = await this.btexec_();
 
                 while (this.m_referencetree && s == EBTStatus.BT_RUNNING)
                 {
                     this.m_referencetree = false;
-                    s = this.btexec_();
+                    s =await this.btexec_();
                 }
 
                 if (this.IsMasked())

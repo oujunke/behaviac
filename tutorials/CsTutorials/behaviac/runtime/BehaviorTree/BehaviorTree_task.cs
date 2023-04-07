@@ -190,7 +190,7 @@ namespace behaviac
             return this.exec(pAgent, childStatus);
         }
 
-        public Task<EBTStatus> exec(Agent pAgent, EBTStatus childStatus)
+        public async Task<EBTStatus> exec(Agent pAgent, EBTStatus childStatus)
         {
 #if !BEHAVIAC_RELEASE
             Debugs.Check(this.m_node == null || this.m_node.IsValid(pAgent, this),
@@ -212,7 +212,7 @@ namespace behaviac
             {
                 //reset it to invalid when it was success/failure
                 this.m_status = EBTStatus.BT_INVALID;
-                bEnterResult = this.onenter_action(pAgent);
+                bEnterResult =await this.onenter_action(pAgent);
             }
 
             if (bEnterResult)
@@ -231,11 +231,11 @@ namespace behaviac
                 }
 
 #endif
-                bool bValid = this.CheckParentUpdatePreconditions(pAgent);
+                bool bValid =await this.CheckParentUpdatePreconditions(pAgent);
 
                 if (bValid)
                 {
-                    this.m_status = this.update_current(pAgent, childStatus);
+                    this.m_status =await this.update_current(pAgent, childStatus);
                 }
                 else
                 {
@@ -280,7 +280,7 @@ namespace behaviac
 
         private const int kMaxParentsCount = 512;
         private static BehaviorTask[] ms_parents = new BehaviorTask[kMaxParentsCount];
-        private bool CheckParentUpdatePreconditions(Agent pAgent)
+        private async Task<bool> CheckParentUpdatePreconditions(Agent pAgent)
         {
             bool bValid = true;
 
@@ -317,7 +317,7 @@ namespace behaviac
                     {
                         BehaviorTask pb = ms_parents[i];
 
-                        bValid = pb.CheckPreconditions(pAgent, true);
+                        bValid =await pb.CheckPreconditions(pAgent, true);
 
                         if (!bValid)
                         {
@@ -328,7 +328,7 @@ namespace behaviac
             }
             else
             {
-                bValid = this.CheckPreconditions(pAgent, true);
+                bValid =await this.CheckPreconditions(pAgent, true);
             }
 
             return bValid;
@@ -537,9 +537,9 @@ namespace behaviac
             return Task.FromResult(EBTStatus.BT_SUCCESS);
         }
 
-        protected virtual bool onenter(Agent pAgent)
+        protected virtual Task<bool> onenter(Agent pAgent)
         {
-            return true;
+            return Task.FromResult(true);
         }
 
         protected virtual void onexit(Agent pAgent, EBTStatus status)
@@ -719,7 +719,7 @@ namespace behaviac
 #endif
         }
 
-        protected virtual bool CheckPreconditions(Agent pAgent, bool bIsAlive)
+        protected virtual async Task<bool> CheckPreconditions(Agent pAgent, bool bIsAlive)
         {
             bool bResult = true;
 
@@ -727,23 +727,23 @@ namespace behaviac
             {
                 if (this.m_node.PreconditionsCount > 0)
                 {
-                    bResult = this.m_node.CheckPreconditions(pAgent, bIsAlive);
+                    bResult =await this.m_node.CheckPreconditions(pAgent, bIsAlive);
                 }
             }
 
             return bResult;
         }
 
-        public bool onenter_action(Agent pAgent)
+        public async Task<bool> onenter_action(Agent pAgent)
         {
-            bool bResult = this.CheckPreconditions(pAgent, false);
+            bool bResult =await this.CheckPreconditions(pAgent, false);
 
             if (bResult)
             {
                 this.m_bHasManagingParent = false;
                 this.SetCurrentTask(null);
 
-                bResult = this.onenter(pAgent);
+                bResult =await this.onenter(pAgent);
 
                 if (!bResult)
                 {
@@ -934,12 +934,12 @@ namespace behaviac
             return true;
         }
 
-        private EBTStatus execCurrentTask(Agent pAgent, EBTStatus childStatus)
+        private async Task<EBTStatus> execCurrentTask(Agent pAgent, EBTStatus childStatus)
         {
             Debugs.Check(this.m_currentTask != null && this.m_currentTask.GetStatus() == EBTStatus.BT_RUNNING);
 
             //this.m_currentTask could be cleared in ::tick, to remember it
-            EBTStatus status = this.m_currentTask.exec(pAgent, childStatus);
+            EBTStatus status =await this.m_currentTask.exec(pAgent, childStatus);
 
             //give the handling back to parents
             if (status != EBTStatus.BT_RUNNING)
@@ -956,11 +956,11 @@ namespace behaviac
                 {
                     if (parentBranch == this)
                     {
-                        status = parentBranch.update(pAgent, status);
+                        status =await parentBranch.update(pAgent, status);
                     }
                     else
                     {
-                        status = parentBranch.exec(pAgent, status);
+                        status =await parentBranch.exec(pAgent, status);
                     }
 
                     if (status == EBTStatus.BT_RUNNING)
@@ -982,25 +982,25 @@ namespace behaviac
             return status;
         }
 
-        protected override EBTStatus update_current(Agent pAgent, EBTStatus childStatus)
+        protected override async Task<EBTStatus> update_current(Agent pAgent, EBTStatus childStatus)
         {
             EBTStatus status = EBTStatus.BT_INVALID;
 
             if (this.m_currentTask != null)
             {
-                status = this.execCurrentTask(pAgent, childStatus);
+                status =await this.execCurrentTask(pAgent, childStatus);
                 Debugs.Check(status == EBTStatus.BT_RUNNING ||
                             (status != EBTStatus.BT_RUNNING && this.m_currentTask == null));
             }
             else
             {
-                status = this.update(pAgent, childStatus);
+                status =await this.update(pAgent, childStatus);
             }
 
             return status;
         }
 
-        protected EBTStatus resume_branch(Agent pAgent, EBTStatus status)
+        protected async Task<EBTStatus> resume_branch(Agent pAgent, EBTStatus status)
         {
             Debugs.Check(this.m_currentTask != null);
             Debugs.Check(status == EBTStatus.BT_SUCCESS || status == EBTStatus.BT_FAILURE);
@@ -1021,7 +1021,7 @@ namespace behaviac
 
             if (parent != null)
             {
-                EBTStatus s = parent.exec(pAgent, status);
+                EBTStatus s =await parent.exec(pAgent, status);
 
                 return s;
             }
@@ -1303,11 +1303,11 @@ namespace behaviac
             base.load(node);
         }
 
-        protected override EBTStatus update(Agent pAgent, EBTStatus childStatus)
+        protected override async Task<EBTStatus> update(Agent pAgent, EBTStatus childStatus)
         {
             if (this.m_root != null)
             {
-                EBTStatus s = this.m_root.exec(pAgent, childStatus);
+                EBTStatus s =await this.m_root.exec(pAgent, childStatus);
                 return s;
             }
 
@@ -1331,12 +1331,12 @@ namespace behaviac
         {
         }
 
-        protected override EBTStatus update_current(Agent pAgent, EBTStatus childStatus)
+        protected override Task<EBTStatus> update_current(Agent pAgent, EBTStatus childStatus)
         {
             return base.update_current(pAgent, childStatus);
         }
 
-        protected override EBTStatus update(Agent pAgent, EBTStatus childStatus)
+        protected override async Task<EBTStatus> update(Agent pAgent, EBTStatus childStatus)
         {
             Debugs.Check(this.m_node is DecoratorNode);
             DecoratorNode node = (DecoratorNode)this.m_node;
@@ -1360,7 +1360,7 @@ namespace behaviac
                 }
             }
 
-            status = base.update(pAgent, childStatus);
+            status =await base.update(pAgent, childStatus);
 
             if (!node.m_bDecorateWhenChildEnds || status != EBTStatus.BT_RUNNING)
             {
@@ -1500,11 +1500,9 @@ namespace behaviac
             this.m_endStatus = status;
         }
 
-        public EBTStatus resume(Agent pAgent, EBTStatus status)
+        public Task<EBTStatus> resume(Agent pAgent, EBTStatus status)
         {
-            EBTStatus s = base.resume_branch(pAgent, status);
-
-            return s;
+            return base.resume_branch(pAgent, status);
         }
 
         protected override bool onenter(Agent pAgent)
@@ -1544,7 +1542,7 @@ namespace behaviac
         }
         #endregion FSM
 
-        protected override EBTStatus update_current(Agent pAgent, EBTStatus childStatus)
+        protected override async Task<EBTStatus> update_current(Agent pAgent, EBTStatus childStatus)
         {
             Debugs.Check(this.m_node != null);
             Debugs.Check(this.m_node is BehaviorTree);
@@ -1557,11 +1555,11 @@ namespace behaviac
 
             if (tree.IsFSM)
             {
-                status = this.update(pAgent, childStatus);
+                status =await this.update(pAgent, childStatus);
             }
             else
             {
-                status = base.update_current(pAgent, childStatus);
+                status = await base.update_current(pAgent, childStatus);
             }
 
             return status;
@@ -1572,7 +1570,7 @@ namespace behaviac
             this.traverse(true, end_handler_, pAgent, status);
         }
 
-        protected override EBTStatus update(Agent pAgent, EBTStatus childStatus)
+        protected override async Task<EBTStatus> update(Agent pAgent, EBTStatus childStatus)
         {
             Debugs.Check(this.m_node != null);
             Debugs.Check(this.m_root != null);
@@ -1584,7 +1582,7 @@ namespace behaviac
 
             EBTStatus status = EBTStatus.BT_INVALID;
 
-            status = base.update(pAgent, childStatus);
+            status =await base.update(pAgent, childStatus);
 
             Debugs.Check(status != EBTStatus.BT_INVALID);
 

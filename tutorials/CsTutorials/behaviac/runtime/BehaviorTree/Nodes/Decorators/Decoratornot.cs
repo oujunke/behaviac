@@ -12,6 +12,7 @@
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace behaviac
 {
@@ -40,10 +41,10 @@ namespace behaviac
             return base.IsValid(pAgent, pTask);
         }
 
-        public override bool Evaluate(Agent pAgent)
+        public override async Task<bool> Evaluate(Agent pAgent)
         {
             Debugs.Check(this.m_children.Count == 1);
-            bool ret = this.m_children[0].Evaluate(pAgent);
+            bool ret =await this.m_children[0].Evaluate(pAgent);
             return !ret;
         }
 

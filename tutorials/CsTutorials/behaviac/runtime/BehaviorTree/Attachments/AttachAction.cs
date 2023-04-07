@@ -12,6 +12,7 @@
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace behaviac
 {
@@ -163,27 +164,27 @@ namespace behaviac
             this.m_ActionConfig.load(properties);
         }
 
-        public override bool Evaluate(Agent pAgent)
+        public override async Task<bool> Evaluate(Agent pAgent)
         {
             bool bValid = this.m_ActionConfig.Execute(pAgent);
 
             if (!bValid)
             {
                 EBTStatus childStatus = EBTStatus.BT_INVALID;
-                bValid = (EBTStatus.BT_SUCCESS == this.update_impl(pAgent, childStatus));
+                bValid = (EBTStatus.BT_SUCCESS ==await this.update_impl(pAgent, childStatus));
             }
 
             return bValid;
         }
 
-        public virtual bool Evaluate(Agent pAgent, EBTStatus status)
+        public virtual async Task<bool> Evaluate(Agent pAgent, EBTStatus status)
         {
             bool bValid = this.m_ActionConfig.Execute(pAgent);
 
             if (!bValid)
             {
                 EBTStatus childStatus = EBTStatus.BT_INVALID;
-                bValid = (EBTStatus.BT_SUCCESS == this.update_impl(pAgent, childStatus));
+                bValid = (EBTStatus.BT_SUCCESS ==await this.update_impl(pAgent, childStatus));
             }
 
             return bValid;

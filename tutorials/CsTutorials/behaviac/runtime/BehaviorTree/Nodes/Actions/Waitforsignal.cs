@@ -12,6 +12,7 @@
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace behaviac
 {
@@ -40,9 +41,9 @@ namespace behaviac
             return base.IsValid(pAgent, pTask);
         }
 
-        public bool CheckIfSignaled(Agent pAgent)
+        public async Task<bool> CheckIfSignaled(Agent pAgent)
         {
-            bool ret = this.EvaluteCustomCondition(pAgent);
+            bool ret =await this.EvaluteCustomCondition(pAgent);
             return ret;
         }
 
@@ -97,7 +98,7 @@ namespace behaviac
             base.onexit(pAgent, s);
         }
 
-        protected override Task<EBTStatus> update(Agent pAgent, EBTStatus childStatus)
+        protected override async Task<EBTStatus> update(Agent pAgent, EBTStatus childStatus)
         {
             if (childStatus != EBTStatus.BT_RUNNING)
             {
@@ -107,7 +108,7 @@ namespace behaviac
             if (!this.m_bTriggered)
             {
                 WaitforSignal node = this.m_node as WaitforSignal;
-                this.m_bTriggered = node.CheckIfSignaled(pAgent);
+                this.m_bTriggered =await node.CheckIfSignaled(pAgent);
             }
 
             if (this.m_bTriggered)
@@ -117,7 +118,7 @@ namespace behaviac
                     return EBTStatus.BT_SUCCESS;
                 }
 
-                EBTStatus status = base.update(pAgent, childStatus);
+                EBTStatus status =await base.update(pAgent, childStatus);
 
                 return status;
             }

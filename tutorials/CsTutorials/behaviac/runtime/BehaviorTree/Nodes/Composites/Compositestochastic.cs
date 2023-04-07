@@ -12,6 +12,7 @@
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace behaviac
 {
@@ -32,9 +33,9 @@ namespace behaviac
             }
         }
 
-        public bool CheckIfInterrupted(Agent pAgent)
+        public async Task<bool> CheckIfInterrupted(Agent pAgent)
         {
-            bool bInterrupted = this.EvaluteCustomCondition(pAgent);
+            bool bInterrupted =await this.EvaluteCustomCondition(pAgent);
 
             return bInterrupted;
         }

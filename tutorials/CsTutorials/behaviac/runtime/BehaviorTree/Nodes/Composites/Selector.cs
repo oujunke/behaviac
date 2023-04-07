@@ -12,6 +12,7 @@
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace behaviac
 {
@@ -66,14 +67,14 @@ namespace behaviac
             return base.IsValid(pAgent, pTask);
         }
 
-        public override bool Evaluate(Agent pAgent)
+        public override async Task<bool> Evaluate(Agent pAgent)
         {
             bool ret = true;
 
             for (int i = 0; i < this.m_children.Count; ++i)
             {
                 BehaviorNode c = this.m_children[i];
-                ret = c.Evaluate(pAgent);
+                ret =await c.Evaluate(pAgent);
 
                 if (ret)
                 {
@@ -84,7 +85,7 @@ namespace behaviac
             return ret;
         }
 
-        public EBTStatus SelectorUpdate(Agent pAgent, EBTStatus childStatus, ref int activeChildIndex, List<BehaviorTask> children)
+        public async Task<EBTStatus> SelectorUpdate(Agent pAgent, EBTStatus childStatus, ref int activeChildIndex, List<BehaviorTask> children)
         {
             EBTStatus s = childStatus;
 
@@ -96,12 +97,12 @@ namespace behaviac
                 {
                     BehaviorTask pBehavior = children[activeChildIndex];
 
-                    if (this.CheckIfInterrupted(pAgent))
+                    if (await this.CheckIfInterrupted(pAgent))
                     {
                         return EBTStatus.BT_FAILURE;
                     }
 
-                    s = pBehavior.exec(pAgent);
+                    s =await pBehavior.exec(pAgent);
                 }
 
                 // If the child succeeds, or keeps running, do the same.
@@ -122,9 +123,9 @@ namespace behaviac
             }
         }
 
-        public bool CheckIfInterrupted(Agent pAgent)
+        public async Task<bool> CheckIfInterrupted(Agent pAgent)
         {
-            bool bInterrupted = this.EvaluteCustomCondition(pAgent);
+            bool bInterrupted =await this.EvaluteCustomCondition(pAgent);
 
             return bInterrupted;
         }

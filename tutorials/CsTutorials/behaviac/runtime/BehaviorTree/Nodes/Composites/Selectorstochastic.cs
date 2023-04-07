@@ -12,6 +12,7 @@
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace behaviac
 {
@@ -83,7 +84,7 @@ namespace behaviac
                 base.onexit(pAgent, s);
             }
 
-            protected override Task<EBTStatus> update(Agent pAgent, EBTStatus childStatus)
+            protected override async Task<EBTStatus> update(Agent pAgent, EBTStatus childStatus)
             {
                 EBTStatus s = childStatus;
                 Debugs.Check(this.m_activeChildIndex < this.m_children.Count);
@@ -98,12 +99,12 @@ namespace behaviac
                         int childIndex = this.m_set[this.m_activeChildIndex];
                         BehaviorTask pBehavior = this.m_children[childIndex];
 
-                        if (node.CheckIfInterrupted(pAgent))
+                        if (await node.CheckIfInterrupted(pAgent))
                         {
                             return EBTStatus.BT_FAILURE;
                         }
 
-                        s = pBehavior.exec(pAgent);
+                        s =await pBehavior.exec(pAgent);
                     }
 
                     // If the child succeeds, or keeps running, do the same.

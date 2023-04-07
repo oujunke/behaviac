@@ -13,6 +13,7 @@
 
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Threading.Tasks;
 
 namespace behaviac
 {
@@ -98,7 +99,7 @@ namespace behaviac
                 base.onexit(pAgent, s);
             }
 
-            protected override Task<EBTStatus> update(Agent pAgent, EBTStatus childStatus)
+            protected override async Task<EBTStatus> update(Agent pAgent, EBTStatus childStatus)
             {
                 Debugs.Check(childStatus != EBTStatus.BT_INVALID);
                 Debugs.Check(this.m_children.Count == 3);
@@ -118,7 +119,7 @@ namespace behaviac
                     if (conditionResult == EBTStatus.BT_INVALID)
                     {
                         // condition has not been checked
-                        conditionResult = pCondition.exec(pAgent);
+                        conditionResult =await pCondition.exec(pAgent);
                     }
 
                     if (conditionResult == EBTStatus.BT_SUCCESS)
@@ -147,7 +148,7 @@ namespace behaviac
                 if (this.m_activeChildIndex != CompositeTask.InvalidChildIndex)
                 {
                     BehaviorTask pBehavior = this.m_children[this.m_activeChildIndex];
-                    EBTStatus s = pBehavior.exec(pAgent);
+                    EBTStatus s =await pBehavior.exec(pAgent);
 
                     return s;
                 }

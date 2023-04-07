@@ -23,6 +23,7 @@ using System.IO;
 using System.Xml;
 #else
 using System.Security;
+using System.Threading.Tasks;
 using MiniXml;
 #endif
 
@@ -1158,7 +1159,7 @@ namespace behaviac
 
         protected virtual Task<EBTStatus> update_impl(Agent pAgent, EBTStatus childStatus)
         {
-            return EBTStatus.BT_FAILURE;
+            return Task.FromResult(EBTStatus.BT_FAILURE);
         }
 
         public void SetClassNameString(string className)
@@ -1207,7 +1208,7 @@ namespace behaviac
             }
         }
 
-        public bool CheckPreconditions(Agent pAgent, bool bIsAlive)
+        public async Task<bool> CheckPreconditions(Agent pAgent, bool bIsAlive)
         {
             Precondition.EPhase phase = bIsAlive ? Precondition.EPhase.E_UPDATE : Precondition.EPhase.E_ENTER;
 
@@ -1243,7 +1244,7 @@ namespace behaviac
 
                     if (phase == Precondition.EPhase.E_BOTH || ph == Precondition.EPhase.E_BOTH || ph == phase)
                     {
-                        bool taskBoolean = pPrecond.Evaluate(pAgent);
+                        bool taskBoolean =await pPrecond.Evaluate(pAgent);
 
                         CombineResults(ref firstValidPrecond, ref lastCombineValue, pPrecond, taskBoolean);
                     }
@@ -1345,19 +1346,19 @@ namespace behaviac
             return true;
         }
 
-        public virtual bool Evaluate(Agent pAgent)
+        public virtual Task<bool> Evaluate(Agent pAgent)
         {
             Debugs.Check(false, "only Condition/Sequence/And/Or allowed");
-            return false;
+            return Task.FromResult(false);
         }
 
 
 
-        protected bool EvaluteCustomCondition(Agent pAgent)
+        protected async Task<bool> EvaluteCustomCondition(Agent pAgent)
         {
             if (this.m_customCondition != null)
             {
-                return m_customCondition.Evaluate(pAgent);
+                return await m_customCondition.Evaluate(pAgent);
             }
 
             return false;

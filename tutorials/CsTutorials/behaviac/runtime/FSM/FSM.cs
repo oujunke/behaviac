@@ -181,9 +181,7 @@ namespace behaviac
 
             protected override Task<EBTStatus> update_current(Agent pAgent, EBTStatus childStatus)
             {
-                EBTStatus status = this.update(pAgent, childStatus);
-
-                return status;
+                return this.update(pAgent, childStatus);
             }
 
             protected override Task<EBTStatus> update(Agent pAgent, EBTStatus childStatus)

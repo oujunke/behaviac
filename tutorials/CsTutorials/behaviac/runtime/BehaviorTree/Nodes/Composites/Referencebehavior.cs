@@ -13,6 +13,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace behaviac
 {
@@ -208,14 +209,14 @@ namespace behaviac
             //    this.m_subTree = null;
             //}
 
-            protected override bool CheckPreconditions(Agent pAgent, bool bIsAlive)
+            protected override async Task<bool> CheckPreconditions(Agent pAgent, bool bIsAlive)
             {
 #if BEHAVIAC_USE_HTN
                 this.currentState = pAgent.Variables.Push(false);
                 Debugs.Check(currentState != null);
 #endif//
 
-                bool bOk = base.CheckPreconditions(pAgent, bIsAlive);
+                bool bOk =await base.CheckPreconditions(pAgent, bIsAlive);
 #if BEHAVIAC_USE_HTN
 
                 if (!bOk)
@@ -295,7 +296,7 @@ namespace behaviac
                 base.onexit(pAgent, s);
             }
 
-            protected override Task<EBTStatus> update(Agent pAgent, EBTStatus childStatus)
+            protected override async Task<EBTStatus> update(Agent pAgent, EBTStatus childStatus)
             {
                 ReferencedBehavior pNode = this.GetNode() as ReferencedBehavior;
                 Debugs.Check(pNode != null);
@@ -312,9 +313,9 @@ namespace behaviac
                     }
 #endif
 
-                    EBTStatus result = this.m_subTree.exec(pAgent);
+                    EBTStatus result =await this.m_subTree.exec(pAgent);
 
-                    bool bTransitioned = State.UpdateTransitions(pAgent, pNode, pNode.m_transitions, ref this.m_nextStateId, result);
+                    bool bTransitioned =await State.UpdateTransitions(pAgent, pNode, pNode.m_transitions, ref this.m_nextStateId, result);
 
                     if (bTransitioned)
                     {

@@ -12,6 +12,7 @@
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace behaviac
 {
@@ -103,7 +104,7 @@ namespace behaviac
             {
             }
 
-            protected override Task<EBTStatus> update(Agent pAgent, EBTStatus childStatus)
+            protected override async Task<EBTStatus> update(Agent pAgent, EBTStatus childStatus)
             {
                 Debugs.Check(childStatus == EBTStatus.BT_RUNNING);
                 Debugs.Check(this.m_node is WaitFramesState, "node is not an WaitFramesState");
@@ -111,7 +112,7 @@ namespace behaviac
 
                 if (Workspace.FrameSinceStartup - this.m_start + 1 >= this.m_frames)
                 {
-                    pStateNode.Update(pAgent, out this.m_nextStateId);
+                    await pStateNode.Update(pAgent, out this.m_nextStateId);
                     return EBTStatus.BT_SUCCESS;
                 }
 

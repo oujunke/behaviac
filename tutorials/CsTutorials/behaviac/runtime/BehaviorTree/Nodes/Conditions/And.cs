@@ -12,6 +12,7 @@
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace behaviac
 {
@@ -40,14 +41,14 @@ namespace behaviac
             return base.IsValid(pAgent, pTask);
         }
 
-        public override bool Evaluate(Agent pAgent)
+        public override async Task<bool> Evaluate(Agent pAgent)
         {
             bool ret = true;
 
             for (int i = 0; i < this.m_children.Count; ++i)
             {
                 BehaviorNode c = this.m_children[i];
-                ret = c.Evaluate(pAgent);
+                ret =await c.Evaluate(pAgent);
 
                 if (!ret)
                 {
@@ -93,7 +94,7 @@ namespace behaviac
             base.load(node);
         }
 
-        protected override Task<EBTStatus> update(Agent pAgent, EBTStatus childStatus)
+        protected override async Task<EBTStatus> update(Agent pAgent, EBTStatus childStatus)
         {
             Debugs.Check(childStatus == EBTStatus.BT_RUNNING);
             //Debug.Check(this.m_children.Count == 2);
@@ -101,7 +102,7 @@ namespace behaviac
             for (int i = 0; i < this.m_children.Count; ++i)
             {
                 BehaviorTask pBehavior = this.m_children[i];
-                EBTStatus s = pBehavior.exec(pAgent);
+                EBTStatus s =await pBehavior.exec(pAgent);
 
                 // If the child fails, fails
                 if (s == EBTStatus.BT_FAILURE)

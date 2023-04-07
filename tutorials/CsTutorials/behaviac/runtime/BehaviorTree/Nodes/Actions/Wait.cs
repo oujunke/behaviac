@@ -13,6 +13,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace behaviac
 {
@@ -146,7 +147,7 @@ namespace behaviac
                 return pWaitNode != null ? pWaitNode.GetIntTime(pAgent) : 0;
             }
 
-            protected override bool onenter(Agent pAgent)
+            protected override Task<bool> onenter(Agent pAgent)
             {
                 if (Workspace.UseIntValue)
                 {
@@ -176,18 +177,18 @@ namespace behaviac
                 {
                     if (Workspace.IntValueSinceStartup - this.m_intStart >= this.m_intTime)
                     {
-                        return EBTStatus.BT_SUCCESS;
+                        return Task.FromResult(EBTStatus.BT_SUCCESS);
                     }
                 }
                 else
                 {
                     if (Workspace.DoubleValueSinceStartup - this.m_start >= this.m_time)
                     {
-                        return EBTStatus.BT_SUCCESS;
+                        return Task.FromResult(EBTStatus.BT_SUCCESS);
                     }
                 }
 
-                return EBTStatus.BT_RUNNING;
+                return Task.FromResult(EBTStatus.BT_RUNNING);
             }
         }
     }

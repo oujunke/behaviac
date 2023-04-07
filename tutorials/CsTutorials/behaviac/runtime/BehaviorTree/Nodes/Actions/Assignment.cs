@@ -12,6 +12,7 @@
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace behaviac
 {
@@ -94,7 +95,7 @@ namespace behaviac
             {
             }
 
-            protected override Task<EBTStatus> update(Agent pAgent, EBTStatus childStatus)
+            protected override async Task<EBTStatus> update(Agent pAgent, EBTStatus childStatus)
             {
                 Debugs.Check(childStatus == EBTStatus.BT_RUNNING);
 
@@ -116,7 +117,7 @@ namespace behaviac
                 }
                 else
                 {
-                    result = pAssignmentNode.update_impl(pAgent, childStatus);
+                    result =await pAssignmentNode.update_impl(pAgent, childStatus);
                 }
 
                 return result;

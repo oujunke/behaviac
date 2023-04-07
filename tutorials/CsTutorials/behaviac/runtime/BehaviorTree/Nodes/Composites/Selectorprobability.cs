@@ -12,6 +12,7 @@
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace behaviac
 {
@@ -128,7 +129,7 @@ namespace behaviac
                 base.onexit(pAgent, s);
             }
 
-            protected override Task<EBTStatus> update(Agent pAgent, EBTStatus childStatus)
+            protected override async Task<EBTStatus> update(Agent pAgent, EBTStatus childStatus)
             {
                 Debugs.Check(this.GetNode() is SelectorProbability);
                 SelectorProbability pSelectorProbabilityNode = (SelectorProbability)(this.GetNode());
@@ -143,7 +144,7 @@ namespace behaviac
                 {
                     BehaviorTask pNode = this.m_children[this.m_activeChildIndex];
 
-                    EBTStatus status = pNode.exec(pAgent);
+                    EBTStatus status =await pNode.exec(pAgent);
 
                     return status;
                 }
@@ -165,7 +166,7 @@ namespace behaviac
                     {
                         BehaviorTask pChild = this.m_children[i];
 
-                        EBTStatus status = pChild.exec(pAgent);
+                        EBTStatus status =await pChild.exec(pAgent);
 
                         if (status == EBTStatus.BT_RUNNING)
                         {

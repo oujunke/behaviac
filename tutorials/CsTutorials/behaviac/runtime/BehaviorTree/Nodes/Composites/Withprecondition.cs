@@ -12,6 +12,7 @@
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace behaviac
 {
@@ -124,7 +125,7 @@ namespace behaviac
 
             Debugs.Check(false);
 
-            return EBTStatus.BT_RUNNING;
+            return Task.FromResult(EBTStatus.BT_RUNNING);
         }
     }
 }

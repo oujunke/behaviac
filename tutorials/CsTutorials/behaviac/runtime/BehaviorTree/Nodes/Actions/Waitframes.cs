@@ -12,6 +12,7 @@
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace behaviac
 {
@@ -107,10 +108,10 @@ namespace behaviac
 
                 if (Workspace.FrameSinceStartup - this.m_start + 1 >= this.m_frames)
                 {
-                    return EBTStatus.BT_SUCCESS;
+                    return Task.FromResult(EBTStatus.BT_SUCCESS);
                 }
 
-                return EBTStatus.BT_RUNNING;
+                return Task.FromResult(EBTStatus.BT_RUNNING);
             }
 
             private int GetFrames(Agent pAgent)

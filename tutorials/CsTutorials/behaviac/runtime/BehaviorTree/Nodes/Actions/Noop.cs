@@ -12,6 +12,7 @@
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace behaviac
 {
@@ -76,7 +77,7 @@ namespace behaviac
                 base.load(node);
             }
 
-            protected override bool onenter(Agent pAgent)
+            protected override Task<bool> onenter(Agent pAgent)
             {
                 return true;
             }
@@ -89,7 +90,7 @@ namespace behaviac
             {
                 Debugs.Check(childStatus == EBTStatus.BT_RUNNING);
 
-                return EBTStatus.BT_SUCCESS;
+                return Task.FromResult(EBTStatus.BT_SUCCESS);
             }
         }
     }

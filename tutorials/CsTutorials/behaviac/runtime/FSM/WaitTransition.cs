@@ -12,6 +12,7 @@
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace behaviac
 {
@@ -48,7 +49,7 @@ namespace behaviac
             return null;
         }
 
-        public override bool Evaluate(Agent pAgent, EBTStatus status)
+        public override Task<bool> Evaluate(Agent pAgent, EBTStatus status)
         {
             return true;
         }

@@ -12,6 +12,7 @@
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace behaviac
 {
@@ -200,7 +201,7 @@ namespace behaviac
             return pTask;
         }
 
-        public EBTStatus ParallelUpdate(Agent pAgent, List<BehaviorTask> children)
+        public async Task<EBTStatus> ParallelUpdate(Agent pAgent, List<BehaviorTask> children)
         {
             bool sawSuccess = false;
             bool sawFail = false;
@@ -219,7 +220,7 @@ namespace behaviac
 
                 if (bLoop || (treeStatus == EBTStatus.BT_RUNNING || treeStatus == EBTStatus.BT_INVALID))
                 {
-                    EBTStatus status = pChild.exec(pAgent);
+                    EBTStatus status =await pChild.exec(pAgent);
 
                     if (status == EBTStatus.BT_FAILURE)
                     {
@@ -326,9 +327,7 @@ namespace behaviac
             //no current task, as it needs to update every child for every update
             protected override Task<EBTStatus> update_current(Agent pAgent, EBTStatus childStatus)
             {
-                EBTStatus s = this.update(pAgent, childStatus);
-
-                return s;
+                return update(pAgent, childStatus);
             }
 
             protected override Task<EBTStatus> update(Agent pAgent, EBTStatus childStatus)

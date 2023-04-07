@@ -12,6 +12,7 @@
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace behaviac
 {
@@ -85,7 +86,7 @@ namespace behaviac
                 return EBTStatus.BT_INVALID;
             }
 
-            protected override Task<EBTStatus> update(Agent pAgent, EBTStatus childStatus)
+            protected override async Task<EBTStatus> update(Agent pAgent, EBTStatus childStatus)
             {
                 Debugs.Check(this.m_node is DecoratorNode);
                 DecoratorNode node = (DecoratorNode)this.m_node;
@@ -97,13 +98,13 @@ namespace behaviac
 
                 for (int i = 0; i < this.m_n; ++i)
                 {
-                    status = this.m_root.exec(pAgent, childStatus);
+                    status =await this.m_root.exec(pAgent, childStatus);
 
                     if (node.m_bDecorateWhenChildEnds)
                     {
                         while (status == EBTStatus.BT_RUNNING)
                         {
-                            status = base.update(pAgent, childStatus);
+                            status =await base.update(pAgent, childStatus);
                         }
                     }
 

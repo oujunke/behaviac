@@ -13,6 +13,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace behaviac
 {
@@ -82,7 +83,7 @@ namespace behaviac
                 return pEndNode != null ? pEndNode.GetEndOutside() : false;
             }
 
-            protected override bool onenter(Agent pAgent)
+            protected override Task<bool> onenter(Agent pAgent)
             {
                 return true;
             }
@@ -108,7 +109,7 @@ namespace behaviac
                     rooTask.setEndStatus(this.GetStatus(pAgent));
                 }
 
-                return EBTStatus.BT_RUNNING;
+                return Task.FromResult(EBTStatus.BT_RUNNING);
             }
         }
     }
