@@ -18,7 +18,7 @@ namespace behaviac
 {
     public class And : ConditionBase
     {
-        public And()
+        public And(Workspace workspace):base(workspace)
         {
         }
 
@@ -26,9 +26,9 @@ namespace behaviac
         //{
         //}
 
-        protected override void load(int version, string agentType, List<property_t> properties)
+        protected override  async Task  load(int version, string agentType, List<property_t> properties)
         {
-            base.load(version, agentType, properties);
+            await base.load(version, agentType, properties);
         }
 
         public override bool IsValid(Agent pAgent, BehaviorTask pTask)
@@ -61,7 +61,7 @@ namespace behaviac
 
         protected override BehaviorTask createTask()
         {
-            AndTask pTask = new AndTask();
+            AndTask pTask = new AndTask(Workspace);
 
             return pTask;
         }
@@ -70,8 +70,7 @@ namespace behaviac
     // ============================================================================
     internal class AndTask : Sequence.SequenceTask
     {
-        public AndTask()
-        : base()
+        public AndTask(Workspace workspace) : base(workspace)
         {
         }
 

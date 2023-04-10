@@ -37,6 +37,7 @@ using System.Xml;
 #else
 using System.Security;
 using MiniXml;
+using System.Threading.Tasks;
 #endif
 
 #if UNITY_EDITOR || UNITY_STANDALONE_WIN
@@ -294,7 +295,7 @@ namespace behaviac
             ComputerRegisters = new ComputerRegister(this);
         }
 
-        public Workspace CreatWorkspace()
+        public static Workspace CreatWorkspace()
         {
             Workspace workspace = new Workspace();
             Config config = new Config();
@@ -1361,7 +1362,7 @@ namespace behaviac
             }
         }
 
-        public void Update()
+        public async Task Update()
         {
             this.DebugUpdate();
 
@@ -1369,23 +1370,23 @@ namespace behaviac
             {
                 int contextId = -1;
 
-                Contexts.execAgents(contextId);
+               await Contexts.execAgents(contextId);
             }
         }
 
-        public void LogCurrentStates()
+        public async Task LogCurrentStates()
         {
             int contextId = -1;
-            Contexts.LogCurrentStates(contextId);
+           await Contexts.LogCurrentStates(contextId);
         }
 
-        public bool CheckBreakpoint(Agent pAgent, BehaviorNode b, string action, EActionResult actionResult)
+        public async Task<bool> CheckBreakpoint(Agent pAgent, BehaviorNode b, string action, EActionResult actionResult)
         {
 #if !BEHAVIAC_RELEASE
 
             if (Configs.IsSocketing)
             {
-                string bpStr = BehaviorTask.GetTickInfo(pAgent, b, action);
+                string bpStr =await BehaviorTask.GetTickInfo(pAgent, b, action);
 
                 uint bpid = Utils.MakeVariableId(bpStr);
 
@@ -1940,7 +1941,7 @@ namespace behaviac
 
             if (type != null)
             {
-                object p = Activator.CreateInstance(type);
+                object p = Activator.CreateInstance(type,this);
                 return p as BehaviorNode;
             }
 

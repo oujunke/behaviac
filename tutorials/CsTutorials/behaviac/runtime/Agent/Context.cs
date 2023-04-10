@@ -13,6 +13,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace behaviac
 {
@@ -232,7 +233,7 @@ namespace behaviac
             }
         }
 
-        public void execAgents(int contextId)
+        public async Task execAgents(int contextId)
         {
             if (contextId >= 0)
             {
@@ -240,7 +241,7 @@ namespace behaviac
 
                 if (pContext != null)
                 {
-                    pContext.execAgents_();
+                    await pContext.execAgents_();
                 }
             }
             else
@@ -253,13 +254,13 @@ namespace behaviac
 
                     if (pContext != null)
                     {
-                        pContext.execAgents_();
+                       await pContext.execAgents_();
                     }
                 }
             }
         }
 
-        private void execAgents_()
+        private async Task execAgents_()
         {
             if (!Workspace.IsExecAgents)
             {
@@ -280,7 +281,7 @@ namespace behaviac
                     Agent pAgent = e.Current.Value;
                     if (pAgent.IsActive())
                     {
-                        pAgent.btexec();
+                        await pAgent.btexec();
 
                         // in case IsExecAgents was set to false by pA's bt
                         if (!Workspace.IsExecAgents)
@@ -296,7 +297,7 @@ namespace behaviac
             this.DelayProcessingAgents();
         }
 
-        private void LogCurrentState()
+        private async Task LogCurrentState()
         {
             string msg = string.Format("LogCurrentStates {0} {1}", this.m_context_id, this.Agents.Count);
             Workspace.Debugs.Log(msg);
@@ -313,13 +314,13 @@ namespace behaviac
                     {
                         e.Current.LogVariables(true);
 
-                        e.Current.LogRunningNodes();
+                        await e.Current.LogRunningNodes();
                     }
                 }
             }
         }
 
-        public void LogCurrentStates(int contextId)
+        public async Task LogCurrentStates(int contextId)
         {
             Workspace.Debugs.Check(ms_contexts != null);
 
@@ -329,7 +330,7 @@ namespace behaviac
 
                 if (pContext != null)
                 {
-                    pContext.LogCurrentState();
+                    await pContext.LogCurrentState();
                 }
             }
             else
@@ -338,7 +339,7 @@ namespace behaviac
 
                 while (e.MoveNext())
                 {
-                    e.Current.LogCurrentState();
+                    await e.Current.LogCurrentState();
                 }
             }
         }
@@ -388,11 +389,11 @@ namespace behaviac
                 agentInstanceName = pAgentInstance.GetType().FullName;
             }
 
-            if (Agent.IsNameRegistered(agentInstanceName,pAgentInstance.Workspace))
+            if (Agent.IsNameRegistered(agentInstanceName, pAgentInstance.Workspace))
             {
                 Workspace.Debugs.Check(GetInstance(agentInstanceName) == null, "the name has been bound to an instance already!");
 
-                string className = Agent.GetRegisteredClassName(agentInstanceName,pAgentInstance.Workspace);
+                string className = Agent.GetRegisteredClassName(agentInstanceName, pAgentInstance.Workspace);
 
                 if (Agent.IsDerived(pAgentInstance, className))
                 {
@@ -425,7 +426,7 @@ namespace behaviac
         {
             Workspace.Debugs.Check(!string.IsNullOrEmpty(agentInstanceName));
 
-            if (Agent.IsNameRegistered(agentInstanceName,Workspace))
+            if (Agent.IsNameRegistered(agentInstanceName, Workspace))
             {
                 if (m_namedAgents.ContainsKey(agentInstanceName))
                 {

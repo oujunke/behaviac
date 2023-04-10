@@ -18,7 +18,7 @@ namespace behaviac
 {
     public class Or : ConditionBase
     {
-        public Or()
+        public Or(Workspace workspace) : base(workspace)
         {
         }
 
@@ -26,9 +26,9 @@ namespace behaviac
         //{
         //}
 
-        protected override void load(int version, string agentType, List<property_t> properties)
+        protected override  async Task  load(int version, string agentType, List<property_t> properties)
         {
-            base.load(version, agentType, properties);
+            await base.load(version, agentType, properties);
         }
 
         public override bool IsValid(Agent pAgent, BehaviorTask pTask)
@@ -61,7 +61,7 @@ namespace behaviac
 
         protected override BehaviorTask createTask()
         {
-            OrTask pTask = new OrTask();
+            OrTask pTask = new OrTask(Workspace);
 
             return pTask;
         }
@@ -69,8 +69,7 @@ namespace behaviac
         // ============================================================================
         private class OrTask : Selector.SelectorTask
         {
-            public OrTask()
-            : base()
+            public OrTask(Workspace workspace) : base(workspace)
             {
             }
 

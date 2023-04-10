@@ -4,6 +4,7 @@
 // PLEASE MODIFY AND REGENERETE IT IN THE DESIGNER FOR CLASS/MEMBERS/METHODS, ETC.
 // -------------------------------------------------------------------------------
 
+using behaviac;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -16,21 +17,15 @@ public class FirstAgent : behaviac.Agent
 ///<<< BEGIN WRITING YOUR CODE FirstAgent
 ///<<< END WRITING YOUR CODE
 {
-	private int p1 = 0;
-	public void _set_p1(int value)
-	{
-		p1 = value;
-	}
-	public int _get_p1()
-	{
-		return p1;
-	}
+    public FirstAgent(Workspace workspace) : base(workspace)
+    {
 
-	public void Say(string value)
+    }
+	public void SayHello()
 	{
-///<<< BEGIN WRITING YOUR CODE Say
+///<<< BEGIN WRITING YOUR CODE SayHello
         Console.WriteLine();
-        Console.WriteLine("{0}", value);
+        Console.WriteLine("Hello Behaviac!");
         Console.WriteLine();
 ///<<< END WRITING YOUR CODE
 	}

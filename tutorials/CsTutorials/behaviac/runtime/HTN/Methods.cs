@@ -13,12 +13,14 @@
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace behaviac
 {
     public class Methods : BehaviorNode
     {
-        public Methods()
+
+        public Methods(Workspace workspace) : base(workspace)
         {
         }
 
@@ -61,9 +63,9 @@ namespace behaviac
         }
 #endif//
 
-        protected override void load(int version, string agentType, List<property_t> properties)
+        protected override  async Task  load(int version, string agentType, List<property_t> properties)
         {
-            base.load(version, agentType, properties);
+            await base.load(version, agentType, properties);
         }
     }
 }

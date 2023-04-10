@@ -17,15 +17,19 @@ using System.Threading.Tasks;
 namespace behaviac
 {
     // ============================================================================
-    public class Actions : BehaviorNode
+    public  class Actions : BehaviorNode
     {
         protected IMethod m_method;
         protected IMethod m_resultFunctor;
         protected EBTStatus m_resultOption = EBTStatus.BT_INVALID;
 
-        protected override void load(int version, string agentType, List<property_t> properties)
+        public Actions(Workspace workspace) : base(workspace)
         {
-            base.load(version, agentType, properties);
+        }
+
+        protected override  async Task  load(int version, string agentType, List<property_t> properties)
+        {
+            await base.load(version, agentType, properties);
 
             for (int i = 0; i < properties.Count; ++i)
             {
@@ -93,13 +97,13 @@ namespace behaviac
                 {
                     if (this.m_resultFunctor != null)
                     {
-                        IValue returnValue = this.m_resultFunctor.GetIValue(pAgent, this.m_method);
+                        IValue returnValue =await this.m_resultFunctor.GetIValue(pAgent, this.m_method);
 
                         result = ((TValue<EBTStatus>)returnValue).value;
                     }
                     else
                     {
-                        IValue returnValue = this.m_method.GetIValue(pAgent);
+                        IValue returnValue =await this.m_method.GetIValue(pAgent);
 
                         Debugs.Check(returnValue is TValue<EBTStatus>, "method's return type is not EBTStatus");
 
@@ -109,7 +113,7 @@ namespace behaviac
             }
             else
             {
-                result =await this.update_impl(pAgent, childStatus);
+                result = await this.update_impl(pAgent, childStatus);
             }
 
             return result;
@@ -117,13 +121,17 @@ namespace behaviac
 
         protected override BehaviorTask createTask()
         {
-            ActionTask pTask = new ActionTask();
+            ActionTask pTask = new ActionTask(Workspace);
 
             return pTask;
         }
 
         private class ActionTask : LeafTask
         {
+            public ActionTask(Workspace workspace) : base(workspace)
+            {
+            }
+
             public override void copyto(BehaviorTask target)
             {
                 base.copyto(target);
@@ -139,9 +147,9 @@ namespace behaviac
                 base.load(node);
             }
 
-            protected override bool onenter(Agent pAgent)
+            protected override Task<bool> onenter(Agent pAgent)
             {
-                return true;
+                return Task.FromResult(true);
             }
 
             protected override void onexit(Agent pAgent, EBTStatus s)
@@ -155,7 +163,7 @@ namespace behaviac
                 Debugs.Check(this.GetNode() is Actions, "node is not an Action");
                 Actions pActionNode = (Actions)(this.GetNode());
 
-                EBTStatus result =await pActionNode.Execute(pAgent, childStatus);
+                EBTStatus result = await pActionNode.Execute(pAgent, childStatus);
 
                 return result;
             }

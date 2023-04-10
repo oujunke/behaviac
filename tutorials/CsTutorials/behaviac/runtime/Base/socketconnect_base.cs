@@ -23,6 +23,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Net.Sockets;
 using System.Runtime.InteropServices;
+using System.Threading.Tasks;
 
 namespace behaviac
 {
@@ -971,7 +972,7 @@ namespace behaviac
             return bufferIndex;
         }
 
-        protected abstract void OnConnection();
+        protected abstract Task OnConnection();
 
         protected virtual void OnRecieveMessages(string msgs)
         {

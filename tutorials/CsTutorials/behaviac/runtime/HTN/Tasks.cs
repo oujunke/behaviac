@@ -10,6 +10,11 @@ namespace behaviac
         protected IMethod m_task;
 
         protected bool m_bHTN;
+
+        public Tasks(Workspace workspace) : base(workspace)
+        {
+        }
+
         public bool IsHTN
         {
             get
@@ -45,7 +50,7 @@ namespace behaviac
 
         protected override BehaviorTask createTask()
         {
-            TaskTask pTask = new TaskTask();
+            TaskTask pTask = new TaskTask(Workspace);
 
             return pTask;
         }
@@ -67,9 +72,9 @@ namespace behaviac
         }
 #endif//
 
-        protected override void load(int version, string agentType, List<property_t> properties)
+        protected override  async Task  load(int version, string agentType, List<property_t> properties)
         {
-            base.load(version, agentType, properties);
+            await base.load(version, agentType, properties);
 
             for (int i = 0; i < properties.Count; ++i)
             {
@@ -89,6 +94,9 @@ namespace behaviac
 
     internal class TaskTask : Sequence.SequenceTask
     {
+        public TaskTask(Workspace workspace) : base(workspace)
+        {
+        }
 #if BEHAVIAC_USE_HTN
         private Planner _planner = new Planner();
 #endif//
@@ -116,7 +124,7 @@ namespace behaviac
             base.addChild(pBehavior);
         }
 
-        protected override bool onenter(Agent pAgent)
+        protected override Task<bool> onenter(Agent pAgent)
         {
             //reset the action child as it will be checked in the update
             this.m_activeChildIndex = CompositeTask.InvalidChildIndex;

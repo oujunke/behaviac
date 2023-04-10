@@ -18,9 +18,9 @@ namespace behaviac
 {
     public class Condition : ConditionBase
     {
-        protected override void load(int version, string agentType, List<property_t> properties)
+        protected override  async Task  load(int version, string agentType, List<property_t> properties)
         {
-            base.load(version, agentType, properties);
+            await base.load(version, agentType, properties);
 
             for (int i = 0; i < properties.Count; ++i)
             {
@@ -73,7 +73,7 @@ namespace behaviac
         {
             if (this.m_opl != null && this.m_opr != null)
             {
-                return this.m_opl.Compare(pAgent, this.m_opr, this.m_operator);
+                return await this.m_opl.Compare(pAgent, this.m_opr, this.m_operator);
             }
             else
             {
@@ -85,7 +85,7 @@ namespace behaviac
 
         protected override BehaviorTask createTask()
         {
-            ConditionTask pTask = new ConditionTask();
+            ConditionTask pTask = new ConditionTask(Workspace);
 
             return pTask;
         }
@@ -94,8 +94,16 @@ namespace behaviac
         protected IInstanceMember m_opr;
         protected EOperatorType m_operator = EOperatorType.E_EQUAL;
 
+        public Condition(Workspace workspace) : base(workspace)
+        {
+        }
+
         private class ConditionTask : ConditionBaseTask
         {
+            public ConditionTask(Workspace workspace) : base(workspace)
+            {
+            }
+
             public override void copyto(BehaviorTask target)
             {
                 base.copyto(target);
@@ -111,9 +119,9 @@ namespace behaviac
                 base.load(node);
             }
 
-            protected override bool onenter(Agent pAgent)
+            protected override Task<bool> onenter(Agent pAgent)
             {
-                return true;
+                return Task.FromResult(true);
             }
 
             protected override void onexit(Agent pAgent, EBTStatus s)

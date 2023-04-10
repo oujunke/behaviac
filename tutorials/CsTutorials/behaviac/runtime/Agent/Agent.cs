@@ -1399,7 +1399,7 @@ namespace behaviac
 #endif
         }
 
-        public void LogRunningNodes()
+        public async Task LogRunningNodes()
         {
 #if !BEHAVIAC_RELEASE
             if (Workspace.Configs.IsLoggingOrSocketing && this.m_currentBT != null)
@@ -1410,7 +1410,7 @@ namespace behaviac
                 while (e.MoveNext())
                 {
                     BehaviorTask behaviorTask = e.Current;
-                    string btStr = BehaviorTask.GetTickInfo(this, behaviorTask, "enter");
+                    string btStr =await BehaviorTask.GetTickInfo(this, behaviorTask, "enter");
 
                     //empty btStr is for internal BehaviorTreeTask
                     if (!string.IsNullOrEmpty(btStr))
@@ -1940,7 +1940,7 @@ namespace behaviac
             }
         }
 
-        public void btonevent(string btEvent, Dictionary<uint, IInstantiatedVariable> eventParams)
+        public async Task btonevent(string btEvent, Dictionary<uint, IInstantiatedVariable> eventParams)
         {
             if (this.m_currentBT != null)
             {
@@ -1958,7 +1958,7 @@ namespace behaviac
 #if !BEHAVIAC_RELEASE
                         Debugs.Check(this.m_debug_in_exec == 0, "FireEvent should not be called during the Agent is in btexec");
 #endif
-                        this.m_currentBT.onevent(this, btEvent, eventParams);
+                        await this.m_currentBT.onevent(this, btEvent, eventParams);
                     }
                     else
                     {
@@ -1968,12 +1968,12 @@ namespace behaviac
             }
         }
 
-        public void FireEvent(string eventName)
+        public async Task FireEvent(string eventName)
         {
-            this.btonevent(eventName, null);
+            await this.btonevent(eventName, null);
         }
 
-        public void FireEvent<ParamType>(string eventName, ParamType param)
+        public async Task FireEvent<ParamType>(string eventName, ParamType param)
         {
             Dictionary<uint, IInstantiatedVariable> eventParams = new Dictionary<uint, IInstantiatedVariable>();
 
@@ -1981,10 +1981,10 @@ namespace behaviac
             uint paramId = Utils.MakeVariableId(paramName);
             eventParams[paramId] = new CVariable<ParamType>(paramName, param, Workspace);
 
-            this.btonevent(eventName, eventParams);
+           await this.btonevent(eventName, eventParams);
         }
 
-        public void FireEvent<ParamType1, ParamType2>(string eventName, ParamType1 param1, ParamType2 param2)
+        public async Task FireEvent<ParamType1, ParamType2>(string eventName, ParamType1 param1, ParamType2 param2)
         {
             Dictionary<uint, IInstantiatedVariable> eventParams = new Dictionary<uint, IInstantiatedVariable>();
 
@@ -1996,10 +1996,10 @@ namespace behaviac
             paramId = Utils.MakeVariableId(paramName);
             eventParams[paramId] = new CVariable<ParamType2>(paramName, param2,Workspace);
 
-            this.btonevent(eventName, eventParams);
+           await this.btonevent(eventName, eventParams);
         }
 
-        public void FireEvent<ParamType1, ParamType2, ParamType3>(string eventName, ParamType1 param1, ParamType2 param2, ParamType3 param3)
+        public async Task FireEvent<ParamType1, ParamType2, ParamType3>(string eventName, ParamType1 param1, ParamType2 param2, ParamType3 param3)
         {
             Dictionary<uint, IInstantiatedVariable> eventParams = new Dictionary<uint, IInstantiatedVariable>();
 
@@ -2015,15 +2015,15 @@ namespace behaviac
             paramId = Utils.MakeVariableId(paramName);
             eventParams[paramId] = new CVariable<ParamType3>(paramName, param3, Workspace);
 
-            this.btonevent(eventName, eventParams);
+         await   this.btonevent(eventName, eventParams);
         }
 
         [behaviac.MethodMetaInfo()]
-        public void LogMessage(string message)
+        public static void LogMessage(string message, Workspace workspace)
         {
-            int frames = Workspace.FrameSinceStartup;
+            int frames = workspace.FrameSinceStartup;
 
-            Workspace.Debugs.Log(string.Format("[{0}]{1}\n", frames, message));
+            workspace.Debugs.Log(string.Format("[{0}]{1}\n", frames, message));
         }
 
         [behaviac.MethodMetaInfo()]

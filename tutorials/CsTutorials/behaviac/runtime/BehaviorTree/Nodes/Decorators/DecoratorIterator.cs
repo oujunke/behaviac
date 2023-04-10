@@ -13,6 +13,7 @@
 
 using System.Collections;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace behaviac
 {
@@ -66,9 +67,9 @@ namespace behaviac
         }
 #endif//
 
-        protected override void load(int version, string agentType, List<property_t> properties)
+        protected override  async Task  load(int version, string agentType, List<property_t> properties)
         {
-            base.load(version, agentType, properties);
+            await base.load(version, agentType, properties);
 
             for (int i = 0; i < properties.Count; ++i)
             {
@@ -142,5 +143,9 @@ namespace behaviac
 
         protected IInstanceMember m_opl;
         protected IInstanceMember m_opr;
+
+        public DecoratorIterator(Workspace workspace) : base(workspace)
+        {
+        }
     }
 }

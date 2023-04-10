@@ -12,14 +12,15 @@
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace behaviac
 {
     public abstract class DecoratorCount : DecoratorNode
     {
-        protected override void load(int version, string agentType, List<property_t> properties)
+        protected override  async Task  load(int version, string agentType, List<property_t> properties)
         {
-            base.load(version, agentType, properties);
+            await base.load(version, agentType, properties);
 
             for (int i = 0; i < properties.Count; ++i)
             {
@@ -32,12 +33,12 @@ namespace behaviac
             }
         }
 
-        protected virtual int GetCount(Agent pAgent)
+        protected virtual async Task<int> GetCount(Agent pAgent)
         {
             if (this.m_count != null)
             {
                 Debugs.Check(this.m_count is CInstanceMember<int>);
-                int count = ((CInstanceMember<int>)this.m_count).GetValue(pAgent);
+                int count = await ((CInstanceMember<int>)this.m_count).GetValue(pAgent);
 
                 return count;
             }
@@ -46,6 +47,10 @@ namespace behaviac
         }
 
         protected IInstanceMember m_count;
+
+        protected DecoratorCount(Workspace workspace) : base(workspace)
+        {
+        }
 
         protected abstract class DecoratorCountTask : DecoratorTask
         {
@@ -72,11 +77,11 @@ namespace behaviac
                 base.load(node);
             }
 
-            protected override bool onenter(Agent pAgent)
+            protected override async Task<bool> onenter(Agent pAgent)
             {
-                base.onenter(pAgent);
+                await base.onenter(pAgent);
 
-                int count = this.GetCount(pAgent);
+                int count =await this.GetCount(pAgent);
 
                 if (count == 0)
                 {
@@ -88,15 +93,19 @@ namespace behaviac
                 return true;
             }
 
-            public int GetCount(Agent pAgent)
+            public async Task<int> GetCount(Agent pAgent)
             {
                 Debugs.Check(this.GetNode() is DecoratorCount);
                 DecoratorCount pDecoratorCountNode = (DecoratorCount)(this.GetNode());
 
-                return pDecoratorCountNode != null ? pDecoratorCountNode.GetCount(pAgent) : 0;
+                return pDecoratorCountNode != null ?await pDecoratorCountNode.GetCount(pAgent) : 0;
             }
 
             protected int m_n;
+
+            protected DecoratorCountTask(Workspace workspace) : base(workspace)
+            {
+            }
         }
     }
 }

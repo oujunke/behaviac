@@ -10,15 +10,13 @@ namespace tutorial_10
     {
         static FirstAgent g_FirstAgent;
         static MyFileManager g_MyFileManager;
-
+        static behaviac.Workspace Instance;
         static bool InitBehavic()
         {
             Console.WriteLine("InitBehavic");
-
-            g_MyFileManager = new MyFileManager();
-
-            behaviac.Workspace.Instance.FilePath = "../../exported";
-            behaviac.Workspace.Instance.FileFormat = behaviac.Workspace.EFileFormat.EFF_xml;
+            Instance = behaviac.Workspace.CreatWorkspace();
+            Instance.FilePath = "../../exported";
+            Instance.FileFormat = behaviac.Workspace.EFileFormat.EFF_xml;
 
             return true;
         }

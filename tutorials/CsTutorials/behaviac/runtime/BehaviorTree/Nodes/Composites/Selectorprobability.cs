@@ -18,9 +18,9 @@ namespace behaviac
 {
     public class SelectorProbability : BehaviorNode
     {
-        protected override void load(int version, string agentType, List<property_t> properties)
+        protected override  async Task  load(int version, string agentType, List<property_t> properties)
         {
-            base.load(version, agentType, properties);
+            await base.load(version, agentType, properties);
 
             for (int i = 0; i < properties.Count; ++i)
             {
@@ -60,12 +60,16 @@ namespace behaviac
 
         protected override BehaviorTask createTask()
         {
-            SelectorProbabilityTask pTask = new SelectorProbabilityTask();
+            SelectorProbabilityTask pTask = new SelectorProbabilityTask(Workspace);
 
             return pTask;
         }
 
         protected IMethod m_method;
+
+        public SelectorProbability(Workspace workspace) : base(workspace)
+        {
+        }
 
         ///Executes behaviors randomly, based on a given set of weights.
         /** The weights are not percentages, but rather simple ratios.
@@ -91,7 +95,7 @@ namespace behaviac
                 base.load(node);
             }
 
-            protected override bool onenter(Agent pAgent)
+            protected override async Task<bool> onenter(Agent pAgent)
             {
                 Debugs.Check(this.m_children.Count > 0);
 				
@@ -113,7 +117,7 @@ namespace behaviac
                     Debugs.Check(task is DecoratorWeight.DecoratorWeightTask);
                     DecoratorWeight.DecoratorWeightTask pWT = (DecoratorWeight.DecoratorWeightTask)task;
 
-                    int weight = pWT.GetWeight(pAgent);
+                    int weight =await pWT.GetWeight(pAgent);
                     this.m_weightingMap.Add(weight);
                     this.m_totalSum += weight;
                 }
@@ -152,7 +156,7 @@ namespace behaviac
                 Debugs.Check(this.m_weightingMap.Count == this.m_children.Count);
 
                 //generate a number between 0 and the sum of the weights
-                float chosen = this.m_totalSum * CompositeStochastic.CompositeStochasticTask.GetRandomValue(pSelectorProbabilityNode.m_method, pAgent);
+                float chosen = this.m_totalSum * await CompositeStochastic.CompositeStochasticTask.GetRandomValue(pSelectorProbabilityNode.m_method, pAgent);
 
                 float sum = 0;
 
@@ -186,6 +190,10 @@ namespace behaviac
 
             private List<int> m_weightingMap = new List<int>();
             private int m_totalSum;
+
+            public SelectorProbabilityTask(Workspace workspace) : base(workspace)
+            {
+            }
         }
     }
 }

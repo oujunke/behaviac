@@ -76,7 +76,7 @@ namespace behaviac
             }
         }
 
-        public Effector(Workspace workspace)
+        public Effector(Workspace workspace):base(workspace)
         {
             m_ActionConfig = new EffectorConfig(workspace);
         }

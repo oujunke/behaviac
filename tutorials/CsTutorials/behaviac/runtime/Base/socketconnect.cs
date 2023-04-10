@@ -15,6 +15,7 @@
 
 using System;
 using System.Runtime.InteropServices;
+using System.Threading.Tasks;
 
 namespace behaviac
 {
@@ -85,7 +86,7 @@ namespace behaviac
             gs_packetsStats.init++;
         }
 
-        protected override void OnConnection()
+        protected override async Task OnConnection()
         {
             Log("behaviac: sending initial settings.\n");
 
@@ -93,7 +94,7 @@ namespace behaviac
 
             Workspace.SocketUtil.SendWorkspaceSettings();
 
-            this.SendInitialProperties();
+            await this.SendInitialProperties();
 
             {
                 Log("behaviac: sending packets before connecting.\n");
@@ -133,9 +134,9 @@ namespace behaviac
             //this.m_bHandleMessage = false;
         }
 
-        private void SendInitialProperties()
+        private async Task SendInitialProperties()
         {
-            Workspace.LogCurrentStates();
+            await Workspace.LogCurrentStates();
         }
 
         public bool IsWorkspaceSent()

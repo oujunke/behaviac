@@ -68,9 +68,9 @@ namespace behaviac
         }
 #endif//
 
-        protected override void load(int version, string agentType, List<property_t> properties)
+        protected override async Task load(int version, string agentType, List<property_t> properties)
         {
-            base.load(version, agentType, properties);
+            await base.load(version, agentType, properties);
 
             for (int i = 0; i < properties.Count; ++i)
             {
@@ -89,7 +89,7 @@ namespace behaviac
                         this.m_referencedBehaviorPath = AgentMeta.ParseMethod(p.value, Workspace);
                     }
 
-                    string szTreePath = this.GetReferencedTree(null);
+                    string szTreePath =await this.GetReferencedTree(null);
 
                     //conservatively make it true
                     bool bHasEvents = true;
@@ -151,17 +151,17 @@ namespace behaviac
 
         protected override BehaviorTask createTask()
         {
-            ReferencedBehaviorTask pTask = new ReferencedBehaviorTask();
+            ReferencedBehaviorTask pTask = new ReferencedBehaviorTask(Workspace);
 
             return pTask;
         }
 
-        public virtual string GetReferencedTree(Agent pAgent)
+        public virtual async Task<string> GetReferencedTree(Agent pAgent)
         {
             if (this.m_referencedBehaviorPath != null)
             {
                 Debugs.Check(this.m_referencedBehaviorPath is CInstanceMember<string>);
-                return ((CInstanceMember<string>)this.m_referencedBehaviorPath).GetValue(pAgent);
+                return await ((CInstanceMember<string>)this.m_referencedBehaviorPath).GetValue(pAgent);
             }
 
             return string.Empty;
@@ -181,11 +181,15 @@ namespace behaviac
 
         private Tasks m_taskNode;
 
-        public Tasks RootTaskNode(Agent pAgent)
+        public ReferencedBehavior(Workspace workspace) : base(workspace)
+        {
+        }
+
+        public async Task<Tasks> RootTaskNode(Agent pAgent)
         {
             if (this.m_taskNode == null)
             {
-                string szTreePath = this.GetReferencedTree(pAgent);
+                string szTreePath =await this.GetReferencedTree(pAgent);
                 BehaviorTree bt = Workspace.LoadBehaviorTree(szTreePath);
 
                 if (bt != null && bt.GetChildrenCount() == 1)
@@ -237,13 +241,17 @@ namespace behaviac
 
             BehaviorTreeTask m_subTree = null;
 
-            public override bool onevent(Agent pAgent, string eventName, Dictionary<uint, IInstantiatedVariable> eventPrams)
+            public ReferencedBehaviorTask(Workspace workspace) : base(workspace)
+            {
+            }
+
+            public override async Task<bool> onevent(Agent pAgent, string eventName, Dictionary<uint, IInstantiatedVariable> eventPrams)
             {
                 if (this.m_status == EBTStatus.BT_RUNNING && this.m_node.HasEvents())
                 {
                     Debugs.Check(this.m_subTree != null);
 
-                    if (!this.m_subTree.onevent(pAgent, eventName, eventPrams))
+                    if (!await this.m_subTree.onevent(pAgent, eventName, eventPrams))
                     {
                         return false;
                     }
@@ -252,7 +260,7 @@ namespace behaviac
                 return true;
             }
 
-            protected override bool onenter(Agent pAgent)
+            protected override async Task<bool> onenter(Agent pAgent)
             {
                 ReferencedBehavior pNode = this.GetNode() as ReferencedBehavior;
                 Debugs.Check(pNode != null);
@@ -261,7 +269,7 @@ namespace behaviac
                 {
                     this.m_nextStateId = -1;
 
-                    string szTreePath = pNode.GetReferencedTree(pAgent);
+                    string szTreePath =await pNode.GetReferencedTree(pAgent);
 
                     //to create the task on demand
                     if (this.m_subTree == null || szTreePath != this.m_subTree.GetName())
@@ -315,8 +323,8 @@ namespace behaviac
 
                     EBTStatus result =await this.m_subTree.exec(pAgent);
 
-                    bool bTransitioned =await State.UpdateTransitions(pAgent, pNode, pNode.m_transitions, ref this.m_nextStateId, result);
-
+                    var (bTransitioned, mNextStateId) =await State.UpdateTransitions(pAgent, pNode, pNode.m_transitions, this.m_nextStateId, result);
+                    this.m_nextStateId = mNextStateId;
                     if (bTransitioned)
                     {
                         if (result == EBTStatus.BT_RUNNING)

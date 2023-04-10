@@ -12,12 +12,13 @@
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace behaviac
 {
     public class DecoratorFailureUntil : DecoratorCount
     {
-        public DecoratorFailureUntil()
+        public DecoratorFailureUntil(Workspace workspace) : base(workspace)
         {
         }
 
@@ -25,9 +26,9 @@ namespace behaviac
         //{
         //}
 
-        protected override void load(int version, string agentType, List<property_t> properties)
+        protected override  async Task  load(int version, string agentType, List<property_t> properties)
         {
-            base.load(version, agentType, properties);
+            await base.load(version, agentType, properties);
         }
 
         public override bool IsValid(Agent pAgent, BehaviorTask pTask)
@@ -42,7 +43,7 @@ namespace behaviac
 
         protected override BehaviorTask createTask()
         {
-            DecoratorFailureUntilTask pTask = new DecoratorFailureUntilTask();
+            DecoratorFailureUntilTask pTask = new DecoratorFailureUntilTask(Workspace);
 
             return pTask;
         }
@@ -50,8 +51,7 @@ namespace behaviac
         ///Returns EBTStatus.BT_FAILURE for the specified number of iterations, then returns EBTStatus.BT_SUCCESS after that
         private class DecoratorFailureUntilTask : DecoratorCountTask
         {
-            public DecoratorFailureUntilTask()
-            : base()
+            public DecoratorFailureUntilTask(Workspace workspace) : base(workspace)
             {
             }
 
@@ -75,13 +75,13 @@ namespace behaviac
                 this.m_n = 0;
             }
 
-            protected override bool onenter(Agent pAgent)
+            protected override async Task<bool> onenter(Agent pAgent)
             {
                 //base.onenter(pAgent);
 
                 if (this.m_n == 0)
                 {
-                    int count = this.GetCount(pAgent);
+                    int count = await this.GetCount(pAgent);
 
                     if (count == 0)
                     {

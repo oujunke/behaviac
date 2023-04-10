@@ -12,14 +12,15 @@
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace behaviac
 {
     public class DecoratorWeight : DecoratorNode
     {
-        protected override void load(int version, string agentType, List<property_t> properties)
+        protected override  async Task  load(int version, string agentType, List<property_t> properties)
         {
-            base.load(version, agentType, properties);
+            await base.load(version, agentType, properties);
 
             for (int i = 0; i < properties.Count; ++i)
             {
@@ -32,12 +33,12 @@ namespace behaviac
             }
         }
 
-        protected virtual int GetWeight(behaviac.Agent pAgent)
+        protected virtual async Task<int>  GetWeight(behaviac.Agent pAgent)
         {
             if (this.m_weight != null)
             {
                 Debugs.Check(this.m_weight is CInstanceMember<int>);
-                return ((CInstanceMember<int>)this.m_weight).GetValue(pAgent);
+                return await ((CInstanceMember<int>)this.m_weight).GetValue(pAgent);
             }
 
             return 0;
@@ -50,21 +51,29 @@ namespace behaviac
 
         protected override BehaviorTask createTask()
         {
-            DecoratorWeightTask pTask = new DecoratorWeightTask();
+            DecoratorWeightTask pTask = new DecoratorWeightTask(Workspace);
 
             return pTask;
         }
 
         protected IInstanceMember m_weight;
 
+        public DecoratorWeight(Workspace workspace) : base(workspace)
+        {
+        }
+
         public class DecoratorWeightTask : DecoratorTask
         {
-            public int GetWeight(Agent pAgent)
+            public DecoratorWeightTask(Workspace workspace) : base(workspace)
+            {
+            }
+
+            public async Task<int> GetWeight(Agent pAgent)
             {
                 Debugs.Check(this.GetNode() is DecoratorWeight);
                 DecoratorWeight pNode = (DecoratorWeight)(this.GetNode());
 
-                return pNode != null ? pNode.GetWeight(pAgent) : 0;
+                return pNode != null ?await pNode.GetWeight(pAgent) : 0;
             }
 
             public override void copyto(BehaviorTask target)

@@ -12,23 +12,19 @@
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace behaviac
 {
     public class DecoratorFrames : DecoratorNode
     {
-        public Workspace Workspace { get; private set; }
-        public Config Configs { set; get; }
-        public Debug Node { set; get; }
-        public DecoratorFrames(Workspace workspace)
+
+        public DecoratorFrames(Workspace workspace):base(workspace)
         {
-            Workspace = workspace;
-            Configs = workspace.Configs;
-            Debugs = workspace.Debugs;
         }
-        protected override void load(int version, string agentType, List<property_t> properties)
+        protected override  async Task  load(int version, string agentType, List<property_t> properties)
         {
-            base.load(version, agentType, properties);
+            await base.load(version, agentType, properties);
 
             for (int i = 0; i < properties.Count; ++i)
             {
@@ -50,12 +46,12 @@ namespace behaviac
             }
         }
 
-        protected virtual int GetFrames(Agent pAgent)
+        protected virtual async Task<int> GetFrames(Agent pAgent)
         {
             if (this.m_frames != null)
             {
                 Debugs.Check(this.m_frames is CInstanceMember<int>);
-                return ((CInstanceMember<int>)this.m_frames).GetValue(pAgent);
+                return await((CInstanceMember<int>)this.m_frames).GetValue(pAgent);
             }
 
             return 0;
@@ -63,7 +59,7 @@ namespace behaviac
 
         protected override BehaviorTask createTask()
         {
-            DecoratorFramesTask pTask = new DecoratorFramesTask();
+            DecoratorFramesTask pTask = new DecoratorFramesTask(Workspace);
 
             return pTask;
         }
@@ -99,14 +95,14 @@ namespace behaviac
                 base.load(node);
             }
 
-            protected override bool onenter(Agent pAgent)
+            protected override async Task<bool> onenter(Agent pAgent)
             {
-                base.onenter(pAgent);
+                await base.onenter(pAgent);
 
                 this.m_start = Workspace.FrameSinceStartup;
-                this.m_frames = this.GetFrames(pAgent);
+                this.m_frames =await this.GetFrames(pAgent);
 
-                return (this.m_frames >= 0);
+                return this.m_frames >= 0;
             }
 
             protected override EBTStatus decorate(EBTStatus status)
@@ -119,16 +115,20 @@ namespace behaviac
                 return EBTStatus.BT_RUNNING;
             }
 
-            private int GetFrames(Agent pAgent)
+            private async Task<int> GetFrames(Agent pAgent)
             {
                 Debugs.Check(this.GetNode() is DecoratorFrames);
                 DecoratorFrames pNode = (DecoratorFrames)(this.GetNode());
 
-                return pNode != null ? pNode.GetFrames(pAgent) : 0;
+                return pNode != null ?await pNode.GetFrames(pAgent) : 0;
             }
 
             private int m_start = 0;
             private int m_frames = 0;
+
+            public DecoratorFramesTask(Workspace workspace) : base(workspace)
+            {
+            }
         }
     }
 }

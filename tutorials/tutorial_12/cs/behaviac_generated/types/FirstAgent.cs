@@ -4,6 +4,7 @@
 // PLEASE MODIFY AND REGENERETE IT IN THE DESIGNER FOR CLASS/MEMBERS/METHODS, ETC.
 // -------------------------------------------------------------------------------
 
+using behaviac;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -16,29 +17,16 @@ public class FirstAgent : behaviac.Agent
 ///<<< BEGIN WRITING YOUR CODE FirstAgent
 ///<<< END WRITING YOUR CODE
 {
-	private int p1 = 0;
-	public void _set_p1(int value)
+    public FirstAgent(Workspace workspace) : base(workspace)
+    {
+
+    }
+	public void SayHello()
 	{
-		p1 = value;
-	}
-	public int _get_p1()
-	{
-		return p1;
-	}
-
-	public behaviac.EBTStatus Say(string value, bool isLatent)
-	{
-///<<< BEGIN WRITING YOUR CODE Say
-        if (isLatent && behaviac.Workspace.Instance.FrameSinceStartup < 3)
-        {
-            Console.WriteLine("\n{0} [Running]\n", value);
-
-            return behaviac.EBTStatus.BT_RUNNING;
-        }
-
-        Console.WriteLine("\n{0} [Success]\n", value);
-
-        return behaviac.EBTStatus.BT_SUCCESS;
+///<<< BEGIN WRITING YOUR CODE SayHello
+        Console.WriteLine();
+        Console.WriteLine("Hello Behaviac!");
+        Console.WriteLine();
 ///<<< END WRITING YOUR CODE
 	}
 

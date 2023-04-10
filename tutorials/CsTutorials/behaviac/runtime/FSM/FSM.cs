@@ -27,9 +27,9 @@ namespace behaviac
         }
 #endif//
 
-        protected override void load(int version, string agentType, List<property_t> properties)
+        protected override  async Task  load(int version, string agentType, List<property_t> properties)
         {
-            base.load(version, agentType, properties);
+            await base.load(version, agentType, properties);
 
             for (int i = 0; i < properties.Count; ++i)
             {
@@ -53,6 +53,11 @@ namespace behaviac
         }
 
         private int m_initialid = -1;
+
+        public FSM(Workspace workspace) : base(workspace)
+        {
+        }
+
         public int InitialId
         {
             get
@@ -67,7 +72,7 @@ namespace behaviac
 
         protected override BehaviorTask createTask()
         {
-            return new FSMTask();
+            return new FSMTask(Workspace);
         }
 
         public class FSMTask : CompositeTask
@@ -90,7 +95,11 @@ namespace behaviac
             //used for FSM
             private int m_currentNodeId = -1;
 
-            protected override bool onenter(Agent pAgent)
+            public FSMTask(Workspace workspace) : base(workspace)
+            {
+            }
+
+            protected override Task<bool> onenter(Agent pAgent)
             {
                 Debugs.Check(this.m_node != null);
                 FSM fsm = (FSM)this.m_node;
@@ -99,7 +108,7 @@ namespace behaviac
 
                 this.m_currentNodeId = fsm.InitialId;
 
-                return true;
+                return Task.FromResult(true);
             }
 
             protected override void onexit(Agent pAgent, EBTStatus s)
@@ -164,7 +173,7 @@ namespace behaviac
 
                         if (state_update_count[this.m_currentNodeId] > kMaxCount)
                         {
-                            string treeName = BehaviorTask.GetParentTreeName(pAgent, this.GetNode());
+                            string treeName =await BehaviorTask.GetParentTreeName(pAgent, this.GetNode());
                             Debugs.LogError(string.Format("{0} might be updating an FSM('{1}') endlessly, possibly a dead loop, please redesign it!\n", pAgent.GetName(), treeName));
                             Debugs.Check(false);
                         }

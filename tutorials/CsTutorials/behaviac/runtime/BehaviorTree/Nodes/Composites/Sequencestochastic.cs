@@ -18,7 +18,7 @@ namespace behaviac
 {
     public class SequenceStochastic : CompositeStochastic
     {
-        public SequenceStochastic()
+        public SequenceStochastic(Workspace workspace):base(workspace)
         {
         }
 
@@ -26,9 +26,9 @@ namespace behaviac
         //{
         //}
 
-        protected override void load(int version, string agentType, List<property_t> properties)
+        protected override  async Task  load(int version, string agentType, List<property_t> properties)
         {
-            base.load(version, agentType, properties);
+            await base.load(version, agentType, properties);
         }
 
         public override bool IsValid(Agent pAgent, BehaviorTask pTask)
@@ -43,15 +43,14 @@ namespace behaviac
 
         protected override BehaviorTask createTask()
         {
-            SequenceStochasticTask pTask = new SequenceStochasticTask();
+            SequenceStochasticTask pTask = new SequenceStochasticTask(Workspace);
 
             return pTask;
         }
 
         private class SequenceStochasticTask : CompositeStochasticTask
         {
-            public SequenceStochasticTask()
-            : base()
+            public SequenceStochasticTask(Workspace workspace) : base(workspace)
             {
             }
 
@@ -75,9 +74,9 @@ namespace behaviac
                 base.load(node);
             }
 
-            protected override bool onenter(Agent pAgent)
+            protected override async Task<bool> onenter(Agent pAgent)
             {
-                base.onenter(pAgent);
+               await base.onenter(pAgent);
 
                 return true;
             }

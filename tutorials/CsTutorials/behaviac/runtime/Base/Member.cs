@@ -71,9 +71,9 @@ namespace behaviac
 
         void SetValueAs(Agent self, IInstanceMember right);
 
-        bool Compare(Agent self, IInstanceMember right, EOperatorType comparisonType);
+        Task<bool> Compare(Agent self, IInstanceMember right, EOperatorType comparisonType);
 
-        void Compute(Agent self, IInstanceMember right1, IInstanceMember right2, EOperatorType computeType);
+        Task Compute(Agent self, IInstanceMember right1, IInstanceMember right2, EOperatorType computeType);
 
         Task Run(Agent self);
     }
@@ -85,7 +85,7 @@ namespace behaviac
             get;
         }
 
-        void SetValue(Agent self, IInstanceMember right);
+        Task SetValue(Agent self, IInstanceMember right);
 
         void SetValueFromString(Agent self, string valueStr);
 
@@ -158,10 +158,10 @@ namespace behaviac
             this.SetValue(self, item);
         }
 
-        public virtual T GetValue(Agent self)
+        public virtual Task<T> GetValue(Agent self)
         {
             Debugs.Check(false);
-            return default(T);
+            return Task.FromResult(default(T));
         }
 
         public object GetValueObject(Agent self)
@@ -169,9 +169,10 @@ namespace behaviac
             return GetValue(self);
         }
 
-        public virtual void SetValue(Agent self, T value)
+        public virtual Task SetValue(Agent self, T value)
         {
             Debugs.Check(false);
+            return Task.CompletedTask;
         }
 
         public void SetValue(Agent self, object value)
@@ -212,24 +213,25 @@ namespace behaviac
             SetValue(self, right.GetValue(self));
         }
 
-        public bool Compare(Agent self, IInstanceMember right, EOperatorType comparisonType)
+        public async Task<bool> Compare(Agent self, IInstanceMember right, EOperatorType comparisonType)
         {
-            T leftValue = this.GetValue(self);
-            T rightValue = ((CInstanceMember<T>)right).GetValue(self);
+            T leftValue = await this.GetValue(self);
+            T rightValue = await ((CInstanceMember<T>)right).GetValue(self);
 
             return OperationUtils.Compare(leftValue, rightValue, comparisonType, Workspace);
         }
 
-        public void Compute(Agent self, IInstanceMember right1, IInstanceMember right2, EOperatorType computeType)
+        public async Task Compute(Agent self, IInstanceMember right1, IInstanceMember right2, EOperatorType computeType)
         {
-            T rightValue1 = ((CInstanceMember<T>)right1).GetValue(self);
-            T rightValue2 = ((CInstanceMember<T>)right2).GetValue(self);
+            T rightValue1 = await ((CInstanceMember<T>)right1).GetValue(self);
+            T rightValue2 = await ((CInstanceMember<T>)right2).GetValue(self);
 
-            SetValue(self, OperationUtils.Compute(rightValue1, rightValue2, computeType, Workspace));
+            await SetValue(self, OperationUtils.Compute(rightValue1, rightValue2, computeType, Workspace));
         }
 
         public virtual Task Run(Agent self)
         {
+            return Task.CompletedTask;
         }
     }
 
@@ -292,9 +294,9 @@ namespace behaviac
             SetValue(self, value);
         }
 
-        public void SetValue(Agent self, IInstanceMember right)
+        public async Task SetValue(Agent self, IInstanceMember right)
         {
-            T rightValue = ((CInstanceMember<T>)right).GetValue(self);
+            T rightValue = await ((CInstanceMember<T>)right).GetValue(self);
 
             SetValue(self, rightValue);
         }
@@ -333,26 +335,26 @@ namespace behaviac
             _property = prop;
         }
 
-        public override T GetValue(Agent self)
+        public override async Task<T> GetValue(Agent self)
         {
             Agent agent = Utils.GetParentAgent(self, _instance);
 
             if (_indexMember != null)
             {
-                int indexValue = ((CInstanceMember<int>)_indexMember).GetValue(self);
+                int indexValue = await ((CInstanceMember<int>)_indexMember).GetValue(self);
                 return _property.GetValue(agent, indexValue);
             }
 
             return _property.GetValue(agent);
         }
 
-        public override void SetValue(Agent self, T value)
+        public override async Task SetValue(Agent self, T value)
         {
             Agent agent = Utils.GetParentAgent(self, _instance);
 
             if (_indexMember != null)
             {
-                int indexValue = ((CInstanceMember<int>)_indexMember).GetValue(self);
+                int indexValue = await ((CInstanceMember<int>)_indexMember).GetValue(self);
                 _property.SetValue(agent, value, indexValue);
             }
             else
@@ -921,7 +923,7 @@ namespace behaviac
             _id = id;
         }
 
-        public override T GetValue(Agent self)
+        public override async Task<T> GetValue(Agent self)
         {
             if (self != null)
             {
@@ -929,7 +931,7 @@ namespace behaviac
 
                 if (_indexMember != null)
                 {
-                    int indexValue = ((CInstanceMember<int>)_indexMember).GetValue(self);
+                    int indexValue = await ((CInstanceMember<int>)_indexMember).GetValue(self);
                     return agent.GetVariable<T>(_id, indexValue);
                 }
                 else
@@ -941,13 +943,13 @@ namespace behaviac
             return default(T);
         }
 
-        public override void SetValue(Agent self, T value)
+        public override async Task SetValue(Agent self, T value)
         {
             Agent agent = Utils.GetParentAgent(self, _instance);
 
             if (_indexMember != null)
             {
-                int indexValue = ((CInstanceMember<int>)_indexMember).GetValue(self);
+                int indexValue = await ((CInstanceMember<int>)_indexMember).GetValue(self);
                 agent.SetVariable<T>("", _id, value, indexValue);
             }
             else
@@ -966,14 +968,15 @@ namespace behaviac
             this._value = (T)AgentMeta.ParseTypeValue(typeName, valueStr, workspace);
         }
 
-        public override T GetValue(Agent self)
+        public override Task<T> GetValue(Agent self)
         {
-            return _value;
+            return Task.FromResult(_value);
         }
 
-        public override void SetValue(Agent self, T value)
+        public override Task SetValue(Agent self, T value)
         {
             _value = value;
+            return Task.CompletedTask;
         }
     }
 
@@ -983,9 +986,9 @@ namespace behaviac
 
         void Load(string instance, string[] paramStrs);
 
-        IValue GetIValue(Agent self);
+        Task<IValue> GetIValue(Agent self);
 
-        IValue GetIValue(Agent self, IInstanceMember firstParam);
+        Task<IValue> GetIValue(Agent self, IInstanceMember firstParam);
 
         void SetTaskParams(Agent self, BehaviorTreeTask treeTask);
     }
@@ -1015,37 +1018,38 @@ namespace behaviac
             Debugs.Check(false);
         }
 
-        public override void Run(Agent self)
+        public override Task Run(Agent self)
         {
             Debugs.Check(false);
+            return Task.CompletedTask;
         }
 
-        public override T GetValue(Agent self)
+        public override async Task<T> GetValue(Agent self)
         {
             if (!System.Object.ReferenceEquals(self, null))
             {
-                Run(self);
+                await Run(self);
             }
 
             return _returnValue.value;
         }
 
-        public virtual IValue GetIValue(Agent self)
+        public virtual async Task<IValue> GetIValue(Agent self)
         {
             if (!System.Object.ReferenceEquals(self, null))
             {
-                Run(self);
+                await Run(self);
             }
 
             return _returnValue;
         }
 
-        public virtual IValue GetIValue(Agent self, IInstanceMember firstParam)
+        public virtual async Task<IValue> GetIValue(Agent self, IInstanceMember firstParam)
         {
             Agent agent = Utils.GetParentAgent(self, _instance);
-            firstParam.Run(agent);
+            await firstParam.Run(agent);
 
-            return GetIValue(self);
+            return await GetIValue(self);
         }
 
         public virtual void SetTaskParams(Agent self, BehaviorTreeTask treeTask)
@@ -1056,7 +1060,7 @@ namespace behaviac
 
     public class CAgentMethod<T> : CAgentMethodBase<T>
     {
-        public delegate T FunctionPointer(Agent a);
+        public delegate Task<T> FunctionPointer(Agent a);
 
         FunctionPointer _fp;
 
@@ -1083,11 +1087,11 @@ namespace behaviac
             _instance = instance;
         }
 
-        public override void Run(Agent self)
+        public override async Task Run(Agent self)
         {
             Agent agent = Utils.GetParentAgent(self, _instance);
 
-            _returnValue.value = _fp(agent);
+            _returnValue.value = await _fp(agent);
         }
 
         public override void SetTaskParams(Agent self, BehaviorTreeTask treeTask)
@@ -1097,7 +1101,7 @@ namespace behaviac
 
     public class CAgentMethod<T, P1> : CAgentMethodBase<T>
     {
-        public delegate T FunctionPointer(Agent a, P1 p1);
+        public delegate Task<T> FunctionPointer(Agent a, P1 p1);
 
         FunctionPointer _fp;
         IInstanceMember _p1;
@@ -1127,22 +1131,22 @@ namespace behaviac
             _p1 = AgentMeta.ParseProperty<P1>(paramStrs[0], Workspace);
         }
 
-        public override void Run(Agent self)
+        public override async Task Run(Agent self)
         {
             Debugs.Check(_p1 != null);
 
             Agent agent = Utils.GetParentAgent(self, _instance);
 
-            _returnValue.value = _fp(agent, ((CInstanceMember<P1>)_p1).GetValue(self));
+            _returnValue.value = await _fp(agent, await ((CInstanceMember<P1>)_p1).GetValue(self));
         }
 
-        public override IValue GetIValue(Agent self, IInstanceMember firstParam)
+        public override async Task<IValue> GetIValue(Agent self, IInstanceMember firstParam)
         {
             Debugs.Check(_p1 != null);
 
             Agent agent = Utils.GetParentAgent(self, _instance);
 
-            _returnValue.value = _fp(agent, ((CInstanceMember<P1>)firstParam).GetValue(self));
+            _returnValue.value = await _fp(agent, await ((CInstanceMember<P1>)firstParam).GetValue(self));
 
             return _returnValue;
         }
@@ -1156,7 +1160,7 @@ namespace behaviac
 
     public class CAgentMethod<T, P1, P2> : CAgentMethodBase<T>
     {
-        public delegate T FunctionPointer(Agent a, P1 p1, P2 p2);
+        public delegate Task<T> FunctionPointer(Agent a, P1 p1, P2 p2);
 
         FunctionPointer _fp;
         IInstanceMember _p1;
@@ -1189,16 +1193,16 @@ namespace behaviac
             _p2 = AgentMeta.ParseProperty<P2>(paramStrs[1], Workspace);
         }
 
-        public override void Run(Agent self)
+        public override async Task Run(Agent self)
         {
             Debugs.Check(_p1 != null);
             Debugs.Check(_p2 != null);
 
             Agent agent = Utils.GetParentAgent(self, _instance);
 
-            _returnValue.value = _fp(agent,
-                                     ((CInstanceMember<P1>)_p1).GetValue(self),
-                                     ((CInstanceMember<P2>)_p2).GetValue(self));
+            _returnValue.value = await _fp(agent,
+                                   await ((CInstanceMember<P1>)_p1).GetValue(self),
+                                    await ((CInstanceMember<P2>)_p2).GetValue(self));
         }
 
         public override void SetTaskParams(Agent self, BehaviorTreeTask treeTask)
@@ -1213,7 +1217,7 @@ namespace behaviac
 
     public class CAgentMethod<T, P1, P2, P3> : CAgentMethodBase<T>
     {
-        public delegate T FunctionPointer(Agent a, P1 p1, P2 p2, P3 p3);
+        public delegate Task<T> FunctionPointer(Agent a, P1 p1, P2 p2, P3 p3);
 
         FunctionPointer _fp;
         IInstanceMember _p1;
@@ -1249,7 +1253,7 @@ namespace behaviac
             _p3 = AgentMeta.ParseProperty<P3>(paramStrs[2], Workspace);
         }
 
-        public override void Run(Agent self)
+        public override async Task Run(Agent self)
         {
             Debugs.Check(_p1 != null);
             Debugs.Check(_p2 != null);
@@ -1257,10 +1261,10 @@ namespace behaviac
 
             Agent agent = Utils.GetParentAgent(self, _instance);
 
-            _returnValue.value = _fp(agent,
-                                     ((CInstanceMember<P1>)_p1).GetValue(self),
-                                     ((CInstanceMember<P2>)_p2).GetValue(self),
-                                     ((CInstanceMember<P3>)_p3).GetValue(self));
+            _returnValue.value = await _fp(agent,
+                                await ((CInstanceMember<P1>)_p1).GetValue(self),
+                                 await ((CInstanceMember<P2>)_p2).GetValue(self),
+                                 await ((CInstanceMember<P3>)_p3).GetValue(self));
         }
 
         public override void SetTaskParams(Agent self, BehaviorTreeTask treeTask)
@@ -1278,7 +1282,7 @@ namespace behaviac
 
     public class CAgentMethod<T, P1, P2, P3, P4> : CAgentMethodBase<T>
     {
-        public delegate T FunctionPointer(Agent a, P1 p1, P2 p2, P3 p3, P4 p4);
+        public delegate Task<T> FunctionPointer(Agent a, P1 p1, P2 p2, P3 p3, P4 p4);
 
         FunctionPointer _fp;
         IInstanceMember _p1;
@@ -1317,7 +1321,7 @@ namespace behaviac
             _p4 = AgentMeta.ParseProperty<P4>(paramStrs[3], Workspace);
         }
 
-        public override void Run(Agent self)
+        public override async Task Run(Agent self)
         {
             Debugs.Check(_p1 != null);
             Debugs.Check(_p2 != null);
@@ -1326,11 +1330,11 @@ namespace behaviac
 
             Agent agent = Utils.GetParentAgent(self, _instance);
 
-            _returnValue.value = _fp(agent,
-                                     ((CInstanceMember<P1>)_p1).GetValue(self),
-                                     ((CInstanceMember<P2>)_p2).GetValue(self),
-                                     ((CInstanceMember<P3>)_p3).GetValue(self),
-                                     ((CInstanceMember<P4>)_p4).GetValue(self));
+            _returnValue.value = await _fp(agent,
+                                   await ((CInstanceMember<P1>)_p1).GetValue(self),
+                                   await ((CInstanceMember<P2>)_p2).GetValue(self),
+                                  await ((CInstanceMember<P3>)_p3).GetValue(self),
+                                 await ((CInstanceMember<P4>)_p4).GetValue(self));
         }
 
         public override void SetTaskParams(Agent self, BehaviorTreeTask treeTask)
@@ -1351,7 +1355,7 @@ namespace behaviac
 
     public class CAgentMethod<T, P1, P2, P3, P4, P5> : CAgentMethodBase<T>
     {
-        public delegate T FunctionPointer(Agent a, P1 p1, P2 p2, P3 p3, P4 p4, P5 p5);
+        public delegate Task<T> FunctionPointer(Agent a, P1 p1, P2 p2, P3 p3, P4 p4, P5 p5);
 
         FunctionPointer _fp;
         IInstanceMember _p1;
@@ -1393,7 +1397,7 @@ namespace behaviac
             _p5 = AgentMeta.ParseProperty<P5>(paramStrs[4], Workspace);
         }
 
-        public override void Run(Agent self)
+        public override async Task Run(Agent self)
         {
             Debugs.Check(_p1 != null);
             Debugs.Check(_p2 != null);
@@ -1403,12 +1407,12 @@ namespace behaviac
 
             Agent agent = Utils.GetParentAgent(self, _instance);
 
-            _returnValue.value = _fp(agent,
-                                     ((CInstanceMember<P1>)_p1).GetValue(self),
-                                     ((CInstanceMember<P2>)_p2).GetValue(self),
-                                     ((CInstanceMember<P3>)_p3).GetValue(self),
-                                     ((CInstanceMember<P4>)_p4).GetValue(self),
-                                     ((CInstanceMember<P5>)_p5).GetValue(self));
+            _returnValue.value = await _fp(agent,
+                                   await ((CInstanceMember<P1>)_p1).GetValue(self),
+                                   await ((CInstanceMember<P2>)_p2).GetValue(self),
+                                   await ((CInstanceMember<P3>)_p3).GetValue(self),
+                                   await ((CInstanceMember<P4>)_p4).GetValue(self),
+                                   await ((CInstanceMember<P5>)_p5).GetValue(self));
         }
 
         public override void SetTaskParams(Agent self, BehaviorTreeTask treeTask)
@@ -1432,7 +1436,7 @@ namespace behaviac
 
     public class CAgentMethod<T, P1, P2, P3, P4, P5, P6> : CAgentMethodBase<T>
     {
-        public delegate T FunctionPointer(Agent a, P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6);
+        public delegate Task<T> FunctionPointer(Agent a, P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6);
 
         FunctionPointer _fp;
         IInstanceMember _p1;
@@ -1477,7 +1481,7 @@ namespace behaviac
             _p6 = AgentMeta.ParseProperty<P6>(paramStrs[5], Workspace);
         }
 
-        public override void Run(Agent self)
+        public override async Task Run(Agent self)
         {
             Debugs.Check(_p1 != null);
             Debugs.Check(_p2 != null);
@@ -1488,13 +1492,13 @@ namespace behaviac
 
             Agent agent = Utils.GetParentAgent(self, _instance);
 
-            _returnValue.value = _fp(agent,
-                                     ((CInstanceMember<P1>)_p1).GetValue(self),
-                                     ((CInstanceMember<P2>)_p2).GetValue(self),
-                                     ((CInstanceMember<P3>)_p3).GetValue(self),
-                                     ((CInstanceMember<P4>)_p4).GetValue(self),
-                                     ((CInstanceMember<P5>)_p5).GetValue(self),
-                                     ((CInstanceMember<P6>)_p6).GetValue(self));
+            _returnValue.value = await _fp(agent,
+                                   await ((CInstanceMember<P1>)_p1).GetValue(self),
+                                   await ((CInstanceMember<P2>)_p2).GetValue(self),
+                                   await ((CInstanceMember<P3>)_p3).GetValue(self),
+                                   await ((CInstanceMember<P4>)_p4).GetValue(self),
+                                   await ((CInstanceMember<P5>)_p5).GetValue(self),
+                                   await ((CInstanceMember<P6>)_p6).GetValue(self));
         }
 
         public override void SetTaskParams(Agent self, BehaviorTreeTask treeTask)
@@ -1521,7 +1525,7 @@ namespace behaviac
 
     public class CAgentMethod<T, P1, P2, P3, P4, P5, P6, P7> : CAgentMethodBase<T>
     {
-        public delegate T FunctionPointer(Agent a, P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6, P7 p7);
+        public delegate Task<T> FunctionPointer(Agent a, P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6, P7 p7);
 
         FunctionPointer _fp;
         IInstanceMember _p1;
@@ -1569,7 +1573,7 @@ namespace behaviac
             _p7 = AgentMeta.ParseProperty<P7>(paramStrs[6], Workspace);
         }
 
-        public override void Run(Agent self)
+        public override async Task Run(Agent self)
         {
             Debugs.Check(_p1 != null);
             Debugs.Check(_p2 != null);
@@ -1581,14 +1585,14 @@ namespace behaviac
 
             Agent agent = Utils.GetParentAgent(self, _instance);
 
-            _returnValue.value = _fp(agent,
-                                     ((CInstanceMember<P1>)_p1).GetValue(self),
-                                     ((CInstanceMember<P2>)_p2).GetValue(self),
-                                     ((CInstanceMember<P3>)_p3).GetValue(self),
-                                     ((CInstanceMember<P4>)_p4).GetValue(self),
-                                     ((CInstanceMember<P5>)_p5).GetValue(self),
-                                     ((CInstanceMember<P6>)_p6).GetValue(self),
-                                     ((CInstanceMember<P7>)_p7).GetValue(self));
+            _returnValue.value = await _fp(agent,
+                                   await ((CInstanceMember<P1>)_p1).GetValue(self),
+                                   await ((CInstanceMember<P2>)_p2).GetValue(self),
+                                   await ((CInstanceMember<P3>)_p3).GetValue(self),
+                                   await ((CInstanceMember<P4>)_p4).GetValue(self),
+                                   await ((CInstanceMember<P5>)_p5).GetValue(self),
+                                   await ((CInstanceMember<P6>)_p6).GetValue(self),
+                                   await ((CInstanceMember<P7>)_p7).GetValue(self));
         }
 
         public override void SetTaskParams(Agent self, BehaviorTreeTask treeTask)
@@ -1618,7 +1622,7 @@ namespace behaviac
 
     public class CAgentMethod<T, P1, P2, P3, P4, P5, P6, P7, P8> : CAgentMethodBase<T>
     {
-        public delegate T FunctionPointer(Agent a, P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6, P7 p7, P8 p8);
+        public delegate Task<T> FunctionPointer(Agent a, P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6, P7 p7, P8 p8);
 
         FunctionPointer _fp;
         IInstanceMember _p1;
@@ -1669,7 +1673,7 @@ namespace behaviac
             _p8 = AgentMeta.ParseProperty<P8>(paramStrs[7], Workspace);
         }
 
-        public override void Run(Agent self)
+        public override async Task Run(Agent self)
         {
             Debugs.Check(_p1 != null);
             Debugs.Check(_p2 != null);
@@ -1682,15 +1686,15 @@ namespace behaviac
 
             Agent agent = Utils.GetParentAgent(self, _instance);
 
-            _returnValue.value = _fp(agent,
-                                     ((CInstanceMember<P1>)_p1).GetValue(self),
-                                     ((CInstanceMember<P2>)_p2).GetValue(self),
-                                     ((CInstanceMember<P3>)_p3).GetValue(self),
-                                     ((CInstanceMember<P4>)_p4).GetValue(self),
-                                     ((CInstanceMember<P5>)_p5).GetValue(self),
-                                     ((CInstanceMember<P6>)_p6).GetValue(self),
-                                     ((CInstanceMember<P7>)_p7).GetValue(self),
-                                     ((CInstanceMember<P8>)_p8).GetValue(self));
+            _returnValue.value = await _fp(agent,
+                                    await ((CInstanceMember<P1>)_p1).GetValue(self),
+                                    await ((CInstanceMember<P2>)_p2).GetValue(self),
+                                    await ((CInstanceMember<P3>)_p3).GetValue(self),
+                                    await ((CInstanceMember<P4>)_p4).GetValue(self),
+                                    await ((CInstanceMember<P5>)_p5).GetValue(self),
+                                    await ((CInstanceMember<P6>)_p6).GetValue(self),
+                                    await ((CInstanceMember<P7>)_p7).GetValue(self),
+                                    await ((CInstanceMember<P8>)_p8).GetValue(self));
         }
 
         public override void SetTaskParams(Agent self, BehaviorTreeTask treeTask)
@@ -1723,7 +1727,7 @@ namespace behaviac
 
     public class CAgentMethod<T, P1, P2, P3, P4, P5, P6, P7, P8, P9> : CAgentMethodBase<T>
     {
-        public delegate T FunctionPointer(Agent a, P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6, P7 p7, P8 p8, P9 p9);
+        public delegate Task<T> FunctionPointer(Agent a, P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6, P7 p7, P8 p8, P9 p9);
 
         FunctionPointer _fp;
         IInstanceMember _p1;
@@ -1777,7 +1781,7 @@ namespace behaviac
             _p9 = AgentMeta.ParseProperty<P9>(paramStrs[8], Workspace);
         }
 
-        public override void Run(Agent self)
+        public override async Task Run(Agent self)
         {
             Debugs.Check(_p1 != null);
             Debugs.Check(_p2 != null);
@@ -1791,16 +1795,16 @@ namespace behaviac
 
             Agent agent = Utils.GetParentAgent(self, _instance);
 
-            _returnValue.value = _fp(agent,
-                                     ((CInstanceMember<P1>)_p1).GetValue(self),
-                                     ((CInstanceMember<P2>)_p2).GetValue(self),
-                                     ((CInstanceMember<P3>)_p3).GetValue(self),
-                                     ((CInstanceMember<P4>)_p4).GetValue(self),
-                                     ((CInstanceMember<P5>)_p5).GetValue(self),
-                                     ((CInstanceMember<P6>)_p6).GetValue(self),
-                                     ((CInstanceMember<P7>)_p7).GetValue(self),
-                                     ((CInstanceMember<P8>)_p8).GetValue(self),
-                                     ((CInstanceMember<P9>)_p9).GetValue(self));
+            _returnValue.value = await _fp(agent,
+                                    await ((CInstanceMember<P1>)_p1).GetValue(self),
+                                    await ((CInstanceMember<P2>)_p2).GetValue(self),
+                                    await ((CInstanceMember<P3>)_p3).GetValue(self),
+                                    await ((CInstanceMember<P4>)_p4).GetValue(self),
+                                    await ((CInstanceMember<P5>)_p5).GetValue(self),
+                                    await ((CInstanceMember<P6>)_p6).GetValue(self),
+                                    await ((CInstanceMember<P7>)_p7).GetValue(self),
+                                    await ((CInstanceMember<P8>)_p8).GetValue(self),
+                                    await ((CInstanceMember<P9>)_p9).GetValue(self));
         }
 
         public override void SetTaskParams(Agent self, BehaviorTreeTask treeTask)
@@ -1836,7 +1840,7 @@ namespace behaviac
 
     public class CAgentMethod<T, P1, P2, P3, P4, P5, P6, P7, P8, P9, P10> : CAgentMethodBase<T>
     {
-        public delegate T FunctionPointer(Agent a, P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6, P7 p7, P8 p8, P9 p9, P10 p10);
+        public delegate Task<T> FunctionPointer(Agent a, P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6, P7 p7, P8 p8, P9 p9, P10 p10);
 
         FunctionPointer _fp;
         IInstanceMember _p1;
@@ -1893,7 +1897,7 @@ namespace behaviac
             _p10 = AgentMeta.ParseProperty<P10>(paramStrs[9], Workspace);
         }
 
-        public override void Run(Agent self)
+        public override async Task Run(Agent self)
         {
             Debugs.Check(_p1 != null);
             Debugs.Check(_p2 != null);
@@ -1908,17 +1912,17 @@ namespace behaviac
 
             Agent agent = Utils.GetParentAgent(self, _instance);
 
-            _returnValue.value = _fp(agent,
-                                     ((CInstanceMember<P1>)_p1).GetValue(self),
-                                     ((CInstanceMember<P2>)_p2).GetValue(self),
-                                     ((CInstanceMember<P3>)_p3).GetValue(self),
-                                     ((CInstanceMember<P4>)_p4).GetValue(self),
-                                     ((CInstanceMember<P5>)_p5).GetValue(self),
-                                     ((CInstanceMember<P6>)_p6).GetValue(self),
-                                     ((CInstanceMember<P7>)_p7).GetValue(self),
-                                     ((CInstanceMember<P8>)_p8).GetValue(self),
-                                     ((CInstanceMember<P9>)_p9).GetValue(self),
-                                     ((CInstanceMember<P10>)_p10).GetValue(self));
+            _returnValue.value = await _fp(agent,
+                                   await ((CInstanceMember<P1>)_p1).GetValue(self),
+                                   await ((CInstanceMember<P2>)_p2).GetValue(self),
+                                   await ((CInstanceMember<P3>)_p3).GetValue(self),
+                                   await ((CInstanceMember<P4>)_p4).GetValue(self),
+                                   await ((CInstanceMember<P5>)_p5).GetValue(self),
+                                   await ((CInstanceMember<P6>)_p6).GetValue(self),
+                                   await ((CInstanceMember<P7>)_p7).GetValue(self),
+                                   await ((CInstanceMember<P8>)_p8).GetValue(self),
+                                   await ((CInstanceMember<P9>)_p9).GetValue(self),
+                                   await ((CInstanceMember<P10>)_p10).GetValue(self));
         }
 
         public override void SetTaskParams(Agent self, BehaviorTreeTask treeTask)
@@ -1957,7 +1961,7 @@ namespace behaviac
 
     public class CAgentMethod<T, P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11> : CAgentMethodBase<T>
     {
-        public delegate T FunctionPointer(Agent a, P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6, P7 p7, P8 p8, P9 p9, P10 p10, P11 p11);
+        public delegate Task<T> FunctionPointer(Agent a, P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6, P7 p7, P8 p8, P9 p9, P10 p10, P11 p11);
 
         FunctionPointer _fp;
         IInstanceMember _p1;
@@ -2017,7 +2021,7 @@ namespace behaviac
             _p11 = AgentMeta.ParseProperty<P11>(paramStrs[10], Workspace);
         }
 
-        public override void Run(Agent self)
+        public override async Task Run(Agent self)
         {
             Debugs.Check(_p1 != null);
             Debugs.Check(_p2 != null);
@@ -2033,18 +2037,18 @@ namespace behaviac
 
             Agent agent = Utils.GetParentAgent(self, _instance);
 
-            _returnValue.value = _fp(agent,
-                                     ((CInstanceMember<P1>)_p1).GetValue(self),
-                                     ((CInstanceMember<P2>)_p2).GetValue(self),
-                                     ((CInstanceMember<P3>)_p3).GetValue(self),
-                                     ((CInstanceMember<P4>)_p4).GetValue(self),
-                                     ((CInstanceMember<P5>)_p5).GetValue(self),
-                                     ((CInstanceMember<P6>)_p6).GetValue(self),
-                                     ((CInstanceMember<P7>)_p7).GetValue(self),
-                                     ((CInstanceMember<P8>)_p8).GetValue(self),
-                                     ((CInstanceMember<P9>)_p9).GetValue(self),
-                                     ((CInstanceMember<P10>)_p10).GetValue(self),
-                                     ((CInstanceMember<P11>)_p11).GetValue(self));
+            _returnValue.value = await _fp(agent,
+                                   await ((CInstanceMember<P1>)_p1).GetValue(self),
+                                   await ((CInstanceMember<P2>)_p2).GetValue(self),
+                                   await ((CInstanceMember<P3>)_p3).GetValue(self),
+                                   await ((CInstanceMember<P4>)_p4).GetValue(self),
+                                   await ((CInstanceMember<P5>)_p5).GetValue(self),
+                                   await ((CInstanceMember<P6>)_p6).GetValue(self),
+                                   await ((CInstanceMember<P7>)_p7).GetValue(self),
+                                   await ((CInstanceMember<P8>)_p8).GetValue(self),
+                                   await ((CInstanceMember<P9>)_p9).GetValue(self),
+                                   await ((CInstanceMember<P10>)_p10).GetValue(self),
+                                   await ((CInstanceMember<P11>)_p11).GetValue(self));
         }
 
         public override void SetTaskParams(Agent self, BehaviorTreeTask treeTask)
@@ -2086,7 +2090,7 @@ namespace behaviac
 
     public class CAgentMethod<T, P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12> : CAgentMethodBase<T>
     {
-        public delegate T FunctionPointer(Agent a, P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6, P7 p7, P8 p8, P9 p9, P10 p10, P11 p11, P12 p12);
+        public delegate Task<T> FunctionPointer(Agent a, P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6, P7 p7, P8 p8, P9 p9, P10 p10, P11 p11, P12 p12);
 
         FunctionPointer _fp;
         IInstanceMember _p1;
@@ -2149,7 +2153,7 @@ namespace behaviac
             _p12 = AgentMeta.ParseProperty<P12>(paramStrs[11], Workspace);
         }
 
-        public override void Run(Agent self)
+        public override async Task Run(Agent self)
         {
             Debugs.Check(_p1 != null);
             Debugs.Check(_p2 != null);
@@ -2166,19 +2170,19 @@ namespace behaviac
 
             Agent agent = Utils.GetParentAgent(self, _instance);
 
-            _returnValue.value = _fp(agent,
-                                     ((CInstanceMember<P1>)_p1).GetValue(self),
-                                     ((CInstanceMember<P2>)_p2).GetValue(self),
-                                     ((CInstanceMember<P3>)_p3).GetValue(self),
-                                     ((CInstanceMember<P4>)_p4).GetValue(self),
-                                     ((CInstanceMember<P5>)_p5).GetValue(self),
-                                     ((CInstanceMember<P6>)_p6).GetValue(self),
-                                     ((CInstanceMember<P7>)_p7).GetValue(self),
-                                     ((CInstanceMember<P8>)_p8).GetValue(self),
-                                     ((CInstanceMember<P9>)_p9).GetValue(self),
-                                     ((CInstanceMember<P10>)_p10).GetValue(self),
-                                     ((CInstanceMember<P11>)_p11).GetValue(self),
-                                     ((CInstanceMember<P12>)_p12).GetValue(self));
+            _returnValue.value = await _fp(agent,
+                                  await ((CInstanceMember<P1>)_p1).GetValue(self),
+                                  await ((CInstanceMember<P2>)_p2).GetValue(self),
+                                  await ((CInstanceMember<P3>)_p3).GetValue(self),
+                                  await ((CInstanceMember<P4>)_p4).GetValue(self),
+                                  await ((CInstanceMember<P5>)_p5).GetValue(self),
+                                  await ((CInstanceMember<P6>)_p6).GetValue(self),
+                                  await ((CInstanceMember<P7>)_p7).GetValue(self),
+                                  await ((CInstanceMember<P8>)_p8).GetValue(self),
+                                  await ((CInstanceMember<P9>)_p9).GetValue(self),
+                                  await ((CInstanceMember<P10>)_p10).GetValue(self),
+                                  await ((CInstanceMember<P11>)_p11).GetValue(self),
+                                  await ((CInstanceMember<P12>)_p12).GetValue(self));
         }
 
         public override void SetTaskParams(Agent self, BehaviorTreeTask treeTask)
@@ -2223,7 +2227,7 @@ namespace behaviac
 
     public class CAgentMethod<T, P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12, P13> : CAgentMethodBase<T>
     {
-        public delegate T FunctionPointer(Agent a, P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6, P7 p7, P8 p8, P9 p9, P10 p10, P11 p11, P12 p12, P13 p13);
+        public delegate Task<T> FunctionPointer(Agent a, P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6, P7 p7, P8 p8, P9 p9, P10 p10, P11 p11, P12 p12, P13 p13);
 
         FunctionPointer _fp;
         IInstanceMember _p1;
@@ -2289,7 +2293,7 @@ namespace behaviac
             _p13 = AgentMeta.ParseProperty<P13>(paramStrs[12], Workspace);
         }
 
-        public override void Run(Agent self)
+        public override async Task Run(Agent self)
         {
             Debugs.Check(_p1 != null);
             Debugs.Check(_p2 != null);
@@ -2307,20 +2311,20 @@ namespace behaviac
 
             Agent agent = Utils.GetParentAgent(self, _instance);
 
-            _returnValue.value = _fp(agent,
-                                     ((CInstanceMember<P1>)_p1).GetValue(self),
-                                     ((CInstanceMember<P2>)_p2).GetValue(self),
-                                     ((CInstanceMember<P3>)_p3).GetValue(self),
-                                     ((CInstanceMember<P4>)_p4).GetValue(self),
-                                     ((CInstanceMember<P5>)_p5).GetValue(self),
-                                     ((CInstanceMember<P6>)_p6).GetValue(self),
-                                     ((CInstanceMember<P7>)_p7).GetValue(self),
-                                     ((CInstanceMember<P8>)_p8).GetValue(self),
-                                     ((CInstanceMember<P9>)_p9).GetValue(self),
-                                     ((CInstanceMember<P10>)_p10).GetValue(self),
-                                     ((CInstanceMember<P11>)_p11).GetValue(self),
-                                     ((CInstanceMember<P12>)_p12).GetValue(self),
-                                     ((CInstanceMember<P13>)_p13).GetValue(self));
+            _returnValue.value = await _fp(agent,
+                                    await ((CInstanceMember<P1>)_p1).GetValue(self),
+                                    await ((CInstanceMember<P2>)_p2).GetValue(self),
+                                    await ((CInstanceMember<P3>)_p3).GetValue(self),
+                                    await ((CInstanceMember<P4>)_p4).GetValue(self),
+                                    await ((CInstanceMember<P5>)_p5).GetValue(self),
+                                    await ((CInstanceMember<P6>)_p6).GetValue(self),
+                                    await ((CInstanceMember<P7>)_p7).GetValue(self),
+                                    await ((CInstanceMember<P8>)_p8).GetValue(self),
+                                    await ((CInstanceMember<P9>)_p9).GetValue(self),
+                                    await ((CInstanceMember<P10>)_p10).GetValue(self),
+                                    await ((CInstanceMember<P11>)_p11).GetValue(self),
+                                    await ((CInstanceMember<P12>)_p12).GetValue(self),
+                                   await ((CInstanceMember<P13>)_p13).GetValue(self));
         }
 
         public override void SetTaskParams(Agent self, BehaviorTreeTask treeTask)
@@ -2368,7 +2372,7 @@ namespace behaviac
 
     public class CAgentMethod<T, P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12, P13, P14> : CAgentMethodBase<T>
     {
-        public delegate T FunctionPointer(Agent a, P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6, P7 p7, P8 p8, P9 p9, P10 p10, P11 p11, P12 p12, P13 p13, P14 p14);
+        public delegate Task<T> FunctionPointer(Agent a, P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6, P7 p7, P8 p8, P9 p9, P10 p10, P11 p11, P12 p12, P13 p13, P14 p14);
 
         FunctionPointer _fp;
         IInstanceMember _p1;
@@ -2437,7 +2441,7 @@ namespace behaviac
             _p14 = AgentMeta.ParseProperty<P14>(paramStrs[13], Workspace);
         }
 
-        public override void Run(Agent self)
+        public override async Task Run(Agent self)
         {
             Debugs.Check(_p1 != null);
             Debugs.Check(_p2 != null);
@@ -2456,21 +2460,21 @@ namespace behaviac
 
             Agent agent = Utils.GetParentAgent(self, _instance);
 
-            _returnValue.value = _fp(agent,
-                                     ((CInstanceMember<P1>)_p1).GetValue(self),
-                                     ((CInstanceMember<P2>)_p2).GetValue(self),
-                                     ((CInstanceMember<P3>)_p3).GetValue(self),
-                                     ((CInstanceMember<P4>)_p4).GetValue(self),
-                                     ((CInstanceMember<P5>)_p5).GetValue(self),
-                                     ((CInstanceMember<P6>)_p6).GetValue(self),
-                                     ((CInstanceMember<P7>)_p7).GetValue(self),
-                                     ((CInstanceMember<P8>)_p8).GetValue(self),
-                                     ((CInstanceMember<P9>)_p9).GetValue(self),
-                                     ((CInstanceMember<P10>)_p10).GetValue(self),
-                                     ((CInstanceMember<P11>)_p11).GetValue(self),
-                                     ((CInstanceMember<P12>)_p12).GetValue(self),
-                                     ((CInstanceMember<P13>)_p13).GetValue(self),
-                                     ((CInstanceMember<P14>)_p14).GetValue(self));
+            _returnValue.value = await _fp(agent,
+                                   await ((CInstanceMember<P1>)_p1).GetValue(self),
+                                   await ((CInstanceMember<P2>)_p2).GetValue(self),
+                                   await ((CInstanceMember<P3>)_p3).GetValue(self),
+                                   await ((CInstanceMember<P4>)_p4).GetValue(self),
+                                   await ((CInstanceMember<P5>)_p5).GetValue(self),
+                                   await ((CInstanceMember<P6>)_p6).GetValue(self),
+                                   await ((CInstanceMember<P7>)_p7).GetValue(self),
+                                   await ((CInstanceMember<P8>)_p8).GetValue(self),
+                                   await ((CInstanceMember<P9>)_p9).GetValue(self),
+                                   await ((CInstanceMember<P10>)_p10).GetValue(self),
+                                   await ((CInstanceMember<P11>)_p11).GetValue(self),
+                                   await ((CInstanceMember<P12>)_p12).GetValue(self),
+                                   await ((CInstanceMember<P13>)_p13).GetValue(self),
+                                   await ((CInstanceMember<P14>)_p14).GetValue(self));
         }
 
         public override void SetTaskParams(Agent self, BehaviorTreeTask treeTask)
@@ -2521,7 +2525,7 @@ namespace behaviac
 
     public class CAgentStaticMethod<T> : CAgentMethodBase<T>
     {
-        public delegate T FunctionPointer();
+        public delegate Task<T> FunctionPointer();
 
         FunctionPointer _fp;
 
@@ -2548,9 +2552,9 @@ namespace behaviac
             _instance = instance;
         }
 
-        public override void Run(Agent self)
+        public override async Task Run(Agent self)
         {
-            _returnValue.value = _fp();
+            _returnValue.value = await _fp();
         }
 
         public override void SetTaskParams(Agent self, BehaviorTreeTask treeTask)
@@ -2560,7 +2564,7 @@ namespace behaviac
 
     public class CAgentStaticMethod<T, P1> : CAgentMethodBase<T>
     {
-        public delegate T FunctionPointer(P1 p1);
+        public delegate Task<T> FunctionPointer(P1 p1);
 
         FunctionPointer _fp;
         IInstanceMember _p1;
@@ -2590,18 +2594,18 @@ namespace behaviac
             _p1 = AgentMeta.ParseProperty<P1>(paramStrs[0], Workspace);
         }
 
-        public override void Run(Agent self)
+        public override async Task Run(Agent self)
         {
             Debugs.Check(_p1 != null);
 
-            _returnValue.value = _fp(((CInstanceMember<P1>)_p1).GetValue(self));
+            _returnValue.value = await _fp(await ((CInstanceMember<P1>)_p1).GetValue(self));
         }
 
-        public override IValue GetIValue(Agent self, IInstanceMember firstParam)
+        public override async Task<IValue> GetIValue(Agent self, IInstanceMember firstParam)
         {
             Debugs.Check(_p1 != null);
 
-            _returnValue.value = _fp(((CInstanceMember<P1>)firstParam).GetValue(self));
+            _returnValue.value = await _fp(await ((CInstanceMember<P1>)firstParam).GetValue(self));
 
             return _returnValue;
         }
@@ -2615,7 +2619,7 @@ namespace behaviac
 
     public class CAgentStaticMethod<T, P1, P2> : CAgentMethodBase<T>
     {
-        public delegate T FunctionPointer(P1 p1, P2 p2);
+        public delegate Task<T> FunctionPointer(P1 p1, P2 p2);
 
         FunctionPointer _fp;
         IInstanceMember _p1;
@@ -2648,12 +2652,12 @@ namespace behaviac
             _p2 = AgentMeta.ParseProperty<P2>(paramStrs[1], Workspace);
         }
 
-        public override void Run(Agent self)
+        public override async Task Run(Agent self)
         {
             Debugs.Check(_p1 != null);
             Debugs.Check(_p2 != null);
 
-            _returnValue.value = _fp(((CInstanceMember<P1>)_p1).GetValue(self), ((CInstanceMember<P2>)_p2).GetValue(self));
+            _returnValue.value = await _fp(await ((CInstanceMember<P1>)_p1).GetValue(self), await ((CInstanceMember<P2>)_p2).GetValue(self));
         }
 
         public override void SetTaskParams(Agent self, BehaviorTreeTask treeTask)
@@ -2668,7 +2672,7 @@ namespace behaviac
 
     public class CAgentStaticMethod<T, P1, P2, P3> : CAgentMethodBase<T>
     {
-        public delegate T FunctionPointer(P1 p1, P2 p2, P3 p3);
+        public delegate Task<T> FunctionPointer(P1 p1, P2 p2, P3 p3);
 
         FunctionPointer _fp;
         IInstanceMember _p1;
@@ -2704,16 +2708,16 @@ namespace behaviac
             _p3 = AgentMeta.ParseProperty<P3>(paramStrs[2], Workspace);
         }
 
-        public override void Run(Agent self)
+        public override async Task Run(Agent self)
         {
             Debugs.Check(_p1 != null);
             Debugs.Check(_p2 != null);
             Debugs.Check(_p3 != null);
 
-            _returnValue.value = _fp(
-                                     ((CInstanceMember<P1>)_p1).GetValue(self),
-                                     ((CInstanceMember<P2>)_p2).GetValue(self),
-                                     ((CInstanceMember<P3>)_p3).GetValue(self));
+            _returnValue.value = await _fp(
+                                    await ((CInstanceMember<P1>)_p1).GetValue(self),
+                                   await ((CInstanceMember<P2>)_p2).GetValue(self),
+                                  await ((CInstanceMember<P3>)_p3).GetValue(self));
         }
 
         public override void SetTaskParams(Agent self, BehaviorTreeTask treeTask)
@@ -2731,7 +2735,7 @@ namespace behaviac
 
     public class CAgentStaticMethod<T, P1, P2, P3, P4> : CAgentMethodBase<T>
     {
-        public delegate T FunctionPointer(P1 p1, P2 p2, P3 p3, P4 p4);
+        public delegate Task<T> FunctionPointer(P1 p1, P2 p2, P3 p3, P4 p4);
 
         FunctionPointer _fp;
         IInstanceMember _p1;
@@ -2770,18 +2774,18 @@ namespace behaviac
             _p4 = AgentMeta.ParseProperty<P4>(paramStrs[3], Workspace);
         }
 
-        public override void Run(Agent self)
+        public override async Task Run(Agent self)
         {
             Debugs.Check(_p1 != null);
             Debugs.Check(_p2 != null);
             Debugs.Check(_p3 != null);
             Debugs.Check(_p4 != null);
 
-            _returnValue.value = _fp(
-                                     ((CInstanceMember<P1>)_p1).GetValue(self),
-                                     ((CInstanceMember<P2>)_p2).GetValue(self),
-                                     ((CInstanceMember<P3>)_p3).GetValue(self),
-                                     ((CInstanceMember<P4>)_p4).GetValue(self));
+            _returnValue.value = await _fp(
+                                await ((CInstanceMember<P1>)_p1).GetValue(self),
+                                await ((CInstanceMember<P2>)_p2).GetValue(self),
+                                await ((CInstanceMember<P3>)_p3).GetValue(self),
+                                await ((CInstanceMember<P4>)_p4).GetValue(self));
         }
 
         public override void SetTaskParams(Agent self, BehaviorTreeTask treeTask)
@@ -2802,7 +2806,7 @@ namespace behaviac
 
     public class CAgentStaticMethod<T, P1, P2, P3, P4, P5> : CAgentMethodBase<T>
     {
-        public delegate T FunctionPointer(P1 p1, P2 p2, P3 p3, P4 p4, P5 p5);
+        public delegate Task<T> FunctionPointer(P1 p1, P2 p2, P3 p3, P4 p4, P5 p5);
 
         FunctionPointer _fp;
         IInstanceMember _p1;
@@ -2844,7 +2848,7 @@ namespace behaviac
             _p5 = AgentMeta.ParseProperty<P5>(paramStrs[4], Workspace);
         }
 
-        public override void Run(Agent self)
+        public override async Task Run(Agent self)
         {
             Debugs.Check(_p1 != null);
             Debugs.Check(_p2 != null);
@@ -2852,12 +2856,12 @@ namespace behaviac
             Debugs.Check(_p4 != null);
             Debugs.Check(_p5 != null);
 
-            _returnValue.value = _fp(
-                                     ((CInstanceMember<P1>)_p1).GetValue(self),
-                                     ((CInstanceMember<P2>)_p2).GetValue(self),
-                                     ((CInstanceMember<P3>)_p3).GetValue(self),
-                                     ((CInstanceMember<P4>)_p4).GetValue(self),
-                                     ((CInstanceMember<P5>)_p5).GetValue(self));
+            _returnValue.value = await _fp(
+                                    await ((CInstanceMember<P1>)_p1).GetValue(self),
+                                    await ((CInstanceMember<P2>)_p2).GetValue(self),
+                                    await ((CInstanceMember<P3>)_p3).GetValue(self),
+                                    await ((CInstanceMember<P4>)_p4).GetValue(self),
+                                    await ((CInstanceMember<P5>)_p5).GetValue(self));
         }
 
         public override void SetTaskParams(Agent self, BehaviorTreeTask treeTask)
@@ -2881,7 +2885,7 @@ namespace behaviac
 
     public class CAgentStaticMethod<T, P1, P2, P3, P4, P5, P6> : CAgentMethodBase<T>
     {
-        public delegate T FunctionPointer(P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6);
+        public delegate Task<T> FunctionPointer(P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6);
 
         FunctionPointer _fp;
         IInstanceMember _p1;
@@ -2926,7 +2930,7 @@ namespace behaviac
             _p6 = AgentMeta.ParseProperty<P6>(paramStrs[5], Workspace);
         }
 
-        public override void Run(Agent self)
+        public override async Task Run(Agent self)
         {
             Debugs.Check(_p1 != null);
             Debugs.Check(_p2 != null);
@@ -2935,13 +2939,13 @@ namespace behaviac
             Debugs.Check(_p5 != null);
             Debugs.Check(_p6 != null);
 
-            _returnValue.value = _fp(
-                                     ((CInstanceMember<P1>)_p1).GetValue(self),
-                                     ((CInstanceMember<P2>)_p2).GetValue(self),
-                                     ((CInstanceMember<P3>)_p3).GetValue(self),
-                                     ((CInstanceMember<P4>)_p4).GetValue(self),
-                                     ((CInstanceMember<P5>)_p5).GetValue(self),
-                                     ((CInstanceMember<P6>)_p6).GetValue(self));
+            _returnValue.value = await _fp(
+                                    await ((CInstanceMember<P1>)_p1).GetValue(self),
+                                    await ((CInstanceMember<P2>)_p2).GetValue(self),
+                                    await ((CInstanceMember<P3>)_p3).GetValue(self),
+                                    await ((CInstanceMember<P4>)_p4).GetValue(self),
+                                    await ((CInstanceMember<P5>)_p5).GetValue(self),
+                                    await ((CInstanceMember<P6>)_p6).GetValue(self));
         }
 
         public override void SetTaskParams(Agent self, BehaviorTreeTask treeTask)
@@ -2968,7 +2972,7 @@ namespace behaviac
 
     public class CAgentStaticMethod<T, P1, P2, P3, P4, P5, P6, P7> : CAgentMethodBase<T>
     {
-        public delegate T FunctionPointer(P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6, P7 p7);
+        public delegate Task<T> FunctionPointer(P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6, P7 p7);
 
         FunctionPointer _fp;
         IInstanceMember _p1;
@@ -3016,7 +3020,7 @@ namespace behaviac
             _p7 = AgentMeta.ParseProperty<P7>(paramStrs[6], Workspace);
         }
 
-        public override void Run(Agent self)
+        public override async Task Run(Agent self)
         {
             Debugs.Check(_p1 != null);
             Debugs.Check(_p2 != null);
@@ -3026,14 +3030,14 @@ namespace behaviac
             Debugs.Check(_p6 != null);
             Debugs.Check(_p7 != null);
 
-            _returnValue.value = _fp(
-                                     ((CInstanceMember<P1>)_p1).GetValue(self),
-                                     ((CInstanceMember<P2>)_p2).GetValue(self),
-                                     ((CInstanceMember<P3>)_p3).GetValue(self),
-                                     ((CInstanceMember<P4>)_p4).GetValue(self),
-                                     ((CInstanceMember<P5>)_p5).GetValue(self),
-                                     ((CInstanceMember<P6>)_p6).GetValue(self),
-                                     ((CInstanceMember<P7>)_p7).GetValue(self));
+            _returnValue.value = await _fp(
+                                    await ((CInstanceMember<P1>)_p1).GetValue(self),
+                                    await ((CInstanceMember<P2>)_p2).GetValue(self),
+                                    await ((CInstanceMember<P3>)_p3).GetValue(self),
+                                    await ((CInstanceMember<P4>)_p4).GetValue(self),
+                                    await ((CInstanceMember<P5>)_p5).GetValue(self),
+                                    await ((CInstanceMember<P6>)_p6).GetValue(self),
+                                    await ((CInstanceMember<P7>)_p7).GetValue(self));
         }
 
         public override void SetTaskParams(Agent self, BehaviorTreeTask treeTask)
@@ -3063,7 +3067,7 @@ namespace behaviac
 
     public class CAgentStaticMethod<T, P1, P2, P3, P4, P5, P6, P7, P8> : CAgentMethodBase<T>
     {
-        public delegate T FunctionPointer(P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6, P7 p7, P8 p8);
+        public delegate Task<T> FunctionPointer(P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6, P7 p7, P8 p8);
 
         FunctionPointer _fp;
         IInstanceMember _p1;
@@ -3114,7 +3118,7 @@ namespace behaviac
             _p8 = AgentMeta.ParseProperty<P8>(paramStrs[7], Workspace);
         }
 
-        public override void Run(Agent self)
+        public override async Task Run(Agent self)
         {
             Debugs.Check(_p1 != null);
             Debugs.Check(_p2 != null);
@@ -3125,15 +3129,15 @@ namespace behaviac
             Debugs.Check(_p7 != null);
             Debugs.Check(_p8 != null);
 
-            _returnValue.value = _fp(
-                                     ((CInstanceMember<P1>)_p1).GetValue(self),
-                                     ((CInstanceMember<P2>)_p2).GetValue(self),
-                                     ((CInstanceMember<P3>)_p3).GetValue(self),
-                                     ((CInstanceMember<P4>)_p4).GetValue(self),
-                                     ((CInstanceMember<P5>)_p5).GetValue(self),
-                                     ((CInstanceMember<P6>)_p6).GetValue(self),
-                                     ((CInstanceMember<P7>)_p7).GetValue(self),
-                                     ((CInstanceMember<P8>)_p8).GetValue(self));
+            _returnValue.value = await _fp(
+                                   await ((CInstanceMember<P1>)_p1).GetValue(self),
+                                   await ((CInstanceMember<P2>)_p2).GetValue(self),
+                                   await ((CInstanceMember<P3>)_p3).GetValue(self),
+                                   await ((CInstanceMember<P4>)_p4).GetValue(self),
+                                   await ((CInstanceMember<P5>)_p5).GetValue(self),
+                                   await ((CInstanceMember<P6>)_p6).GetValue(self),
+                                   await ((CInstanceMember<P7>)_p7).GetValue(self),
+                                   await ((CInstanceMember<P8>)_p8).GetValue(self));
         }
 
         public override void SetTaskParams(Agent self, BehaviorTreeTask treeTask)
@@ -3166,7 +3170,7 @@ namespace behaviac
 
     public class CAgentStaticMethod<T, P1, P2, P3, P4, P5, P6, P7, P8, P9> : CAgentMethodBase<T>
     {
-        public delegate T FunctionPointer(P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6, P7 p7, P8 p8, P9 p9);
+        public delegate Task<T> FunctionPointer(P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6, P7 p7, P8 p8, P9 p9);
 
         FunctionPointer _fp;
         IInstanceMember _p1;
@@ -3220,7 +3224,7 @@ namespace behaviac
             _p9 = AgentMeta.ParseProperty<P9>(paramStrs[8], Workspace);
         }
 
-        public override void Run(Agent self)
+        public override async Task Run(Agent self)
         {
             Debugs.Check(_p1 != null);
             Debugs.Check(_p2 != null);
@@ -3232,16 +3236,16 @@ namespace behaviac
             Debugs.Check(_p8 != null);
             Debugs.Check(_p9 != null);
 
-            _returnValue.value = _fp(
-                                     ((CInstanceMember<P1>)_p1).GetValue(self),
-                                     ((CInstanceMember<P2>)_p2).GetValue(self),
-                                     ((CInstanceMember<P3>)_p3).GetValue(self),
-                                     ((CInstanceMember<P4>)_p4).GetValue(self),
-                                     ((CInstanceMember<P5>)_p5).GetValue(self),
-                                     ((CInstanceMember<P6>)_p6).GetValue(self),
-                                     ((CInstanceMember<P7>)_p7).GetValue(self),
-                                     ((CInstanceMember<P8>)_p8).GetValue(self),
-                                     ((CInstanceMember<P9>)_p9).GetValue(self));
+            _returnValue.value = await _fp(
+                                   await ((CInstanceMember<P1>)_p1).GetValue(self),
+                                   await ((CInstanceMember<P2>)_p2).GetValue(self),
+                                   await ((CInstanceMember<P3>)_p3).GetValue(self),
+                                   await ((CInstanceMember<P4>)_p4).GetValue(self),
+                                   await ((CInstanceMember<P5>)_p5).GetValue(self),
+                                   await ((CInstanceMember<P6>)_p6).GetValue(self),
+                                   await ((CInstanceMember<P7>)_p7).GetValue(self),
+                                   await ((CInstanceMember<P8>)_p8).GetValue(self),
+                                   await ((CInstanceMember<P9>)_p9).GetValue(self));
         }
 
         public override void SetTaskParams(Agent self, BehaviorTreeTask treeTask)
@@ -3277,7 +3281,7 @@ namespace behaviac
 
     public class CAgentStaticMethod<T, P1, P2, P3, P4, P5, P6, P7, P8, P9, P10> : CAgentMethodBase<T>
     {
-        public delegate T FunctionPointer(P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6, P7 p7, P8 p8, P9 p9, P10 p10);
+        public delegate Task<T> FunctionPointer(P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6, P7 p7, P8 p8, P9 p9, P10 p10);
 
         FunctionPointer _fp;
         IInstanceMember _p1;
@@ -3334,7 +3338,7 @@ namespace behaviac
             _p10 = AgentMeta.ParseProperty<P10>(paramStrs[9], Workspace);
         }
 
-        public override void Run(Agent self)
+        public override async Task Run(Agent self)
         {
             Debugs.Check(_p1 != null);
             Debugs.Check(_p2 != null);
@@ -3347,17 +3351,17 @@ namespace behaviac
             Debugs.Check(_p9 != null);
             Debugs.Check(_p10 != null);
 
-            _returnValue.value = _fp(
-                                     ((CInstanceMember<P1>)_p1).GetValue(self),
-                                     ((CInstanceMember<P2>)_p2).GetValue(self),
-                                     ((CInstanceMember<P3>)_p3).GetValue(self),
-                                     ((CInstanceMember<P4>)_p4).GetValue(self),
-                                     ((CInstanceMember<P5>)_p5).GetValue(self),
-                                     ((CInstanceMember<P6>)_p6).GetValue(self),
-                                     ((CInstanceMember<P7>)_p7).GetValue(self),
-                                     ((CInstanceMember<P8>)_p8).GetValue(self),
-                                     ((CInstanceMember<P9>)_p9).GetValue(self),
-                                     ((CInstanceMember<P10>)_p10).GetValue(self));
+            _returnValue.value = await _fp(
+                                  await ((CInstanceMember<P1>)_p1).GetValue(self),
+                                  await ((CInstanceMember<P2>)_p2).GetValue(self),
+                                  await ((CInstanceMember<P3>)_p3).GetValue(self),
+                                  await ((CInstanceMember<P4>)_p4).GetValue(self),
+                                  await ((CInstanceMember<P5>)_p5).GetValue(self),
+                                  await ((CInstanceMember<P6>)_p6).GetValue(self),
+                                  await ((CInstanceMember<P7>)_p7).GetValue(self),
+                                  await ((CInstanceMember<P8>)_p8).GetValue(self),
+                                  await ((CInstanceMember<P9>)_p9).GetValue(self),
+                                  await ((CInstanceMember<P10>)_p10).GetValue(self));
         }
 
         public override void SetTaskParams(Agent self, BehaviorTreeTask treeTask)
@@ -3396,7 +3400,7 @@ namespace behaviac
 
     public class CAgentStaticMethod<T, P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11> : CAgentMethodBase<T>
     {
-        public delegate T FunctionPointer(P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6, P7 p7, P8 p8, P9 p9, P10 p10, P11 p11);
+        public delegate Task<T> FunctionPointer(P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6, P7 p7, P8 p8, P9 p9, P10 p10, P11 p11);
 
         FunctionPointer _fp;
         IInstanceMember _p1;
@@ -3456,7 +3460,7 @@ namespace behaviac
             _p11 = AgentMeta.ParseProperty<P11>(paramStrs[10], Workspace);
         }
 
-        public override void Run(Agent self)
+        public override async Task Run(Agent self)
         {
             Debugs.Check(_p1 != null);
             Debugs.Check(_p2 != null);
@@ -3470,18 +3474,18 @@ namespace behaviac
             Debugs.Check(_p10 != null);
             Debugs.Check(_p11 != null);
 
-            _returnValue.value = _fp(
-                                     ((CInstanceMember<P1>)_p1).GetValue(self),
-                                     ((CInstanceMember<P2>)_p2).GetValue(self),
-                                     ((CInstanceMember<P3>)_p3).GetValue(self),
-                                     ((CInstanceMember<P4>)_p4).GetValue(self),
-                                     ((CInstanceMember<P5>)_p5).GetValue(self),
-                                     ((CInstanceMember<P6>)_p6).GetValue(self),
-                                     ((CInstanceMember<P7>)_p7).GetValue(self),
-                                     ((CInstanceMember<P8>)_p8).GetValue(self),
-                                     ((CInstanceMember<P9>)_p9).GetValue(self),
-                                     ((CInstanceMember<P10>)_p10).GetValue(self),
-                                     ((CInstanceMember<P11>)_p11).GetValue(self));
+            _returnValue.value = await _fp(
+                                await ((CInstanceMember<P1>)_p1).GetValue(self),
+                                await ((CInstanceMember<P2>)_p2).GetValue(self),
+                                await ((CInstanceMember<P3>)_p3).GetValue(self),
+                                await ((CInstanceMember<P4>)_p4).GetValue(self),
+                                await ((CInstanceMember<P5>)_p5).GetValue(self),
+                                await ((CInstanceMember<P6>)_p6).GetValue(self),
+                                await ((CInstanceMember<P7>)_p7).GetValue(self),
+                                await ((CInstanceMember<P8>)_p8).GetValue(self),
+                                await ((CInstanceMember<P9>)_p9).GetValue(self),
+                                await ((CInstanceMember<P10>)_p10).GetValue(self),
+                                await ((CInstanceMember<P11>)_p11).GetValue(self));
         }
 
         public override void SetTaskParams(Agent self, BehaviorTreeTask treeTask)
@@ -3523,7 +3527,7 @@ namespace behaviac
 
     public class CAgentStaticMethod<T, P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12> : CAgentMethodBase<T>
     {
-        public delegate T FunctionPointer(P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6, P7 p7, P8 p8, P9 p9, P10 p10, P11 p11, P12 p12);
+        public delegate Task<T> FunctionPointer(P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6, P7 p7, P8 p8, P9 p9, P10 p10, P11 p11, P12 p12);
 
         FunctionPointer _fp;
         IInstanceMember _p1;
@@ -3586,7 +3590,7 @@ namespace behaviac
             _p12 = AgentMeta.ParseProperty<P12>(paramStrs[11], Workspace);
         }
 
-        public override void Run(Agent self)
+        public override async Task Run(Agent self)
         {
             Debugs.Check(_p1 != null);
             Debugs.Check(_p2 != null);
@@ -3601,19 +3605,19 @@ namespace behaviac
             Debugs.Check(_p11 != null);
             Debugs.Check(_p12 != null);
 
-            _returnValue.value = _fp(
-                                     ((CInstanceMember<P1>)_p1).GetValue(self),
-                                     ((CInstanceMember<P2>)_p2).GetValue(self),
-                                     ((CInstanceMember<P3>)_p3).GetValue(self),
-                                     ((CInstanceMember<P4>)_p4).GetValue(self),
-                                     ((CInstanceMember<P5>)_p5).GetValue(self),
-                                     ((CInstanceMember<P6>)_p6).GetValue(self),
-                                     ((CInstanceMember<P7>)_p7).GetValue(self),
-                                     ((CInstanceMember<P8>)_p8).GetValue(self),
-                                     ((CInstanceMember<P9>)_p9).GetValue(self),
-                                     ((CInstanceMember<P10>)_p10).GetValue(self),
-                                     ((CInstanceMember<P11>)_p11).GetValue(self),
-                                     ((CInstanceMember<P12>)_p12).GetValue(self));
+            _returnValue.value = await _fp(
+                                   await ((CInstanceMember<P1>)_p1).GetValue(self),
+                                   await ((CInstanceMember<P2>)_p2).GetValue(self),
+                                   await ((CInstanceMember<P3>)_p3).GetValue(self),
+                                   await ((CInstanceMember<P4>)_p4).GetValue(self),
+                                   await ((CInstanceMember<P5>)_p5).GetValue(self),
+                                   await ((CInstanceMember<P6>)_p6).GetValue(self),
+                                   await ((CInstanceMember<P7>)_p7).GetValue(self),
+                                   await ((CInstanceMember<P8>)_p8).GetValue(self),
+                                   await ((CInstanceMember<P9>)_p9).GetValue(self),
+                                   await ((CInstanceMember<P10>)_p10).GetValue(self),
+                                   await ((CInstanceMember<P11>)_p11).GetValue(self),
+                                   await ((CInstanceMember<P12>)_p12).GetValue(self));
         }
 
         public override void SetTaskParams(Agent self, BehaviorTreeTask treeTask)
@@ -3658,7 +3662,7 @@ namespace behaviac
 
     public class CAgentStaticMethod<T, P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12, P13> : CAgentMethodBase<T>
     {
-        public delegate T FunctionPointer(P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6, P7 p7, P8 p8, P9 p9, P10 p10, P11 p11, P12 p12, P13 p13);
+        public delegate Task<T> FunctionPointer(P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6, P7 p7, P8 p8, P9 p9, P10 p10, P11 p11, P12 p12, P13 p13);
 
         FunctionPointer _fp;
         IInstanceMember _p1;
@@ -3724,7 +3728,7 @@ namespace behaviac
             _p13 = AgentMeta.ParseProperty<P13>(paramStrs[12], Workspace);
         }
 
-        public override void Run(Agent self)
+        public override async Task Run(Agent self)
         {
             Debugs.Check(_p1 != null);
             Debugs.Check(_p2 != null);
@@ -3740,20 +3744,20 @@ namespace behaviac
             Debugs.Check(_p12 != null);
             Debugs.Check(_p13 != null);
 
-            _returnValue.value = _fp(
-                                     ((CInstanceMember<P1>)_p1).GetValue(self),
-                                     ((CInstanceMember<P2>)_p2).GetValue(self),
-                                     ((CInstanceMember<P3>)_p3).GetValue(self),
-                                     ((CInstanceMember<P4>)_p4).GetValue(self),
-                                     ((CInstanceMember<P5>)_p5).GetValue(self),
-                                     ((CInstanceMember<P6>)_p6).GetValue(self),
-                                     ((CInstanceMember<P7>)_p7).GetValue(self),
-                                     ((CInstanceMember<P8>)_p8).GetValue(self),
-                                     ((CInstanceMember<P9>)_p9).GetValue(self),
-                                     ((CInstanceMember<P10>)_p10).GetValue(self),
-                                     ((CInstanceMember<P11>)_p11).GetValue(self),
-                                     ((CInstanceMember<P12>)_p12).GetValue(self),
-                                     ((CInstanceMember<P13>)_p13).GetValue(self));
+            _returnValue.value = await _fp(
+                                await ((CInstanceMember<P1>)_p1).GetValue(self),
+                                await ((CInstanceMember<P2>)_p2).GetValue(self),
+                                await ((CInstanceMember<P3>)_p3).GetValue(self),
+                                await ((CInstanceMember<P4>)_p4).GetValue(self),
+                                await ((CInstanceMember<P5>)_p5).GetValue(self),
+                                await ((CInstanceMember<P6>)_p6).GetValue(self),
+                                await ((CInstanceMember<P7>)_p7).GetValue(self),
+                                await ((CInstanceMember<P8>)_p8).GetValue(self),
+                                await ((CInstanceMember<P9>)_p9).GetValue(self),
+                                await ((CInstanceMember<P10>)_p10).GetValue(self),
+                                await ((CInstanceMember<P11>)_p11).GetValue(self),
+                                await ((CInstanceMember<P12>)_p12).GetValue(self),
+                                await ((CInstanceMember<P13>)_p13).GetValue(self));
         }
 
         public override void SetTaskParams(Agent self, BehaviorTreeTask treeTask)
@@ -3801,7 +3805,7 @@ namespace behaviac
 
     public class CAgentStaticMethod<T, P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12, P13, P14> : CAgentMethodBase<T>
     {
-        public delegate T FunctionPointer(P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6, P7 p7, P8 p8, P9 p9, P10 p10, P11 p11, P12 p12, P13 p13, P14 p14);
+        public delegate Task<T> FunctionPointer(P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6, P7 p7, P8 p8, P9 p9, P10 p10, P11 p11, P12 p12, P13 p13, P14 p14);
 
         FunctionPointer _fp;
         IInstanceMember _p1;
@@ -3870,7 +3874,7 @@ namespace behaviac
             _p14 = AgentMeta.ParseProperty<P14>(paramStrs[13], Workspace);
         }
 
-        public override void Run(Agent self)
+        public override async Task Run(Agent self)
         {
             Debugs.Check(_p1 != null);
             Debugs.Check(_p2 != null);
@@ -3887,21 +3891,21 @@ namespace behaviac
             Debugs.Check(_p13 != null);
             Debugs.Check(_p14 != null);
 
-            _returnValue.value = _fp(
-                                     ((CInstanceMember<P1>)_p1).GetValue(self),
-                                     ((CInstanceMember<P2>)_p2).GetValue(self),
-                                     ((CInstanceMember<P3>)_p3).GetValue(self),
-                                     ((CInstanceMember<P4>)_p4).GetValue(self),
-                                     ((CInstanceMember<P5>)_p5).GetValue(self),
-                                     ((CInstanceMember<P6>)_p6).GetValue(self),
-                                     ((CInstanceMember<P7>)_p7).GetValue(self),
-                                     ((CInstanceMember<P8>)_p8).GetValue(self),
-                                     ((CInstanceMember<P9>)_p9).GetValue(self),
-                                     ((CInstanceMember<P10>)_p10).GetValue(self),
-                                     ((CInstanceMember<P11>)_p11).GetValue(self),
-                                     ((CInstanceMember<P12>)_p12).GetValue(self),
-                                     ((CInstanceMember<P13>)_p13).GetValue(self),
-                                     ((CInstanceMember<P14>)_p14).GetValue(self));
+            _returnValue.value = await _fp(
+                                await ((CInstanceMember<P1>)_p1).GetValue(self),
+                                await ((CInstanceMember<P2>)_p2).GetValue(self),
+                                await ((CInstanceMember<P3>)_p3).GetValue(self),
+                                await ((CInstanceMember<P4>)_p4).GetValue(self),
+                                await ((CInstanceMember<P5>)_p5).GetValue(self),
+                                await ((CInstanceMember<P6>)_p6).GetValue(self),
+                                await ((CInstanceMember<P7>)_p7).GetValue(self),
+                                await ((CInstanceMember<P8>)_p8).GetValue(self),
+                                await ((CInstanceMember<P9>)_p9).GetValue(self),
+                                await ((CInstanceMember<P10>)_p10).GetValue(self),
+                                await ((CInstanceMember<P11>)_p11).GetValue(self),
+                                await ((CInstanceMember<P12>)_p12).GetValue(self),
+                                await ((CInstanceMember<P13>)_p13).GetValue(self),
+                                await ((CInstanceMember<P14>)_p14).GetValue(self));
         }
 
         public override void SetTaskParams(Agent self, BehaviorTreeTask treeTask)
@@ -3994,12 +3998,13 @@ namespace behaviac
         public virtual Task Run(Agent self)
         {
             Debugs.Check(false);
+            return Task.CompletedTask;
         }
 
-        public IValue GetIValue(Agent self)
+        public Task<IValue> GetIValue(Agent self)
         {
             Debugs.Check(false);
-            return null;
+            return Task.FromResult(default(IValue));
         }
 
         public object GetValueObject(Agent self)
@@ -4008,7 +4013,7 @@ namespace behaviac
             return null;
         }
 
-        public IValue GetIValue(Agent self, IInstanceMember firstParam)
+        public Task<IValue> GetIValue(Agent self, IInstanceMember firstParam)
         {
             //Agent agent = Utils.GetParentAgent(self, _instance);
             //firstParam.Run(agent);
@@ -4036,15 +4041,16 @@ namespace behaviac
             Debugs.Check(false);
         }
 
-        public bool Compare(Agent self, IInstanceMember right, EOperatorType comparisonType)
+        public Task<bool> Compare(Agent self, IInstanceMember right, EOperatorType comparisonType)
         {
             Debugs.Check(false);
-            return false;
+            return Task.FromResult(false);
         }
 
-        public void Compute(Agent self, IInstanceMember right1, IInstanceMember right2, EOperatorType computeType)
+        public Task Compute(Agent self, IInstanceMember right1, IInstanceMember right2, EOperatorType computeType)
         {
             Debugs.Check(false);
+            return Task.CompletedTask;
         }
 
         public virtual void SetTaskParams(Agent self, BehaviorTreeTask treeTask)
@@ -4055,7 +4061,7 @@ namespace behaviac
 
     public class CAgentMethodVoid : CAgentMethodVoidBase
     {
-        public delegate void FunctionPointer(Agent a);
+        public delegate Task FunctionPointer(Agent a);
 
         FunctionPointer _fp;
 
@@ -4082,11 +4088,11 @@ namespace behaviac
             _instance = instance;
         }
 
-        public override void Run(Agent self)
+        public override async Task Run(Agent self)
         {
             Agent agent = Utils.GetParentAgent(self, _instance);
 
-            _fp(agent);
+            await _fp(agent);
         }
 
         public override void SetTaskParams(Agent self, BehaviorTreeTask treeTask)
@@ -4096,7 +4102,7 @@ namespace behaviac
 
     public class CAgentMethodVoid<P1> : CAgentMethodVoidBase
     {
-        public delegate void FunctionPointer(Agent a, P1 p1);
+        public delegate Task FunctionPointer(Agent a, P1 p1);
 
         FunctionPointer _fp;
         IInstanceMember _p1;
@@ -4126,13 +4132,13 @@ namespace behaviac
             _p1 = AgentMeta.ParseProperty<P1>(paramStrs[0], Workspace);
         }
 
-        public override void Run(Agent self)
+        public override async Task Run(Agent self)
         {
             Debugs.Check(_p1 != null);
 
             Agent agent = Utils.GetParentAgent(self, _instance);
 
-            _fp(agent, ((CInstanceMember<P1>)_p1).GetValue(self));
+            await _fp(agent, await ((CInstanceMember<P1>)_p1).GetValue(self));
         }
 
         public override void SetTaskParams(Agent self, BehaviorTreeTask treeTask)
@@ -4144,7 +4150,7 @@ namespace behaviac
 
     public class CAgentMethodVoid<P1, P2> : CAgentMethodVoidBase
     {
-        public delegate void FunctionPointer(Agent a, P1 p1, P2 p2);
+        public delegate Task FunctionPointer(Agent a, P1 p1, P2 p2);
 
         FunctionPointer _fp;
         IInstanceMember _p1;
@@ -4177,14 +4183,14 @@ namespace behaviac
             _p2 = AgentMeta.ParseProperty<P2>(paramStrs[1], Workspace);
         }
 
-        public override void Run(Agent self)
+        public override async Task Run(Agent self)
         {
             Debugs.Check(_p1 != null);
             Debugs.Check(_p2 != null);
 
             Agent agent = Utils.GetParentAgent(self, _instance);
 
-            _fp(agent, ((CInstanceMember<P1>)_p1).GetValue(self), ((CInstanceMember<P2>)_p2).GetValue(self));
+            await _fp(agent, await ((CInstanceMember<P1>)_p1).GetValue(self), await ((CInstanceMember<P2>)_p2).GetValue(self));
         }
 
         public override void SetTaskParams(Agent self, BehaviorTreeTask treeTask)
@@ -4199,7 +4205,7 @@ namespace behaviac
 
     public class CAgentMethodVoid<P1, P2, P3> : CAgentMethodVoidBase
     {
-        public delegate void FunctionPointer(Agent a, P1 p1, P2 p2, P3 p3);
+        public delegate Task FunctionPointer(Agent a, P1 p1, P2 p2, P3 p3);
 
         FunctionPointer _fp;
         IInstanceMember _p1;
@@ -4235,7 +4241,7 @@ namespace behaviac
             _p3 = AgentMeta.ParseProperty<P3>(paramStrs[2], Workspace);
         }
 
-        public override void Run(Agent self)
+        public override async Task Run(Agent self)
         {
             Debugs.Check(_p1 != null);
             Debugs.Check(_p2 != null);
@@ -4243,10 +4249,10 @@ namespace behaviac
 
             Agent agent = Utils.GetParentAgent(self, _instance);
 
-            _fp(agent,
-                ((CInstanceMember<P1>)_p1).GetValue(self),
-                ((CInstanceMember<P2>)_p2).GetValue(self),
-                ((CInstanceMember<P3>)_p3).GetValue(self));
+            await _fp(agent,
+            await ((CInstanceMember<P1>)_p1).GetValue(self),
+            await ((CInstanceMember<P2>)_p2).GetValue(self),
+            await ((CInstanceMember<P3>)_p3).GetValue(self));
         }
 
         public override void SetTaskParams(Agent self, BehaviorTreeTask treeTask)
@@ -4264,7 +4270,7 @@ namespace behaviac
 
     public class CAgentMethodVoid<P1, P2, P3, P4> : CAgentMethodVoidBase
     {
-        public delegate void FunctionPointer(Agent a, P1 p1, P2 p2, P3 p3, P4 p4);
+        public delegate Task FunctionPointer(Agent a, P1 p1, P2 p2, P3 p3, P4 p4);
 
         FunctionPointer _fp;
         IInstanceMember _p1;
@@ -4303,7 +4309,7 @@ namespace behaviac
             _p4 = AgentMeta.ParseProperty<P4>(paramStrs[3], Workspace);
         }
 
-        public override void Run(Agent self)
+        public override async Task Run(Agent self)
         {
             Debugs.Check(_p1 != null);
             Debugs.Check(_p2 != null);
@@ -4312,11 +4318,11 @@ namespace behaviac
 
             Agent agent = Utils.GetParentAgent(self, _instance);
 
-            _fp(agent,
-                ((CInstanceMember<P1>)_p1).GetValue(self),
-                ((CInstanceMember<P2>)_p2).GetValue(self),
-                ((CInstanceMember<P3>)_p3).GetValue(self),
-                ((CInstanceMember<P4>)_p4).GetValue(self));
+            await _fp(agent,
+            await ((CInstanceMember<P1>)_p1).GetValue(self),
+            await ((CInstanceMember<P2>)_p2).GetValue(self),
+            await ((CInstanceMember<P3>)_p3).GetValue(self),
+            await ((CInstanceMember<P4>)_p4).GetValue(self));
         }
 
         public override void SetTaskParams(Agent self, BehaviorTreeTask treeTask)
@@ -4337,7 +4343,7 @@ namespace behaviac
 
     public class CAgentMethodVoid<P1, P2, P3, P4, P5> : CAgentMethodVoidBase
     {
-        public delegate void FunctionPointer(Agent a, P1 p1, P2 p2, P3 p3, P4 p4, P5 p5);
+        public delegate Task FunctionPointer(Agent a, P1 p1, P2 p2, P3 p3, P4 p4, P5 p5);
 
         FunctionPointer _fp;
         IInstanceMember _p1;
@@ -4379,7 +4385,7 @@ namespace behaviac
             _p5 = AgentMeta.ParseProperty<P5>(paramStrs[4], Workspace);
         }
 
-        public override void Run(Agent self)
+        public override async Task Run(Agent self)
         {
             Debugs.Check(_p1 != null);
             Debugs.Check(_p2 != null);
@@ -4389,12 +4395,12 @@ namespace behaviac
 
             Agent agent = Utils.GetParentAgent(self, _instance);
 
-            _fp(agent,
-                ((CInstanceMember<P1>)_p1).GetValue(self),
-                ((CInstanceMember<P2>)_p2).GetValue(self),
-                ((CInstanceMember<P3>)_p3).GetValue(self),
-                ((CInstanceMember<P4>)_p4).GetValue(self),
-                ((CInstanceMember<P5>)_p5).GetValue(self));
+            await _fp(agent,
+            await ((CInstanceMember<P1>)_p1).GetValue(self),
+            await ((CInstanceMember<P2>)_p2).GetValue(self),
+            await ((CInstanceMember<P3>)_p3).GetValue(self),
+            await ((CInstanceMember<P4>)_p4).GetValue(self),
+            await ((CInstanceMember<P5>)_p5).GetValue(self));
         }
 
         public override void SetTaskParams(Agent self, BehaviorTreeTask treeTask)
@@ -4418,7 +4424,7 @@ namespace behaviac
 
     public class CAgentMethodVoid<P1, P2, P3, P4, P5, P6> : CAgentMethodVoidBase
     {
-        public delegate void FunctionPointer(Agent a, P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6);
+        public delegate Task FunctionPointer(Agent a, P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6);
 
         FunctionPointer _fp;
         IInstanceMember _p1;
@@ -4463,7 +4469,7 @@ namespace behaviac
             _p6 = AgentMeta.ParseProperty<P6>(paramStrs[5], Workspace);
         }
 
-        public override void Run(Agent self)
+        public override async Task Run(Agent self)
         {
             Debugs.Check(_p1 != null);
             Debugs.Check(_p2 != null);
@@ -4474,13 +4480,13 @@ namespace behaviac
 
             Agent agent = Utils.GetParentAgent(self, _instance);
 
-            _fp(agent,
-                ((CInstanceMember<P1>)_p1).GetValue(self),
-                ((CInstanceMember<P2>)_p2).GetValue(self),
-                ((CInstanceMember<P3>)_p3).GetValue(self),
-                ((CInstanceMember<P4>)_p4).GetValue(self),
-                ((CInstanceMember<P5>)_p5).GetValue(self),
-                ((CInstanceMember<P6>)_p6).GetValue(self));
+            await _fp(agent,
+            await ((CInstanceMember<P1>)_p1).GetValue(self),
+            await ((CInstanceMember<P2>)_p2).GetValue(self),
+            await ((CInstanceMember<P3>)_p3).GetValue(self),
+            await ((CInstanceMember<P4>)_p4).GetValue(self),
+            await ((CInstanceMember<P5>)_p5).GetValue(self),
+            await ((CInstanceMember<P6>)_p6).GetValue(self));
         }
 
         public override void SetTaskParams(Agent self, BehaviorTreeTask treeTask)
@@ -4507,7 +4513,7 @@ namespace behaviac
 
     public class CAgentMethodVoid<P1, P2, P3, P4, P5, P6, P7> : CAgentMethodVoidBase
     {
-        public delegate void FunctionPointer(Agent a, P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6, P7 p7);
+        public delegate Task FunctionPointer(Agent a, P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6, P7 p7);
 
         FunctionPointer _fp;
         IInstanceMember _p1;
@@ -4555,7 +4561,7 @@ namespace behaviac
             _p7 = AgentMeta.ParseProperty<P7>(paramStrs[6], Workspace);
         }
 
-        public override void Run(Agent self)
+        public override async Task Run(Agent self)
         {
             Debugs.Check(_p1 != null);
             Debugs.Check(_p2 != null);
@@ -4567,14 +4573,14 @@ namespace behaviac
 
             Agent agent = Utils.GetParentAgent(self, _instance);
 
-            _fp(agent,
-                ((CInstanceMember<P1>)_p1).GetValue(self),
-                ((CInstanceMember<P2>)_p2).GetValue(self),
-                ((CInstanceMember<P3>)_p3).GetValue(self),
-                ((CInstanceMember<P4>)_p4).GetValue(self),
-                ((CInstanceMember<P5>)_p5).GetValue(self),
-                ((CInstanceMember<P6>)_p6).GetValue(self),
-                ((CInstanceMember<P7>)_p7).GetValue(self));
+            await _fp(agent,
+            await ((CInstanceMember<P1>)_p1).GetValue(self),
+            await ((CInstanceMember<P2>)_p2).GetValue(self),
+            await ((CInstanceMember<P3>)_p3).GetValue(self),
+            await ((CInstanceMember<P4>)_p4).GetValue(self),
+            await ((CInstanceMember<P5>)_p5).GetValue(self),
+            await ((CInstanceMember<P6>)_p6).GetValue(self),
+            await ((CInstanceMember<P7>)_p7).GetValue(self));
         }
 
         public override void SetTaskParams(Agent self, BehaviorTreeTask treeTask)
@@ -4604,7 +4610,7 @@ namespace behaviac
 
     public class CAgentMethodVoid<P1, P2, P3, P4, P5, P6, P7, P8> : CAgentMethodVoidBase
     {
-        public delegate void FunctionPointer(Agent a, P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6, P7 p7, P8 p8);
+        public delegate Task FunctionPointer(Agent a, P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6, P7 p7, P8 p8);
 
         FunctionPointer _fp;
         IInstanceMember _p1;
@@ -4655,7 +4661,7 @@ namespace behaviac
             _p8 = AgentMeta.ParseProperty<P8>(paramStrs[7], Workspace);
         }
 
-        public override void Run(Agent self)
+        public override async Task Run(Agent self)
         {
             Debugs.Check(_p1 != null);
             Debugs.Check(_p2 != null);
@@ -4668,15 +4674,15 @@ namespace behaviac
 
             Agent agent = Utils.GetParentAgent(self, _instance);
 
-            _fp(agent,
-                ((CInstanceMember<P1>)_p1).GetValue(self),
-                ((CInstanceMember<P2>)_p2).GetValue(self),
-                ((CInstanceMember<P3>)_p3).GetValue(self),
-                ((CInstanceMember<P4>)_p4).GetValue(self),
-                ((CInstanceMember<P5>)_p5).GetValue(self),
-                ((CInstanceMember<P6>)_p6).GetValue(self),
-                ((CInstanceMember<P7>)_p7).GetValue(self),
-                ((CInstanceMember<P8>)_p8).GetValue(self));
+            await _fp(agent,
+            await ((CInstanceMember<P1>)_p1).GetValue(self),
+            await ((CInstanceMember<P2>)_p2).GetValue(self),
+            await ((CInstanceMember<P3>)_p3).GetValue(self),
+            await ((CInstanceMember<P4>)_p4).GetValue(self),
+            await ((CInstanceMember<P5>)_p5).GetValue(self),
+            await ((CInstanceMember<P6>)_p6).GetValue(self),
+            await ((CInstanceMember<P7>)_p7).GetValue(self),
+            await ((CInstanceMember<P8>)_p8).GetValue(self));
         }
 
         public override void SetTaskParams(Agent self, BehaviorTreeTask treeTask)
@@ -4709,7 +4715,7 @@ namespace behaviac
 
     public class CAgentMethodVoid<P1, P2, P3, P4, P5, P6, P7, P8, P9> : CAgentMethodVoidBase
     {
-        public delegate void FunctionPointer(Agent a, P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6, P7 p7, P8 p8, P9 p9);
+        public delegate Task FunctionPointer(Agent a, P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6, P7 p7, P8 p8, P9 p9);
 
         FunctionPointer _fp;
         IInstanceMember _p1;
@@ -4763,7 +4769,7 @@ namespace behaviac
             _p9 = AgentMeta.ParseProperty<P9>(paramStrs[8], Workspace);
         }
 
-        public override void Run(Agent self)
+        public override async Task Run(Agent self)
         {
             Debugs.Check(_p1 != null);
             Debugs.Check(_p2 != null);
@@ -4777,16 +4783,16 @@ namespace behaviac
 
             Agent agent = Utils.GetParentAgent(self, _instance);
 
-            _fp(agent,
-                ((CInstanceMember<P1>)_p1).GetValue(self),
-                ((CInstanceMember<P2>)_p2).GetValue(self),
-                ((CInstanceMember<P3>)_p3).GetValue(self),
-                ((CInstanceMember<P4>)_p4).GetValue(self),
-                ((CInstanceMember<P5>)_p5).GetValue(self),
-                ((CInstanceMember<P6>)_p6).GetValue(self),
-                ((CInstanceMember<P7>)_p7).GetValue(self),
-                ((CInstanceMember<P8>)_p8).GetValue(self),
-                ((CInstanceMember<P9>)_p9).GetValue(self));
+            await _fp(agent,
+            await ((CInstanceMember<P1>)_p1).GetValue(self),
+            await ((CInstanceMember<P2>)_p2).GetValue(self),
+            await ((CInstanceMember<P3>)_p3).GetValue(self),
+            await ((CInstanceMember<P4>)_p4).GetValue(self),
+            await ((CInstanceMember<P5>)_p5).GetValue(self),
+            await ((CInstanceMember<P6>)_p6).GetValue(self),
+            await ((CInstanceMember<P7>)_p7).GetValue(self),
+            await ((CInstanceMember<P8>)_p8).GetValue(self),
+            await ((CInstanceMember<P9>)_p9).GetValue(self));
         }
 
         public override void SetTaskParams(Agent self, BehaviorTreeTask treeTask)
@@ -4822,7 +4828,7 @@ namespace behaviac
 
     public class CAgentMethodVoid<P1, P2, P3, P4, P5, P6, P7, P8, P9, P10> : CAgentMethodVoidBase
     {
-        public delegate void FunctionPointer(Agent a, P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6, P7 p7, P8 p8, P9 p9, P10 p10);
+        public delegate Task FunctionPointer(Agent a, P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6, P7 p7, P8 p8, P9 p9, P10 p10);
 
         FunctionPointer _fp;
         IInstanceMember _p1;
@@ -4879,7 +4885,7 @@ namespace behaviac
             _p10 = AgentMeta.ParseProperty<P10>(paramStrs[9], Workspace);
         }
 
-        public override void Run(Agent self)
+        public override async Task Run(Agent self)
         {
             Debugs.Check(_p1 != null);
             Debugs.Check(_p2 != null);
@@ -4894,17 +4900,17 @@ namespace behaviac
 
             Agent agent = Utils.GetParentAgent(self, _instance);
 
-            _fp(agent,
-                ((CInstanceMember<P1>)_p1).GetValue(self),
-                ((CInstanceMember<P2>)_p2).GetValue(self),
-                ((CInstanceMember<P3>)_p3).GetValue(self),
-                ((CInstanceMember<P4>)_p4).GetValue(self),
-                ((CInstanceMember<P5>)_p5).GetValue(self),
-                ((CInstanceMember<P6>)_p6).GetValue(self),
-                ((CInstanceMember<P7>)_p7).GetValue(self),
-                ((CInstanceMember<P8>)_p8).GetValue(self),
-                ((CInstanceMember<P9>)_p9).GetValue(self),
-                ((CInstanceMember<P10>)_p10).GetValue(self));
+            await _fp(agent,
+            await ((CInstanceMember<P1>)_p1).GetValue(self),
+            await ((CInstanceMember<P2>)_p2).GetValue(self),
+            await ((CInstanceMember<P3>)_p3).GetValue(self),
+            await ((CInstanceMember<P4>)_p4).GetValue(self),
+            await ((CInstanceMember<P5>)_p5).GetValue(self),
+            await ((CInstanceMember<P6>)_p6).GetValue(self),
+            await ((CInstanceMember<P7>)_p7).GetValue(self),
+            await ((CInstanceMember<P8>)_p8).GetValue(self),
+            await ((CInstanceMember<P9>)_p9).GetValue(self),
+            await ((CInstanceMember<P10>)_p10).GetValue(self));
         }
 
         public override void SetTaskParams(Agent self, BehaviorTreeTask treeTask)
@@ -4943,7 +4949,7 @@ namespace behaviac
 
     public class CAgentMethodVoid<P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11> : CAgentMethodVoidBase
     {
-        public delegate void FunctionPointer(Agent a, P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6, P7 p7, P8 p8, P9 p9, P10 p10, P11 p11);
+        public delegate Task FunctionPointer(Agent a, P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6, P7 p7, P8 p8, P9 p9, P10 p10, P11 p11);
 
         FunctionPointer _fp;
         IInstanceMember _p1;
@@ -5002,7 +5008,7 @@ namespace behaviac
             _p11 = AgentMeta.ParseProperty<P11>(paramStrs[10], Workspace);
         }
 
-        public override void Run(Agent self)
+        public override async Task Run(Agent self)
         {
             Debugs.Check(_p1 != null);
             Debugs.Check(_p2 != null);
@@ -5018,18 +5024,18 @@ namespace behaviac
 
             Agent agent = Utils.GetParentAgent(self, _instance);
 
-            _fp(agent,
-                ((CInstanceMember<P1>)_p1).GetValue(self),
-                ((CInstanceMember<P2>)_p2).GetValue(self),
-                ((CInstanceMember<P3>)_p3).GetValue(self),
-                ((CInstanceMember<P4>)_p4).GetValue(self),
-                ((CInstanceMember<P5>)_p5).GetValue(self),
-                ((CInstanceMember<P6>)_p6).GetValue(self),
-                ((CInstanceMember<P7>)_p7).GetValue(self),
-                ((CInstanceMember<P8>)_p8).GetValue(self),
-                ((CInstanceMember<P9>)_p9).GetValue(self),
-                ((CInstanceMember<P10>)_p10).GetValue(self),
-                ((CInstanceMember<P11>)_p11).GetValue(self));
+            await _fp(agent,
+              await ((CInstanceMember<P1>)_p1).GetValue(self),
+              await ((CInstanceMember<P2>)_p2).GetValue(self),
+              await ((CInstanceMember<P3>)_p3).GetValue(self),
+              await ((CInstanceMember<P4>)_p4).GetValue(self),
+              await ((CInstanceMember<P5>)_p5).GetValue(self),
+              await ((CInstanceMember<P6>)_p6).GetValue(self),
+              await ((CInstanceMember<P7>)_p7).GetValue(self),
+              await ((CInstanceMember<P8>)_p8).GetValue(self),
+              await ((CInstanceMember<P9>)_p9).GetValue(self),
+              await ((CInstanceMember<P10>)_p10).GetValue(self),
+              await ((CInstanceMember<P11>)_p11).GetValue(self));
         }
 
         public override void SetTaskParams(Agent self, BehaviorTreeTask treeTask)
@@ -5071,7 +5077,7 @@ namespace behaviac
 
     public class CAgentMethodVoid<P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12> : CAgentMethodVoidBase
     {
-        public delegate void FunctionPointer(Agent a, P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6, P7 p7, P8 p8, P9 p9, P10 p10, P11 p11, P12 p12);
+        public delegate Task FunctionPointer(Agent a, P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6, P7 p7, P8 p8, P9 p9, P10 p10, P11 p11, P12 p12);
 
         FunctionPointer _fp;
         IInstanceMember _p1;
@@ -5134,7 +5140,7 @@ namespace behaviac
             _p12 = AgentMeta.ParseProperty<P12>(paramStrs[11], Workspace);
         }
 
-        public override void Run(Agent self)
+        public override async Task Run(Agent self)
         {
             Debugs.Check(_p1 != null);
             Debugs.Check(_p2 != null);
@@ -5151,19 +5157,19 @@ namespace behaviac
 
             Agent agent = Utils.GetParentAgent(self, _instance);
 
-            _fp(agent,
-                ((CInstanceMember<P1>)_p1).GetValue(self),
-                ((CInstanceMember<P2>)_p2).GetValue(self),
-                ((CInstanceMember<P3>)_p3).GetValue(self),
-                ((CInstanceMember<P4>)_p4).GetValue(self),
-                ((CInstanceMember<P5>)_p5).GetValue(self),
-                ((CInstanceMember<P6>)_p6).GetValue(self),
-                ((CInstanceMember<P7>)_p7).GetValue(self),
-                ((CInstanceMember<P8>)_p8).GetValue(self),
-                ((CInstanceMember<P9>)_p9).GetValue(self),
-                ((CInstanceMember<P10>)_p10).GetValue(self),
-                ((CInstanceMember<P11>)_p11).GetValue(self),
-                ((CInstanceMember<P12>)_p12).GetValue(self));
+            await _fp(agent,
+             await ((CInstanceMember<P1>)_p1).GetValue(self),
+             await ((CInstanceMember<P2>)_p2).GetValue(self),
+             await ((CInstanceMember<P3>)_p3).GetValue(self),
+             await ((CInstanceMember<P4>)_p4).GetValue(self),
+             await ((CInstanceMember<P5>)_p5).GetValue(self),
+             await ((CInstanceMember<P6>)_p6).GetValue(self),
+             await ((CInstanceMember<P7>)_p7).GetValue(self),
+             await ((CInstanceMember<P8>)_p8).GetValue(self),
+             await ((CInstanceMember<P9>)_p9).GetValue(self),
+             await ((CInstanceMember<P10>)_p10).GetValue(self),
+             await ((CInstanceMember<P11>)_p11).GetValue(self),
+             await ((CInstanceMember<P12>)_p12).GetValue(self));
         }
 
         public override void SetTaskParams(Agent self, BehaviorTreeTask treeTask)
@@ -5208,7 +5214,7 @@ namespace behaviac
 
     public class CAgentMethodVoid<P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12, P13> : CAgentMethodVoidBase
     {
-        public delegate void FunctionPointer(Agent a, P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6, P7 p7, P8 p8, P9 p9, P10 p10, P11 p11, P12 p12, P13 p13);
+        public delegate Task FunctionPointer(Agent a, P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6, P7 p7, P8 p8, P9 p9, P10 p10, P11 p11, P12 p12, P13 p13);
 
         FunctionPointer _fp;
         IInstanceMember _p1;
@@ -5274,7 +5280,7 @@ namespace behaviac
             _p13 = AgentMeta.ParseProperty<P13>(paramStrs[12], Workspace);
         }
 
-        public override void Run(Agent self)
+        public override async Task Run(Agent self)
         {
             Debugs.Check(_p1 != null);
             Debugs.Check(_p2 != null);
@@ -5292,20 +5298,20 @@ namespace behaviac
 
             Agent agent = Utils.GetParentAgent(self, _instance);
 
-            _fp(agent,
-                ((CInstanceMember<P1>)_p1).GetValue(self),
-                ((CInstanceMember<P2>)_p2).GetValue(self),
-                ((CInstanceMember<P3>)_p3).GetValue(self),
-                ((CInstanceMember<P4>)_p4).GetValue(self),
-                ((CInstanceMember<P5>)_p5).GetValue(self),
-                ((CInstanceMember<P6>)_p6).GetValue(self),
-                ((CInstanceMember<P7>)_p7).GetValue(self),
-                ((CInstanceMember<P8>)_p8).GetValue(self),
-                ((CInstanceMember<P9>)_p9).GetValue(self),
-                ((CInstanceMember<P10>)_p10).GetValue(self),
-                ((CInstanceMember<P11>)_p11).GetValue(self),
-                ((CInstanceMember<P12>)_p12).GetValue(self),
-                ((CInstanceMember<P13>)_p13).GetValue(self));
+            await _fp(agent,
+                 await ((CInstanceMember<P1>)_p1).GetValue(self),
+              await ((CInstanceMember<P2>)_p2).GetValue(self),
+              await ((CInstanceMember<P3>)_p3).GetValue(self),
+              await ((CInstanceMember<P4>)_p4).GetValue(self),
+             await ((CInstanceMember<P5>)_p5).GetValue(self),
+             await ((CInstanceMember<P6>)_p6).GetValue(self),
+            await ((CInstanceMember<P7>)_p7).GetValue(self),
+           await ((CInstanceMember<P8>)_p8).GetValue(self),
+             await ((CInstanceMember<P9>)_p9).GetValue(self),
+             await ((CInstanceMember<P10>)_p10).GetValue(self),
+            await ((CInstanceMember<P11>)_p11).GetValue(self),
+            await ((CInstanceMember<P12>)_p12).GetValue(self),
+             await ((CInstanceMember<P13>)_p13).GetValue(self));
         }
 
         public override void SetTaskParams(Agent self, BehaviorTreeTask treeTask)
@@ -5353,7 +5359,7 @@ namespace behaviac
 
     public class CAgentMethodVoid<P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12, P13, P14> : CAgentMethodVoidBase
     {
-        public delegate void FunctionPointer(Agent a, P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6, P7 p7, P8 p8, P9 p9, P10 p10, P11 p11, P12 p12, P13 p13, P14 p14);
+        public delegate Task FunctionPointer(Agent a, P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6, P7 p7, P8 p8, P9 p9, P10 p10, P11 p11, P12 p12, P13 p13, P14 p14);
 
         FunctionPointer _fp;
         IInstanceMember _p1;
@@ -5422,7 +5428,7 @@ namespace behaviac
             _p14 = AgentMeta.ParseProperty<P14>(paramStrs[13], Workspace);
         }
 
-        public override void Run(Agent self)
+        public override async Task Run(Agent self)
         {
             Debugs.Check(_p1 != null);
             Debugs.Check(_p2 != null);
@@ -5441,21 +5447,21 @@ namespace behaviac
 
             Agent agent = Utils.GetParentAgent(self, _instance);
 
-            _fp(agent,
-                ((CInstanceMember<P1>)_p1).GetValue(self),
-                ((CInstanceMember<P2>)_p2).GetValue(self),
-                ((CInstanceMember<P3>)_p3).GetValue(self),
-                ((CInstanceMember<P4>)_p4).GetValue(self),
-                ((CInstanceMember<P5>)_p5).GetValue(self),
-                ((CInstanceMember<P6>)_p6).GetValue(self),
-                ((CInstanceMember<P7>)_p7).GetValue(self),
-                ((CInstanceMember<P8>)_p8).GetValue(self),
-                ((CInstanceMember<P9>)_p9).GetValue(self),
-                ((CInstanceMember<P10>)_p10).GetValue(self),
-                ((CInstanceMember<P11>)_p11).GetValue(self),
-                ((CInstanceMember<P12>)_p12).GetValue(self),
-                ((CInstanceMember<P13>)_p13).GetValue(self),
-                ((CInstanceMember<P14>)_p14).GetValue(self));
+            await _fp(agent,
+                 await ((CInstanceMember<P1>)_p1).GetValue(self),
+                 await ((CInstanceMember<P2>)_p2).GetValue(self),
+                 await ((CInstanceMember<P3>)_p3).GetValue(self),
+                 await ((CInstanceMember<P4>)_p4).GetValue(self),
+                 await ((CInstanceMember<P5>)_p5).GetValue(self),
+                 await ((CInstanceMember<P6>)_p6).GetValue(self),
+                 await ((CInstanceMember<P7>)_p7).GetValue(self),
+                 await ((CInstanceMember<P8>)_p8).GetValue(self),
+                 await ((CInstanceMember<P9>)_p9).GetValue(self),
+                 await ((CInstanceMember<P10>)_p10).GetValue(self),
+                 await ((CInstanceMember<P11>)_p11).GetValue(self),
+                 await ((CInstanceMember<P12>)_p12).GetValue(self),
+                 await ((CInstanceMember<P13>)_p13).GetValue(self),
+                 await ((CInstanceMember<P14>)_p14).GetValue(self));
         }
 
         public override void SetTaskParams(Agent self, BehaviorTreeTask treeTask)
@@ -5545,7 +5551,7 @@ namespace behaviac
 
     public class CAgentStaticMethodVoid<P1> : CAgentMethodVoidBase
     {
-        public delegate void FunctionPointer(P1 p1);
+        public delegate Task FunctionPointer(P1 p1);
 
         FunctionPointer _fp;
         IInstanceMember _p1;
@@ -5575,11 +5581,11 @@ namespace behaviac
             _p1 = AgentMeta.ParseProperty<P1>(paramStrs[0], Workspace);
         }
 
-        public override void Run(Agent self)
+        public override async Task Run(Agent self)
         {
             Debugs.Check(_p1 != null);
 
-            _fp(((CInstanceMember<P1>)_p1).GetValue(self));
+            await _fp(await ((CInstanceMember<P1>)_p1).GetValue(self));
         }
 
         public override void SetTaskParams(Agent self, BehaviorTreeTask treeTask)
@@ -5591,7 +5597,7 @@ namespace behaviac
 
     public class CAgentStaticMethodVoid<P1, P2> : CAgentMethodVoidBase
     {
-        public delegate void FunctionPointer(P1 p1, P2 p2);
+        public delegate Task FunctionPointer(P1 p1, P2 p2);
 
         FunctionPointer _fp;
         IInstanceMember _p1;
@@ -5624,12 +5630,12 @@ namespace behaviac
             _p2 = AgentMeta.ParseProperty<P2>(paramStrs[1], Workspace);
         }
 
-        public override void Run(Agent self)
+        public override async Task Run(Agent self)
         {
             Debugs.Check(_p1 != null);
             Debugs.Check(_p2 != null);
 
-            _fp(((CInstanceMember<P1>)_p1).GetValue(self), ((CInstanceMember<P2>)_p2).GetValue(self));
+            await _fp(await ((CInstanceMember<P1>)_p1).GetValue(self), await ((CInstanceMember<P2>)_p2).GetValue(self));
         }
 
         public override void SetTaskParams(Agent self, BehaviorTreeTask treeTask)
@@ -5644,7 +5650,7 @@ namespace behaviac
 
     public class CAgentStaticMethodVoid<P1, P2, P3> : CAgentMethodVoidBase
     {
-        public delegate void FunctionPointer(P1 p1, P2 p2, P3 p3);
+        public delegate Task FunctionPointer(P1 p1, P2 p2, P3 p3);
 
         FunctionPointer _fp;
         IInstanceMember _p1;
@@ -5680,15 +5686,16 @@ namespace behaviac
             _p3 = AgentMeta.ParseProperty<P3>(paramStrs[2], Workspace);
         }
 
-        public override void Run(Agent self)
+        public override async Task Run(Agent self)
         {
             Debugs.Check(_p1 != null);
             Debugs.Check(_p2 != null);
             Debugs.Check(_p3 != null);
 
-            _fp(((CInstanceMember<P1>)_p1).GetValue(self),
-                ((CInstanceMember<P2>)_p2).GetValue(self),
-                ((CInstanceMember<P3>)_p3).GetValue(self));
+            await _fp(
+                await ((CInstanceMember<P1>)_p1).GetValue(self),
+            await ((CInstanceMember<P2>)_p2).GetValue(self),
+            await ((CInstanceMember<P3>)_p3).GetValue(self));
         }
 
         public override void SetTaskParams(Agent self, BehaviorTreeTask treeTask)
@@ -5706,7 +5713,7 @@ namespace behaviac
 
     public class CAgentStaticMethodVoid<P1, P2, P3, P4> : CAgentMethodVoidBase
     {
-        public delegate void FunctionPointer(P1 p1, P2 p2, P3 p3, P4 p4);
+        public delegate Task FunctionPointer(P1 p1, P2 p2, P3 p3, P4 p4);
 
         FunctionPointer _fp;
         IInstanceMember _p1;
@@ -5745,17 +5752,18 @@ namespace behaviac
             _p4 = AgentMeta.ParseProperty<P4>(paramStrs[3], Workspace);
         }
 
-        public override void Run(Agent self)
+        public override async Task Run(Agent self)
         {
             Debugs.Check(_p1 != null);
             Debugs.Check(_p2 != null);
             Debugs.Check(_p3 != null);
             Debugs.Check(_p4 != null);
 
-            _fp(((CInstanceMember<P1>)_p1).GetValue(self),
-                ((CInstanceMember<P2>)_p2).GetValue(self),
-                ((CInstanceMember<P3>)_p3).GetValue(self),
-                ((CInstanceMember<P4>)_p4).GetValue(self));
+            await _fp(
+            await ((CInstanceMember<P1>)_p1).GetValue(self),
+            await ((CInstanceMember<P2>)_p2).GetValue(self),
+            await ((CInstanceMember<P3>)_p3).GetValue(self),
+            await ((CInstanceMember<P4>)_p4).GetValue(self));
         }
 
         public override void SetTaskParams(Agent self, BehaviorTreeTask treeTask)
@@ -5776,7 +5784,7 @@ namespace behaviac
 
     public class CAgentStaticMethodVoid<P1, P2, P3, P4, P5> : CAgentMethodVoidBase
     {
-        public delegate void FunctionPointer(P1 p1, P2 p2, P3 p3, P4 p4, P5 p5);
+        public delegate Task FunctionPointer(P1 p1, P2 p2, P3 p3, P4 p4, P5 p5);
 
         FunctionPointer _fp;
         IInstanceMember _p1;
@@ -5818,7 +5826,7 @@ namespace behaviac
             _p5 = AgentMeta.ParseProperty<P5>(paramStrs[4], Workspace);
         }
 
-        public override Task Run(Agent self)
+        public override async Task Run(Agent self)
         {
             Debugs.Check(_p1 != null);
             Debugs.Check(_p2 != null);
@@ -5826,11 +5834,12 @@ namespace behaviac
             Debugs.Check(_p4 != null);
             Debugs.Check(_p5 != null);
 
-            _fp(((CInstanceMember<P1>)_p1).GetValue(self),
-                ((CInstanceMember<P2>)_p2).GetValue(self),
-                ((CInstanceMember<P3>)_p3).GetValue(self),
-                ((CInstanceMember<P4>)_p4).GetValue(self),
-                ((CInstanceMember<P5>)_p5).GetValue(self));
+            await _fp(
+            await ((CInstanceMember<P1>)_p1).GetValue(self),
+            await ((CInstanceMember<P2>)_p2).GetValue(self),
+            await ((CInstanceMember<P3>)_p3).GetValue(self),
+            await ((CInstanceMember<P4>)_p4).GetValue(self),
+            await ((CInstanceMember<P5>)_p5).GetValue(self));
         }
 
         public override void SetTaskParams(Agent self, BehaviorTreeTask treeTask)
@@ -5854,7 +5863,7 @@ namespace behaviac
 
     public class CAgentStaticMethodVoid<P1, P2, P3, P4, P5, P6> : CAgentMethodVoidBase
     {
-        public delegate void FunctionPointer(P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6);
+        public delegate Task FunctionPointer(P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6);
 
         FunctionPointer _fp;
         IInstanceMember _p1;
@@ -5899,7 +5908,7 @@ namespace behaviac
             _p6 = AgentMeta.ParseProperty<P6>(paramStrs[5], Workspace);
         }
 
-        public override Task Run(Agent self)
+        public override async Task Run(Agent self)
         {
             Debugs.Check(_p1 != null);
             Debugs.Check(_p2 != null);
@@ -5908,12 +5917,13 @@ namespace behaviac
             Debugs.Check(_p5 != null);
             Debugs.Check(_p6 != null);
 
-            _fp(((CInstanceMember<P1>)_p1).GetValue(self),
-                ((CInstanceMember<P2>)_p2).GetValue(self),
-                ((CInstanceMember<P3>)_p3).GetValue(self),
-                ((CInstanceMember<P4>)_p4).GetValue(self),
-                ((CInstanceMember<P5>)_p5).GetValue(self),
-                ((CInstanceMember<P6>)_p6).GetValue(self));
+            await _fp(
+            await ((CInstanceMember<P1>)_p1).GetValue(self),
+            await ((CInstanceMember<P2>)_p2).GetValue(self),
+            await ((CInstanceMember<P3>)_p3).GetValue(self),
+            await ((CInstanceMember<P4>)_p4).GetValue(self),
+            await ((CInstanceMember<P5>)_p5).GetValue(self),
+            await ((CInstanceMember<P6>)_p6).GetValue(self));
         }
 
         public override void SetTaskParams(Agent self, BehaviorTreeTask treeTask)
@@ -5940,7 +5950,7 @@ namespace behaviac
 
     public class CAgentStaticMethodVoid<P1, P2, P3, P4, P5, P6, P7> : CAgentMethodVoidBase
     {
-        public delegate void FunctionPointer(P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6, P7 p7);
+        public delegate Task FunctionPointer(P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6, P7 p7);
 
         FunctionPointer _fp;
         IInstanceMember _p1;
@@ -5988,7 +5998,7 @@ namespace behaviac
             _p7 = AgentMeta.ParseProperty<P7>(paramStrs[6], Workspace);
         }
 
-        public override Task Run(Agent self)
+        public override async Task Run(Agent self)
         {
             Debugs.Check(_p1 != null);
             Debugs.Check(_p2 != null);
@@ -5998,13 +6008,14 @@ namespace behaviac
             Debugs.Check(_p6 != null);
             Debugs.Check(_p7 != null);
 
-            _fp(((CInstanceMember<P1>)_p1).GetValue(self),
-                ((CInstanceMember<P2>)_p2).GetValue(self),
-                ((CInstanceMember<P3>)_p3).GetValue(self),
-                ((CInstanceMember<P4>)_p4).GetValue(self),
-                ((CInstanceMember<P5>)_p5).GetValue(self),
-                ((CInstanceMember<P6>)_p6).GetValue(self),
-                ((CInstanceMember<P7>)_p7).GetValue(self));
+            await _fp(
+            await ((CInstanceMember<P1>)_p1).GetValue(self),
+            await ((CInstanceMember<P2>)_p2).GetValue(self),
+            await ((CInstanceMember<P3>)_p3).GetValue(self),
+            await ((CInstanceMember<P4>)_p4).GetValue(self),
+            await ((CInstanceMember<P5>)_p5).GetValue(self),
+            await ((CInstanceMember<P6>)_p6).GetValue(self),
+            await ((CInstanceMember<P7>)_p7).GetValue(self));
         }
 
         public override void SetTaskParams(Agent self, BehaviorTreeTask treeTask)
@@ -6085,7 +6096,7 @@ namespace behaviac
             _p8 = AgentMeta.ParseProperty<P8>(paramStrs[7], Workspace);
         }
 
-        public override Task Run(Agent self)
+        public override async Task Run(Agent self)
         {
             Debugs.Check(_p1 != null);
             Debugs.Check(_p2 != null);
@@ -6096,14 +6107,15 @@ namespace behaviac
             Debugs.Check(_p7 != null);
             Debugs.Check(_p8 != null);
 
-            return _fp(((CInstanceMember<P1>)_p1).GetValue(self),
-                 ((CInstanceMember<P2>)_p2).GetValue(self),
-                 ((CInstanceMember<P3>)_p3).GetValue(self),
-                 ((CInstanceMember<P4>)_p4).GetValue(self),
-                 ((CInstanceMember<P5>)_p5).GetValue(self),
-                 ((CInstanceMember<P6>)_p6).GetValue(self),
-                 ((CInstanceMember<P7>)_p7).GetValue(self),
-                 ((CInstanceMember<P8>)_p8).GetValue(self));
+            await _fp(
+            await ((CInstanceMember<P1>)_p1).GetValue(self),
+            await ((CInstanceMember<P2>)_p2).GetValue(self),
+            await ((CInstanceMember<P3>)_p3).GetValue(self),
+            await ((CInstanceMember<P4>)_p4).GetValue(self),
+            await ((CInstanceMember<P5>)_p5).GetValue(self),
+            await ((CInstanceMember<P6>)_p6).GetValue(self),
+            await ((CInstanceMember<P7>)_p7).GetValue(self),
+            await ((CInstanceMember<P8>)_p8).GetValue(self));
         }
 
         public override void SetTaskParams(Agent self, BehaviorTreeTask treeTask)
@@ -6190,7 +6202,7 @@ namespace behaviac
             _p9 = AgentMeta.ParseProperty<P9>(paramStrs[8], Workspace);
         }
 
-        public override Task Run(Agent self)
+        public override async Task Run(Agent self)
         {
             Debugs.Check(_p1 != null);
             Debugs.Check(_p2 != null);
@@ -6202,15 +6214,16 @@ namespace behaviac
             Debugs.Check(_p8 != null);
             Debugs.Check(_p9 != null);
 
-            return _fp(((CInstanceMember<P1>)_p1).GetValue(self),
-                  ((CInstanceMember<P2>)_p2).GetValue(self),
-                  ((CInstanceMember<P3>)_p3).GetValue(self),
-                  ((CInstanceMember<P4>)_p4).GetValue(self),
-                  ((CInstanceMember<P5>)_p5).GetValue(self),
-                  ((CInstanceMember<P6>)_p6).GetValue(self),
-                  ((CInstanceMember<P7>)_p7).GetValue(self),
-                  ((CInstanceMember<P8>)_p8).GetValue(self),
-                  ((CInstanceMember<P9>)_p9).GetValue(self));
+            await _fp(
+             await ((CInstanceMember<P1>)_p1).GetValue(self),
+             await ((CInstanceMember<P2>)_p2).GetValue(self),
+             await ((CInstanceMember<P3>)_p3).GetValue(self),
+             await ((CInstanceMember<P4>)_p4).GetValue(self),
+             await ((CInstanceMember<P5>)_p5).GetValue(self),
+             await ((CInstanceMember<P6>)_p6).GetValue(self),
+             await ((CInstanceMember<P7>)_p7).GetValue(self),
+             await ((CInstanceMember<P8>)_p8).GetValue(self),
+             await ((CInstanceMember<P9>)_p9).GetValue(self));
         }
 
         public override void SetTaskParams(Agent self, BehaviorTreeTask treeTask)
@@ -6303,7 +6316,7 @@ namespace behaviac
             _p10 = AgentMeta.ParseProperty<P10>(paramStrs[9], Workspace);
         }
 
-        public override Task Run(Agent self)
+        public override async Task Run(Agent self)
         {
             Debugs.Check(_p1 != null);
             Debugs.Check(_p2 != null);
@@ -6316,16 +6329,17 @@ namespace behaviac
             Debugs.Check(_p9 != null);
             Debugs.Check(_p10 != null);
 
-            return _fp(((CInstanceMember<P1>)_p1).GetValue(self),
-                  ((CInstanceMember<P2>)_p2).GetValue(self),
-                  ((CInstanceMember<P3>)_p3).GetValue(self),
-                  ((CInstanceMember<P4>)_p4).GetValue(self),
-                  ((CInstanceMember<P5>)_p5).GetValue(self),
-                  ((CInstanceMember<P6>)_p6).GetValue(self),
-                  ((CInstanceMember<P7>)_p7).GetValue(self),
-                  ((CInstanceMember<P8>)_p8).GetValue(self),
-                  ((CInstanceMember<P9>)_p9).GetValue(self),
-                  ((CInstanceMember<P10>)_p10).GetValue(self));
+            await _fp(
+              await ((CInstanceMember<P1>)_p1).GetValue(self),
+              await ((CInstanceMember<P2>)_p2).GetValue(self),
+              await ((CInstanceMember<P3>)_p3).GetValue(self),
+              await ((CInstanceMember<P4>)_p4).GetValue(self),
+              await ((CInstanceMember<P5>)_p5).GetValue(self),
+              await ((CInstanceMember<P6>)_p6).GetValue(self),
+              await ((CInstanceMember<P7>)_p7).GetValue(self),
+              await ((CInstanceMember<P8>)_p8).GetValue(self),
+              await ((CInstanceMember<P9>)_p9).GetValue(self),
+              await ((CInstanceMember<P10>)_p10).GetValue(self));
         }
 
         public override void SetTaskParams(Agent self, BehaviorTreeTask treeTask)
@@ -6424,7 +6438,7 @@ namespace behaviac
             _p11 = AgentMeta.ParseProperty<P11>(paramStrs[10], Workspace);
         }
 
-        public override Task Run(Agent self)
+        public override async Task Run(Agent self)
         {
             Debugs.Check(_p1 != null);
             Debugs.Check(_p2 != null);
@@ -6438,17 +6452,18 @@ namespace behaviac
             Debugs.Check(_p10 != null);
             Debugs.Check(_p11 != null);
 
-            return _fp(((CInstanceMember<P1>)_p1).GetValue(self),
-                  ((CInstanceMember<P2>)_p2).GetValue(self),
-                  ((CInstanceMember<P3>)_p3).GetValue(self),
-                  ((CInstanceMember<P4>)_p4).GetValue(self),
-                  ((CInstanceMember<P5>)_p5).GetValue(self),
-                  ((CInstanceMember<P6>)_p6).GetValue(self),
-                  ((CInstanceMember<P7>)_p7).GetValue(self),
-                  ((CInstanceMember<P8>)_p8).GetValue(self),
-                  ((CInstanceMember<P9>)_p9).GetValue(self),
-                  ((CInstanceMember<P10>)_p10).GetValue(self),
-                  ((CInstanceMember<P11>)_p11).GetValue(self));
+            await _fp(
+               await ((CInstanceMember<P1>)_p1).GetValue(self),
+               await ((CInstanceMember<P2>)_p2).GetValue(self),
+               await ((CInstanceMember<P3>)_p3).GetValue(self),
+               await ((CInstanceMember<P4>)_p4).GetValue(self),
+               await ((CInstanceMember<P5>)_p5).GetValue(self),
+               await ((CInstanceMember<P6>)_p6).GetValue(self),
+               await ((CInstanceMember<P7>)_p7).GetValue(self),
+               await ((CInstanceMember<P8>)_p8).GetValue(self),
+               await ((CInstanceMember<P9>)_p9).GetValue(self),
+               await ((CInstanceMember<P10>)_p10).GetValue(self),
+               await ((CInstanceMember<P11>)_p11).GetValue(self));
         }
 
         public override void SetTaskParams(Agent self, BehaviorTreeTask treeTask)
@@ -6553,7 +6568,7 @@ namespace behaviac
             _p12 = AgentMeta.ParseProperty<P12>(paramStrs[11], Workspace);
         }
 
-        public override Task Run(Agent self)
+        public override async Task Run(Agent self)
         {
             Debugs.Check(_p1 != null);
             Debugs.Check(_p2 != null);
@@ -6568,18 +6583,19 @@ namespace behaviac
             Debugs.Check(_p11 != null);
             Debugs.Check(_p12 != null);
 
-            return _fp(((CInstanceMember<P1>)_p1).GetValue(self),
-                  ((CInstanceMember<P2>)_p2).GetValue(self),
-                  ((CInstanceMember<P3>)_p3).GetValue(self),
-                  ((CInstanceMember<P4>)_p4).GetValue(self),
-                  ((CInstanceMember<P5>)_p5).GetValue(self),
-                  ((CInstanceMember<P6>)_p6).GetValue(self),
-                  ((CInstanceMember<P7>)_p7).GetValue(self),
-                  ((CInstanceMember<P8>)_p8).GetValue(self),
-                  ((CInstanceMember<P9>)_p9).GetValue(self),
-                  ((CInstanceMember<P10>)_p10).GetValue(self),
-                  ((CInstanceMember<P11>)_p11).GetValue(self),
-                  ((CInstanceMember<P12>)_p12).GetValue(self));
+            await _fp(
+                await ((CInstanceMember<P1>)_p1).GetValue(self),
+                await ((CInstanceMember<P2>)_p2).GetValue(self),
+                await ((CInstanceMember<P3>)_p3).GetValue(self),
+                await ((CInstanceMember<P4>)_p4).GetValue(self),
+                await ((CInstanceMember<P5>)_p5).GetValue(self),
+                await ((CInstanceMember<P6>)_p6).GetValue(self),
+                await ((CInstanceMember<P7>)_p7).GetValue(self),
+                await ((CInstanceMember<P8>)_p8).GetValue(self),
+                await ((CInstanceMember<P9>)_p9).GetValue(self),
+                await ((CInstanceMember<P10>)_p10).GetValue(self),
+                await ((CInstanceMember<P11>)_p11).GetValue(self),
+                await ((CInstanceMember<P12>)_p12).GetValue(self));
         }
 
         public override void SetTaskParams(Agent self, BehaviorTreeTask treeTask)
@@ -6690,7 +6706,7 @@ namespace behaviac
             _p13 = AgentMeta.ParseProperty<P13>(paramStrs[12], Workspace);
         }
 
-        public override Task Run(Agent self)
+        public override async Task Run(Agent self)
         {
             Debugs.Check(_p1 != null);
             Debugs.Check(_p2 != null);
@@ -6706,19 +6722,20 @@ namespace behaviac
             Debugs.Check(_p12 != null);
             Debugs.Check(_p13 != null);
 
-            return _fp(((CInstanceMember<P1>)_p1).GetValue(self),
-                 ((CInstanceMember<P2>)_p2).GetValue(self),
-                 ((CInstanceMember<P3>)_p3).GetValue(self),
-                 ((CInstanceMember<P4>)_p4).GetValue(self),
-                 ((CInstanceMember<P5>)_p5).GetValue(self),
-                 ((CInstanceMember<P6>)_p6).GetValue(self),
-                 ((CInstanceMember<P7>)_p7).GetValue(self),
-                 ((CInstanceMember<P8>)_p8).GetValue(self),
-                 ((CInstanceMember<P9>)_p9).GetValue(self),
-                 ((CInstanceMember<P10>)_p10).GetValue(self),
-                 ((CInstanceMember<P11>)_p11).GetValue(self),
-                 ((CInstanceMember<P12>)_p12).GetValue(self),
-                 ((CInstanceMember<P13>)_p13).GetValue(self));
+            await _fp(
+                await ((CInstanceMember<P1>)_p1).GetValue(self),
+                await ((CInstanceMember<P2>)_p2).GetValue(self),
+                await ((CInstanceMember<P3>)_p3).GetValue(self),
+                await ((CInstanceMember<P4>)_p4).GetValue(self),
+                await ((CInstanceMember<P5>)_p5).GetValue(self),
+                await ((CInstanceMember<P6>)_p6).GetValue(self),
+                await ((CInstanceMember<P7>)_p7).GetValue(self),
+                await ((CInstanceMember<P8>)_p8).GetValue(self),
+                await ((CInstanceMember<P9>)_p9).GetValue(self),
+                await ((CInstanceMember<P10>)_p10).GetValue(self),
+                await ((CInstanceMember<P11>)_p11).GetValue(self),
+                await ((CInstanceMember<P12>)_p12).GetValue(self),
+                await ((CInstanceMember<P13>)_p13).GetValue(self));
         }
 
         public override void SetTaskParams(Agent self, BehaviorTreeTask treeTask)
@@ -6766,7 +6783,7 @@ namespace behaviac
 
     public class CAgentStaticMethodVoid<P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12, P13, P14> : CAgentMethodVoidBase
     {
-        public delegate void FunctionPointer(P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6, P7 p7, P8 p8, P9 p9, P10 p10, P11 p11, P12 p12, P13 p13, P14 p14);
+        public delegate Task FunctionPointer(P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6, P7 p7, P8 p8, P9 p9, P10 p10, P11 p11, P12 p12, P13 p13, P14 p14);
 
         FunctionPointer _fp;
         IInstanceMember _p1;
@@ -6835,7 +6852,7 @@ namespace behaviac
             _p14 = AgentMeta.ParseProperty<P14>(paramStrs[13], Workspace);
         }
 
-        public override Task Run(Agent self)
+        public override async Task Run(Agent self)
         {
             Debugs.Check(_p1 != null);
             Debugs.Check(_p2 != null);
@@ -6852,20 +6869,21 @@ namespace behaviac
             Debugs.Check(_p13 != null);
             Debugs.Check(_p14 != null);
 
-            _fp(((CInstanceMember<P1>)_p1).GetValue(self),
-                ((CInstanceMember<P2>)_p2).GetValue(self),
-                ((CInstanceMember<P3>)_p3).GetValue(self),
-                ((CInstanceMember<P4>)_p4).GetValue(self),
-                ((CInstanceMember<P5>)_p5).GetValue(self),
-                ((CInstanceMember<P6>)_p6).GetValue(self),
-                ((CInstanceMember<P7>)_p7).GetValue(self),
-                ((CInstanceMember<P8>)_p8).GetValue(self),
-                ((CInstanceMember<P9>)_p9).GetValue(self),
-                ((CInstanceMember<P10>)_p10).GetValue(self),
-                ((CInstanceMember<P11>)_p11).GetValue(self),
-                ((CInstanceMember<P12>)_p12).GetValue(self),
-                ((CInstanceMember<P13>)_p13).GetValue(self),
-                ((CInstanceMember<P14>)_p14).GetValue(self));
+            await _fp(
+                await ((CInstanceMember<P1>)_p1).GetValue(self),
+                 await ((CInstanceMember<P2>)_p2).GetValue(self),
+               await ((CInstanceMember<P3>)_p3).GetValue(self),
+               await ((CInstanceMember<P4>)_p4).GetValue(self),
+               await ((CInstanceMember<P5>)_p5).GetValue(self),
+              await ((CInstanceMember<P6>)_p6).GetValue(self),
+               await ((CInstanceMember<P7>)_p7).GetValue(self),
+              await ((CInstanceMember<P8>)_p8).GetValue(self),
+              await ((CInstanceMember<P9>)_p9).GetValue(self),
+             await ((CInstanceMember<P10>)_p10).GetValue(self),
+             await ((CInstanceMember<P11>)_p11).GetValue(self),
+              await ((CInstanceMember<P12>)_p12).GetValue(self),
+             await ((CInstanceMember<P13>)_p13).GetValue(self),
+             await ((CInstanceMember<P14>)_p14).GetValue(self));
         }
 
         public override void SetTaskParams(Agent self, BehaviorTreeTask treeTask)

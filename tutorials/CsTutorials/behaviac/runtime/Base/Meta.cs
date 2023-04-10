@@ -37,6 +37,15 @@ namespace behaviac
 {
     public class BehaviorLoader
     {
+        public Workspace Workspace { get; private set; }
+        public Config Configs { set; get; }
+        public Debug Debugs { set; get; }
+        public BehaviorLoader(Workspace workspace)
+        {
+            Workspace = workspace;
+            Configs = workspace.Configs;
+            Debugs = workspace.Debugs;
+        }
         public virtual bool Load()
         {
             return false;
@@ -55,7 +64,7 @@ namespace behaviac
         private Dictionary<uint, ICustomizedProperty> _customizedStaticProperties = new Dictionary<uint, ICustomizedProperty>();
         private Dictionary<uint, IInstantiatedVariable> _customizedStaticVars = null;
         private Dictionary<uint, IMethod> _methods = new Dictionary<uint, IMethod>();
-        internal class MetaGlobal
+        public class MetaGlobal
         {
             internal Dictionary<uint, AgentMeta> _agentMetas = new Dictionary<uint, AgentMeta>();
             internal Dictionary<string, TypeCreator> _Creators = new Dictionary<string, TypeCreator>();
@@ -93,7 +102,7 @@ namespace behaviac
 
         }
         private static ConcurrentDictionary<Workspace, MetaGlobal> WorkspaceMetaGlobalData = new ConcurrentDictionary<Workspace, MetaGlobal>();
-        internal static MetaGlobal GetMetaGlobal(Workspace workspace)
+        public static MetaGlobal GetMetaGlobal(Workspace workspace)
         {
             return WorkspaceMetaGlobalData.GetOrAdd(workspace, w => new MetaGlobal());
         }

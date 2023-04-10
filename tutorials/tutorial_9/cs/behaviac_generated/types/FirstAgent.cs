@@ -4,6 +4,7 @@
 // PLEASE MODIFY AND REGENERETE IT IN THE DESIGNER FOR CLASS/MEMBERS/METHODS, ETC.
 // -------------------------------------------------------------------------------
 
+using behaviac;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -16,16 +17,10 @@ public class FirstAgent : behaviac.Agent
 ///<<< BEGIN WRITING YOUR CODE FirstAgent
 ///<<< END WRITING YOUR CODE
 {
-	private FirstEnum p1 = FirstEnum.e1;
-	public void _set_p1(FirstEnum value)
-	{
-		p1 = value;
-	}
-	public FirstEnum _get_p1()
-	{
-		return p1;
-	}
+    public FirstAgent(Workspace workspace) : base(workspace)
+    {
 
+    }
 	public void SayHello()
 	{
 ///<<< BEGIN WRITING YOUR CODE SayHello

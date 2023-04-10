@@ -19,7 +19,8 @@ namespace behaviac
 {
     public class IfElse : BehaviorNode
     {
-        public IfElse()
+
+        public IfElse(Workspace workspace) : base(workspace)
         {
         }
 
@@ -27,9 +28,9 @@ namespace behaviac
         //{
         //}
 
-        protected override void load(int version, string agentType, List<property_t> properties)
+        protected override  async Task  load(int version, string agentType, List<property_t> properties)
         {
-            base.load(version, agentType, properties);
+            await base.load(version, agentType, properties);
         }
 
         public override bool IsValid(Agent pAgent, BehaviorTask pTask)
@@ -44,7 +45,7 @@ namespace behaviac
 
         protected override BehaviorTask createTask()
         {
-            IfElseTask pTask = new IfElseTask();
+            IfElseTask pTask = new IfElseTask(Workspace);
 
             return pTask;
         }
@@ -59,8 +60,7 @@ namespace behaviac
 
         private class IfElseTask : CompositeTask
         {
-            public IfElseTask()
-            : base()
+            public IfElseTask(Workspace workspace) : base(workspace)
             {
             }
 
@@ -79,19 +79,19 @@ namespace behaviac
                 base.load(node);
             }
 
-            protected override bool onenter(Agent pAgent)
+            protected override Task<bool> onenter(Agent pAgent)
             {
                 //reset it as it will be checked for the condition execution at the first time
                 this.m_activeChildIndex = CompositeTask.InvalidChildIndex;
 
                 if (this.m_children.Count == 3)
                 {
-                    return true;
+                    return Task.FromResult(true);
                 }
 
                 Debugs.Check(false, "IfElseTask has to have three children: condition, if, else");
 
-                return false;
+                return Task.FromResult(false);
             }
 
             protected override void onexit(Agent pAgent, EBTStatus s)

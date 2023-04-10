@@ -18,7 +18,8 @@ namespace behaviac
 {
     public class Selector : BehaviorNode
     {
-        public Selector()
+
+        public Selector(Workspace workspace) : base(workspace)
         {
         }
 
@@ -52,9 +53,9 @@ namespace behaviac
         }
 #endif//
 
-        protected override void load(int version, string agentType, List<property_t> properties)
+        protected override  async Task  load(int version, string agentType, List<property_t> properties)
         {
-            base.load(version, agentType, properties);
+            await base.load(version, agentType, properties);
         }
 
         public override bool IsValid(Agent pAgent, BehaviorTask pTask)
@@ -85,7 +86,7 @@ namespace behaviac
             return ret;
         }
 
-        public async Task<EBTStatus> SelectorUpdate(Agent pAgent, EBTStatus childStatus, ref int activeChildIndex, List<BehaviorTask> children)
+        public async Task<(EBTStatus,int)> SelectorUpdate(Agent pAgent, EBTStatus childStatus, int activeChildIndex, List<BehaviorTask> children)
         {
             EBTStatus s = childStatus;
 
@@ -99,7 +100,7 @@ namespace behaviac
 
                     if (await this.CheckIfInterrupted(pAgent))
                     {
-                        return EBTStatus.BT_FAILURE;
+                        return (EBTStatus.BT_FAILURE, activeChildIndex);
                     }
 
                     s =await pBehavior.exec(pAgent);
@@ -108,7 +109,7 @@ namespace behaviac
                 // If the child succeeds, or keeps running, do the same.
                 if (s != EBTStatus.BT_FAILURE)
                 {
-                    return s;
+                    return (s, activeChildIndex);
                 }
 
                 // Hit the end of the array, job done!
@@ -116,7 +117,7 @@ namespace behaviac
 
                 if (activeChildIndex >= children.Count)
                 {
-                    return EBTStatus.BT_FAILURE;
+                    return (EBTStatus.BT_FAILURE, activeChildIndex);
                 }
 
                 s = EBTStatus.BT_RUNNING;
@@ -132,7 +133,7 @@ namespace behaviac
 
         protected override BehaviorTask createTask()
         {
-            SelectorTask pTask = new SelectorTask();
+            SelectorTask pTask = new SelectorTask(Workspace);
 
             return pTask;
         }
@@ -140,7 +141,7 @@ namespace behaviac
         // ============================================================================
         public class SelectorTask : CompositeTask
         {
-            public SelectorTask()
+            public SelectorTask(Workspace workspace) : base(workspace)
             {
             }
 
@@ -163,11 +164,11 @@ namespace behaviac
                 base.load(node);
             }
 
-            protected override bool onenter(Agent pAgent)
+            protected override Task<bool> onenter(Agent pAgent)
             {
                 Debugs.Check(this.m_children.Count > 0);
                 this.m_activeChildIndex = 0;
-                return true;
+                return Task.FromResult(true);
             }
 
             protected override void onexit(Agent pAgent, EBTStatus s)
@@ -175,12 +176,14 @@ namespace behaviac
                 base.onexit(pAgent, s);
             }
 
-            protected override Task<EBTStatus> update(Agent pAgent, EBTStatus childStatus)
+            protected override async Task<EBTStatus> update(Agent pAgent, EBTStatus childStatus)
             {
                 Debugs.Check(this.m_activeChildIndex < this.m_children.Count);
                 Selector node = this.m_node as Selector;
 
-                return node.SelectorUpdate(pAgent, childStatus, ref this.m_activeChildIndex, this.m_children);
+                var (res,maci)=await node.SelectorUpdate(pAgent, childStatus, this.m_activeChildIndex, this.m_children);
+                this.m_activeChildIndex = maci;
+                return res;
             }
         }
     }

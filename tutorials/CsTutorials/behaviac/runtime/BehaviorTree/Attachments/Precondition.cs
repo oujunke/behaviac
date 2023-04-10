@@ -92,7 +92,7 @@ namespace behaviac
             }
         }
 
-        public Precondition(Workspace workspace)
+        public Precondition(Workspace workspace):base(workspace)
         {
             m_ActionConfig = new PreconditionConfig(workspace);
         }

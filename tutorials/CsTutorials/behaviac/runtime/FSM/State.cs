@@ -19,9 +19,9 @@ namespace behaviac
     // ============================================================================
     public class State : BehaviorNode
     {
-        protected override void load(int version, string agentType, List<property_t> properties)
+        protected override  async Task  load(int version, string agentType, List<property_t> properties)
         {
-            base.load(version, agentType, properties);
+            await base.load(version, agentType, properties);
 
             for (int i = 0; i < properties.Count; ++i)
             {
@@ -96,16 +96,16 @@ namespace behaviac
 
         protected override BehaviorTask createTask()
         {
-            StateTask pTask = new StateTask();
+            StateTask pTask = new StateTask(Workspace);
 
             return pTask;
         }
 
         //nextStateId holds the next state id if it returns running when a certain transition is satisfied
         //otherwise, it returns success or failure if it ends
-        public async Task<EBTStatus>  Update(Agent pAgent, out int nextStateId)
+        public async Task<(EBTStatus,int)>  Update(Agent pAgent)
         {
-            nextStateId = -1;
+           int nextStateId = -1;
 
             //when no method is specified(m_method == null),
             //'update_impl' is used to return the configured result status for both xml/bson and c#
@@ -117,18 +117,18 @@ namespace behaviac
             }
             else
             {
-                bool bTransitioned =await UpdateTransitions(pAgent, this, this.m_transitions, ref nextStateId, result);
-
+                var (bTransitioned,nid) =await UpdateTransitions(pAgent, this, this.m_transitions, nextStateId, result);
+                nextStateId = nid;
                 if (bTransitioned)
                 {
                     result = EBTStatus.BT_SUCCESS;
                 }
             }
 
-            return result;
+            return (result, nextStateId);
         }
 
-        public static async Task<bool> UpdateTransitions(Agent pAgent, BehaviorNode node, List<Transition> transitions, ref int nextStateId, EBTStatus result)
+        public static async Task<(bool,int)> UpdateTransitions(Agent pAgent, BehaviorNode node, List<Transition> transitions, int nextStateId, EBTStatus result)
         {
             bool bTransitioned = false;
 
@@ -144,13 +144,13 @@ namespace behaviac
                         pAgent.Debugs.Check(nextStateId != -1);
 
                         //transition actions
-                        transition.ApplyEffects(pAgent, Effector.EPhase.E_BOTH);
+                        await transition.ApplyEffects(pAgent, Effector.EPhase.E_BOTH);
 
 #if !BEHAVIAC_RELEASE
 
                         if (pAgent.Configs.IsLoggingOrSocketing)
                         {
-                            BehaviorTask.CHECK_BREAKPOINT(pAgent, node, "transition", EActionResult.EAR_none);
+                           await BehaviorTask.CHECK_BREAKPOINT(pAgent, node, "transition", EActionResult.EAR_none);
                         }
 
 #endif
@@ -161,13 +161,17 @@ namespace behaviac
                 }
             }
 
-            return bTransitioned;
+            return (bTransitioned, nextStateId);
         }
 
         protected bool m_bIsEndState;
         protected IMethod m_method;
 
         protected List<Transition> m_transitions;
+
+        public State(Workspace workspace) : base(workspace)
+        {
+        }
 
         public class StateTask : LeafTask
         {
@@ -187,6 +191,11 @@ namespace behaviac
             }
 
             protected int m_nextStateId = -1;
+
+            public StateTask(Workspace workspace) : base(workspace)
+            {
+            }
+
             public override int GetNextStateId()
             {
                 return m_nextStateId;
@@ -206,7 +215,7 @@ namespace behaviac
             protected override Task<bool> onenter(Agent pAgent)
             {
                 this.m_nextStateId = -1;
-                return true;
+                return Task.FromResult(true);
             }
 
             protected override void onexit(Agent pAgent, EBTStatus s)
@@ -220,8 +229,8 @@ namespace behaviac
                 Debugs.Check(this.GetNode() is State, "node is not an State");
                 State pStateNode = (State)(this.GetNode());
 
-                EBTStatus result =await pStateNode.Update(pAgent, out this.m_nextStateId);
-
+                var (result,mnsi) =await pStateNode.Update(pAgent);
+                this.m_nextStateId = mnsi;
                 return result;
             }
         }

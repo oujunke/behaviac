@@ -18,9 +18,9 @@ namespace behaviac
 {
     public abstract class CompositeStochastic : BehaviorNode
     {
-        protected override void load(int version, string agentType, List<property_t> properties)
+        protected override async Task load(int version, string agentType, List<property_t> properties)
         {
-            base.load(version, agentType, properties);
+           await base.load(version, agentType, properties);
 
             for (int i = 0; i < properties.Count; ++i)
             {
@@ -35,7 +35,7 @@ namespace behaviac
 
         public async Task<bool> CheckIfInterrupted(Agent pAgent)
         {
-            bool bInterrupted =await this.EvaluteCustomCondition(pAgent);
+            bool bInterrupted = await this.EvaluteCustomCondition(pAgent);
 
             return bInterrupted;
         }
@@ -52,16 +52,20 @@ namespace behaviac
 
         protected IMethod m_method;
 
+        protected CompositeStochastic(Workspace workspace) : base(workspace)
+        {
+        }
+
         public class CompositeStochasticTask : CompositeTask
         {
             //generate a random float value between 0 and 1.
-            public static float GetRandomValue(IMethod method, Agent pAgent)
+            public static async Task<float> GetRandomValue(IMethod method, Agent pAgent)
             {
                 float value = 0;
 
                 if (method != null)
                 {
-                    value = ((CInstanceMember<float>)method).GetValue(pAgent);
+                    value = await ((CInstanceMember<float>)method).GetValue(pAgent);
                 }
                 else
                 {
@@ -95,11 +99,11 @@ namespace behaviac
                 base.load(node);
             }
 
-            protected override bool onenter(Agent pAgent)
+            protected override async Task<bool> onenter(Agent pAgent)
             {
                 Debugs.Check(this.m_children.Count > 0);
 
-                this.random_child(pAgent);
+                await this.random_child(pAgent);
 
                 this.m_activeChildIndex = 0;
                 return true;
@@ -110,7 +114,7 @@ namespace behaviac
                 base.onexit(pAgent, s);
             }
 
-            private void random_child(Agent pAgent)
+            private async Task random_child(Agent pAgent)
             {
                 Debugs.Check(this.GetNode() == null || this.GetNode() is CompositeStochastic);
                 CompositeStochastic pNode = (CompositeStochastic)(this.GetNode());
@@ -129,10 +133,10 @@ namespace behaviac
 
                 for (int i = 0; i < n; ++i)
                 {
-                    int index1 = (int)(n * GetRandomValue(pNode != null ? pNode.m_method : null, pAgent));
+                    int index1 = (int)(n * await GetRandomValue(pNode != null ? pNode.m_method : null, pAgent));
                     Debugs.Check(index1 < n);
 
-                    int index2 = (int)(n * GetRandomValue(pNode != null ? pNode.m_method : null, pAgent));
+                    int index2 = (int)(n * await GetRandomValue(pNode != null ? pNode.m_method : null, pAgent));
                     Debugs.Check(index2 < n);
 
                     //swap
@@ -146,6 +150,10 @@ namespace behaviac
             }
 
             protected List<int> m_set = new List<int>();
+
+            protected CompositeStochasticTask(Workspace workspace) : base(workspace)
+            {
+            }
         }
     }
 }

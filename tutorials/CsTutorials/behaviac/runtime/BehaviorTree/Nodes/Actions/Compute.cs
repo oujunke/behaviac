@@ -19,9 +19,9 @@ namespace behaviac
 {
     public class Compute : BehaviorNode
     {
-        protected override void load(int version, string agentType, List<property_t> properties)
+        protected override async Task load(int version, string agentType, List<property_t> properties)
         {
-            base.load(version, agentType, properties);
+            await base.load(version, agentType, properties);
 
             for (int i = 0; i < properties.Count; ++i)
             {
@@ -35,7 +35,7 @@ namespace behaviac
                 {
                     Debugs.Check(p.value == "Add" || p.value == "Sub" || p.value == "Mul" || p.value == "Div");
 
-                    this.m_operator = OperationUtils.ParseOperatorType(p.value,Workspace);
+                    this.m_operator = OperationUtils.ParseOperatorType(p.value, Workspace);
                 }
                 else if (p.name == "Opr1")
                 {
@@ -78,7 +78,7 @@ namespace behaviac
 
         protected override BehaviorTask createTask()
         {
-            return new ComputeTask();
+            return new ComputeTask(Workspace);
         }
 
         protected IInstanceMember m_opl;
@@ -86,8 +86,16 @@ namespace behaviac
         protected IInstanceMember m_opr2;
         protected EOperatorType m_operator = EOperatorType.E_INVALID;
 
+        public Compute(Workspace workspace) : base(workspace)
+        {
+        }
+
         private class ComputeTask : LeafTask
         {
+            public ComputeTask(Workspace workspace) : base(workspace)
+            {
+            }
+
             public override void copyto(BehaviorTask target)
             {
                 base.copyto(target);
@@ -103,9 +111,9 @@ namespace behaviac
                 base.load(node);
             }
 
-            protected override bool onenter(Agent pAgent)
+            protected override Task<bool> onenter(Agent pAgent)
             {
-                return true;
+                return Task.FromResult(true);
             }
 
             protected override void onexit(Agent pAgent, EBTStatus s)
@@ -154,11 +162,11 @@ namespace behaviac
 
                 if (pComputeNode.m_opl != null)
                 {
-                    pComputeNode.m_opl.Compute(pAgent, pComputeNode.m_opr1, pComputeNode.m_opr2, pComputeNode.m_operator);
+                    await pComputeNode.m_opl.Compute(pAgent, pComputeNode.m_opr1, pComputeNode.m_opr2, pComputeNode.m_operator);
                 }
                 else
                 {
-                    result =await pComputeNode.update_impl(pAgent, childStatus);
+                    result = await pComputeNode.update_impl(pAgent, childStatus);
                 }
 
                 return result;

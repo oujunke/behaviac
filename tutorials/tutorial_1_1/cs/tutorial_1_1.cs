@@ -9,13 +9,13 @@ namespace tutorial_1_1
     class Program
     {
         static FirstAgent g_FirstAgent;
-
+        static behaviac.Workspace Instance;
         static bool InitBehavic()
         {
             Console.WriteLine("InitBehavic");
-
-            behaviac.Workspace.Instance.FilePath = "../../exported";
-            behaviac.Workspace.Instance.FileFormat = behaviac.Workspace.EFileFormat.EFF_xml;
+            Instance = behaviac.Workspace.CreatWorkspace();
+            Instance.FilePath = "../../exported";
+            Instance.FileFormat = behaviac.Workspace.EFileFormat.EFF_xml;
 
             return true;
         }
@@ -24,7 +24,7 @@ namespace tutorial_1_1
         {
             Console.WriteLine("InitPlayer");
 
-            g_FirstAgent = new FirstAgent();
+            g_FirstAgent = new FirstAgent(Instance);
 
             bool bRet = g_FirstAgent.btload("FirstBT");
             Debug.Assert(bRet);

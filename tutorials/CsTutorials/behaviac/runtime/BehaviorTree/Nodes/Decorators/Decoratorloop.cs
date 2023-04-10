@@ -18,7 +18,7 @@ namespace behaviac
 {
     public class DecoratorLoop : DecoratorCount
     {
-        public DecoratorLoop()
+        public DecoratorLoop(Workspace workspace) : base(workspace)
         {
         }
 
@@ -46,9 +46,9 @@ namespace behaviac
         }
 #endif//
 
-        protected override void load(int version, string agentType, List<property_t> properties)
+        protected override  async Task  load(int version, string agentType, List<property_t> properties)
         {
-            base.load(version, agentType, properties);
+            await base.load(version, agentType, properties);
 
             for (int i = 0; i < properties.Count; ++i)
             {
@@ -64,9 +64,9 @@ namespace behaviac
             }
         }
 
-        public int Count(Agent pAgent)
+        public async Task<int> Count(Agent pAgent)
         {
-            return base.GetCount(pAgent);
+            return await base.GetCount(pAgent);
         }
 
         public override bool IsValid(Agent pAgent, BehaviorTask pTask)
@@ -83,7 +83,7 @@ namespace behaviac
 
         protected override BehaviorTask createTask()
         {
-            DecoratorLoopTask pTask = new DecoratorLoopTask();
+            DecoratorLoopTask pTask = new DecoratorLoopTask(Workspace);
 
             return pTask;
         }
@@ -91,7 +91,7 @@ namespace behaviac
         ///Returns EBTStatus.BT_FAILURE for the specified number of iterations, then returns EBTStatus.BT_SUCCESS after that
         private class DecoratorLoopTask : DecoratorCountTask
         {
-            public DecoratorLoopTask()
+            public DecoratorLoopTask(Workspace workspace) : base(workspace)
             {
             }
 

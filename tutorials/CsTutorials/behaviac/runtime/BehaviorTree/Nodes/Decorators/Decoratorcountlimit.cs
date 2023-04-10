@@ -18,7 +18,7 @@ namespace behaviac
 {
     public class DecoratorCountLimit : DecoratorCount
     {
-        public DecoratorCountLimit()
+        public DecoratorCountLimit(Workspace workspace) : base(workspace)
         {
         }
 
@@ -26,9 +26,9 @@ namespace behaviac
         //{
         //}
 
-        protected override void load(int version, string agentType, List<property_t> properties)
+        protected override  async Task  load(int version, string agentType, List<property_t> properties)
         {
-            base.load(version, agentType, properties);
+            await base.load(version, agentType, properties);
         }
 
         public override bool IsValid(Agent pAgent, BehaviorTask pTask)
@@ -43,7 +43,7 @@ namespace behaviac
 
         protected override BehaviorTask createTask()
         {
-            DecoratorCountLimitTask pTask = new DecoratorCountLimitTask();
+            DecoratorCountLimitTask pTask = new DecoratorCountLimitTask(Workspace);
 
             return pTask;
         }
@@ -58,7 +58,7 @@ namespace behaviac
         ///enter and tick the child for the specified number of iterations, then it will not enter and tick the child after that
         private class DecoratorCountLimitTask : DecoratorCountTask
         {
-            public DecoratorCountLimitTask()
+            public DecoratorCountLimitTask(Workspace workspace) : base(workspace)
             {
             }
 
@@ -98,7 +98,7 @@ namespace behaviac
                 {
                     this.m_bInited = true;
 
-                    int count = this.GetCount(pAgent);
+                    int count =await this.GetCount(pAgent);
 
                     this.m_n = count;
                 }

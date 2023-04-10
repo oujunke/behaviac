@@ -9,16 +9,14 @@ namespace tutorial_7
     class Program
     {
         static FirstAgent g_FirstAgent;
-
+        static behaviac.Workspace Instance;
         static bool InitBehavic()
         {
             Console.WriteLine("InitBehavic");
-
-            behaviac.Config.IsSocketBlocking = true;
-            //behaviac.Config.SocketPort = 60636;
-
-            behaviac.Workspace.Instance.FilePath = "../../exported";
-            behaviac.Workspace.Instance.FileFormat = behaviac.Workspace.EFileFormat.EFF_xml;
+            Instance = behaviac.Workspace.CreatWorkspace();
+            Instance.Configs.IsSocketBlocking = true;
+            Instance.FilePath = "../../exported";
+            Instance.FileFormat = behaviac.Workspace.EFileFormat.EFF_xml;
 
             return true;
         }

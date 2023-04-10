@@ -292,7 +292,7 @@ namespace behaviac
     * Base class for BehaviorTree Nodes. This is the static part
     */
 
-    public abstract class BehaviorNode
+    public abstract  class BehaviorNode
     {
 #if BEHAVIAC_USE_HTN
         public virtual bool decompose(BehaviorNode node, PlannerTaskComplex seqTask, int depth, Planner planner)
@@ -368,10 +368,6 @@ namespace behaviac
             return null;
         }
 
-        protected BehaviorNode()
-        {
-        }
-
         //~BehaviorNode()
         //{
         //    this.Clear();
@@ -423,16 +419,29 @@ namespace behaviac
         }
 
         #region Load
-
+        public static string ConvertClassName(string className)
+        {
+            switch (className)
+            {
+                case "Action":
+                    return "Actions";
+                case "Task":
+                    return "Tasks";
+                case "Method":
+                    return "Methods";
+            }
+            return className;
+        }
         protected BehaviorNode Create(string className)
         {
-            return Workspace.CreateBehaviorNode(className);
+            return Workspace.CreateBehaviorNode(ConvertClassName(className));
         }
 
-        protected virtual void load(int version, string agentType, List<property_t> properties)
+        protected virtual Task load(int version, string agentType, List<property_t> properties)
         {
             string nodeType = this.GetClassNameString().Replace(".", "::");
             Workspace.OnBehaviorNodeLoaded(nodeType, properties);
+            return Task.CompletedTask;
         }
 
 #if BEHAVIAC_USE_SYSTEM_XML
@@ -1164,7 +1173,7 @@ namespace behaviac
 
         public void SetClassNameString(string className)
         {
-            this.m_className = className;
+            this.m_className = ConvertClassName(className);
         }
 
         public string GetClassNameString()
@@ -1244,7 +1253,7 @@ namespace behaviac
 
                     if (phase == Precondition.EPhase.E_BOTH || ph == Precondition.EPhase.E_BOTH || ph == phase)
                     {
-                        bool taskBoolean =await pPrecond.Evaluate(pAgent);
+                        bool taskBoolean = await pPrecond.Evaluate(pAgent);
 
                         CombineResults(ref firstValidPrecond, ref lastCombineValue, pPrecond, taskBoolean);
                     }
@@ -1277,7 +1286,7 @@ namespace behaviac
             }
         }
 
-        public virtual void ApplyEffects(Agent pAgent, Effector.EPhase phase)
+        public virtual async Task ApplyEffects(Agent pAgent, Effector.EPhase phase)
         {
             if (this.m_effectors == null || this.m_effectors.Count == 0)
             {
@@ -1307,7 +1316,7 @@ namespace behaviac
 
                     if (phase == Effector.EPhase.E_BOTH || ph == Effector.EPhase.E_BOTH || ph == phase)
                     {
-                        pEffector.Evaluate(pAgent);
+                        await pEffector.Evaluate(pAgent);
                     }
                 }
             }
@@ -1315,7 +1324,7 @@ namespace behaviac
             return;
         }
 
-        public bool CheckEvents(string eventName, Agent pAgent, Dictionary<uint, IInstantiatedVariable> eventParams)
+        public async Task<bool> CheckEvents(string eventName, Agent pAgent, Dictionary<uint, IInstantiatedVariable> eventParams)
         {
             if (this.m_events != null)
             {
@@ -1332,7 +1341,7 @@ namespace behaviac
 
                         if (!string.IsNullOrEmpty(pEventName) && pEventName == eventName)
                         {
-                            pE.switchTo(pAgent, eventParams);
+                            await pE.switchTo(pAgent, eventParams);
 
                             if (pE.TriggeredOnce())
                             {
@@ -1421,14 +1430,14 @@ namespace behaviac
 
     public abstract class DecoratorNode : BehaviorNode
     {
-        public DecoratorNode()
+        public DecoratorNode(Workspace workspace) : base(workspace)
         {
             m_bDecorateWhenChildEnds = false;
         }
 
-        protected override void load(int version, string agentType, List<property_t> properties)
+        protected override async Task load(int version, string agentType, List<property_t> properties)
         {
-            base.load(version, agentType, properties);
+            await base.load(version, agentType, properties);
 
             for (int i = 0; i < properties.Count; ++i)
             {
@@ -1469,12 +1478,8 @@ namespace behaviac
     {
         //keep this version equal to designers' NewVersion
         private const int SupportedVersion = 5;
-        public Workspace Workspace { get; private set; }
-        private Config Configs { set; get; }
-        public BehaviorTree(Workspace workspace)
+        public BehaviorTree(Workspace workspace) : base(workspace)
         {
-            Workspace = workspace;
-            Configs = workspace.Configs;
         }
         private Dictionary<uint, ICustomizedProperty> m_localProps;
         public Dictionary<uint, ICustomizedProperty> LocalProps
@@ -1499,10 +1504,10 @@ namespace behaviac
             }
 
             uint varId = Utils.MakeVariableId(name);
-            ICustomizedProperty prop = AgentMeta.CreateProperty(typeName, varId, name, valueStr,Workspace);
+            ICustomizedProperty prop = AgentMeta.CreateProperty(typeName, varId, name, valueStr, Workspace);
             this.m_localProps[varId] = prop;
 
-            Type type = Utils.GetElementTypeFromName(typeName,Workspace);
+            Type type = Utils.GetElementTypeFromName(typeName, Workspace);
 
             if (type != null)
             {
@@ -1542,7 +1547,7 @@ namespace behaviac
         }
 
 #if BEHAVIAC_USE_SYSTEM_XML
-        protected override void load_local(int version, string agentType, XmlNode node)
+        protected override  async Task  load_local(int version, string agentType, XmlNode node)
         {
             if (node.Name != "par")
             {
@@ -1732,7 +1737,7 @@ namespace behaviac
 
         protected override BehaviorTask createTask()
         {
-            BehaviorTreeTask pTask = new BehaviorTreeTask();
+            BehaviorTreeTask pTask = new BehaviorTreeTask(Workspace);
             return pTask;
         }
     }

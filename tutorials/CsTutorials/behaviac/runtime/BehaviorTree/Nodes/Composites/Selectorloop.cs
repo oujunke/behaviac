@@ -20,9 +20,13 @@ namespace behaviac
     {
         protected bool m_bResetChildren = false;
 
-        protected override void load(int version, string agentType, List<property_t> properties)
+        public SelectorLoop(Workspace workspace) : base(workspace)
         {
-            base.load(version, agentType, properties);
+        }
+
+        protected override async Task load(int version, string agentType, List<property_t> properties)
+        {
+            await base.load(version, agentType, properties);
 
             for (int i = 0; i < properties.Count; ++i)
             {
@@ -53,7 +57,7 @@ namespace behaviac
 
         protected override BehaviorTask createTask()
         {
-            SelectorLoopTask pTask = new SelectorLoopTask();
+            SelectorLoopTask pTask = new SelectorLoopTask(Workspace);
 
             return pTask;
         }
@@ -71,6 +75,10 @@ namespace behaviac
 
         public class SelectorLoopTask : CompositeTask
         {
+            public SelectorLoopTask(Workspace workspace) : base(workspace)
+            {
+            }
+
             protected override void addChild(BehaviorTask pBehavior)
             {
                 base.addChild(pBehavior);
@@ -101,7 +109,7 @@ namespace behaviac
                 base.load(node);
             }
 
-            protected override bool onenter(Agent pAgent)
+            protected override Task<bool> onenter(Agent pAgent)
             {
                 //reset the action child as it will be checked in the update
                 this.m_activeChildIndex = CompositeTask.InvalidChildIndex;
@@ -118,7 +126,7 @@ namespace behaviac
             //no current task, as it needs to update every child for every update
             protected override async Task<EBTStatus> update_current(Agent pAgent, EBTStatus childStatus)
             {
-                EBTStatus s =await this.update(pAgent, childStatus);
+                EBTStatus s = await this.update(pAgent, childStatus);
 
                 return s;
             }
@@ -147,7 +155,7 @@ namespace behaviac
                 }
 
                 //checking the preconditions and take the first action tree
-                int index = (int) - 1;
+                int index = (int)-1;
 
                 for (int i = (idx + 1); i < this.m_children.Count; ++i)
                 {
@@ -156,7 +164,7 @@ namespace behaviac
 
                     BehaviorTask pre = pSubTree.PreconditionNode;
 
-                    EBTStatus status =await pre.exec(pAgent);
+                    EBTStatus status = await pre.exec(pAgent);
 
                     if (status == EBTStatus.BT_SUCCESS)
                     {
@@ -166,7 +174,7 @@ namespace behaviac
                 }
 
                 //clean up the current ticking action tree
-                if (index != (int) - 1)
+                if (index != (int)-1)
                 {
                     if (this.m_activeChildIndex != CompositeTask.InvalidChildIndex)
                     {
@@ -200,7 +208,7 @@ namespace behaviac
                         if (i > index)
                         {
                             BehaviorTask pre = pSubTree.PreconditionNode;
-                            EBTStatus status =await pre.exec(pAgent);
+                            EBTStatus status = await pre.exec(pAgent);
 
                             //to search for the first one whose precondition is success
                             if (status != EBTStatus.BT_SUCCESS)
@@ -210,7 +218,7 @@ namespace behaviac
                         }
 
                         BehaviorTask action = pSubTree.ActionNode;
-                        EBTStatus s =await action.exec(pAgent);
+                        EBTStatus s = await action.exec(pAgent);
 
                         if (s == EBTStatus.BT_RUNNING)
                         {

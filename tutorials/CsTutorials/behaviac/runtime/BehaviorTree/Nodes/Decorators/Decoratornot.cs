@@ -18,7 +18,7 @@ namespace behaviac
 {
     public class DecoratorNot : DecoratorNode
     {
-        public DecoratorNot()
+        public DecoratorNot(Workspace workspace) : base(workspace)
         {
         }
 
@@ -26,9 +26,9 @@ namespace behaviac
         //{
         //}
 
-        protected override void load(int version, string agentType, List<property_t> properties)
+        protected override  async Task  load(int version, string agentType, List<property_t> properties)
         {
-            base.load(version, agentType, properties);
+            await base.load(version, agentType, properties);
         }
 
         public override bool IsValid(Agent pAgent, BehaviorTask pTask)
@@ -50,15 +50,14 @@ namespace behaviac
 
         protected override BehaviorTask createTask()
         {
-            DecoratorNotTask pTask = new DecoratorNotTask();
+            DecoratorNotTask pTask = new DecoratorNotTask(Workspace);
 
             return pTask;
         }
 
         private class DecoratorNotTask : DecoratorTask
         {
-            public DecoratorNotTask()
-            : base()
+            public DecoratorNotTask(Workspace workspace) : base(workspace)
             {
             }
 

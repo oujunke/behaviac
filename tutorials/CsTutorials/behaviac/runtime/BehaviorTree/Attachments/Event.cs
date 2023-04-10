@@ -12,25 +12,22 @@
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace behaviac
 {
     public class Event : ConditionBase
     {
-        public Workspace Workspace { get; private set; }
-        private Config Configs { set; get; }
-        public Event(Workspace workspace)
+        public Event(Workspace workspace):base(workspace)
         {
-            Workspace = workspace;
-            Configs = workspace.Configs;
             m_eventName = null;
             m_bTriggeredOnce = false;
             m_triggerMode = TriggerMode.TM_Transfer;
         }
 
-        protected override void load(int version, string agentType, List<property_t> properties)
+        protected override  async Task  load(int version, string agentType, List<property_t> properties)
         {
-            base.load(version, agentType, properties);
+            await base.load(version, agentType, properties);
 
             for (int i = 0; i < properties.Count; ++i)
             {
@@ -87,7 +84,7 @@ namespace behaviac
             return this.m_triggerMode;
         }
 
-        public void switchTo(Agent pAgent, Dictionary<uint, IInstantiatedVariable> eventParams)
+        public async Task switchTo(Agent pAgent, Dictionary<uint, IInstantiatedVariable> eventParams)
         {
             if (!string.IsNullOrEmpty(this.m_referencedBehaviorPath))
             {
@@ -100,7 +97,7 @@ namespace behaviac
                     Debugs.Check(pAgent.CurrentTreeTask != null);
                     pAgent.CurrentTreeTask.AddVariables(eventParams);
 
-                    pAgent.btexec();
+                    await pAgent.btexec();
                 }
             }
         }

@@ -18,9 +18,9 @@ namespace behaviac
 {
     public class Assignment : BehaviorNode
     {
-        protected override void load(int version, string agentType, List<property_t> properties)
+        protected override async Task load(int version, string agentType, List<property_t> properties)
         {
-            base.load(version, agentType, properties);
+            await base.load(version, agentType, properties);
 
             for (int i = 0; i < properties.Count; ++i)
             {
@@ -62,15 +62,23 @@ namespace behaviac
 
         protected override BehaviorTask createTask()
         {
-            return new AssignmentTask();
+            return new AssignmentTask(Workspace);
         }
 
         protected IInstanceMember m_opl;
         protected IInstanceMember m_opr;
         protected bool m_bCast = false;
 
+        public Assignment(Workspace workspace) : base(workspace)
+        {
+        }
+
         private class AssignmentTask : LeafTask
         {
+            public AssignmentTask(Workspace workspace) : base(workspace)
+            {
+            }
+
             public override void copyto(BehaviorTask target)
             {
                 base.copyto(target);
@@ -86,9 +94,9 @@ namespace behaviac
                 base.load(node);
             }
 
-            protected override bool onenter(Agent pAgent)
+            protected override Task<bool> onenter(Agent pAgent)
             {
-                return true;
+                return Task.FromResult(true);
             }
 
             protected override void onexit(Agent pAgent, EBTStatus s)
@@ -117,7 +125,7 @@ namespace behaviac
                 }
                 else
                 {
-                    result =await pAssignmentNode.update_impl(pAgent, childStatus);
+                    result = await pAssignmentNode.update_impl(pAgent, childStatus);
                 }
 
                 return result;

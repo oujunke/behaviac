@@ -9,13 +9,13 @@ namespace tutorial_1_2
     class Program
     {
         static SecondAgent g_SecondAgent;
-
+        static behaviac.Workspace Instance;
         static bool InitBehavic()
         {
             Console.WriteLine("InitBehavic");
-
-            behaviac.Workspace.Instance.FilePath = "../../exported";
-            behaviac.Workspace.Instance.FileFormat = behaviac.Workspace.EFileFormat.EFF_xml;
+            Instance = behaviac.Workspace.CreatWorkspace();
+            Instance.FilePath = "../../exported";
+            Instance.FileFormat = behaviac.Workspace.EFileFormat.EFF_xml;
 
             return true;
         }

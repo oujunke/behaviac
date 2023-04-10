@@ -18,7 +18,8 @@ namespace behaviac
 {
     public class WithPrecondition : BehaviorNode
     {
-        public WithPrecondition()
+
+        public WithPrecondition(Workspace workspace) : base(workspace)
         {
         }
 
@@ -26,9 +27,9 @@ namespace behaviac
         //{
         //}
 
-        protected override void load(int version, string agentType, List<property_t> properties)
+        protected override  async Task  load(int version, string agentType, List<property_t> properties)
         {
-            base.load(version, agentType, properties);
+            await base.load(version, agentType, properties);
         }
 
         public override bool IsValid(Agent pAgent, BehaviorTask pTask)
@@ -43,7 +44,7 @@ namespace behaviac
 
         protected override BehaviorTask createTask()
         {
-            WithPreconditionTask pTask = new WithPreconditionTask();
+            WithPreconditionTask pTask = new WithPreconditionTask(Workspace);
 
             return pTask;
         }
@@ -51,8 +52,7 @@ namespace behaviac
 
     internal class WithPreconditionTask : Sequence.SequenceTask
     {
-        public WithPreconditionTask()
-        : base()
+        public WithPreconditionTask(Workspace workspace) : base(workspace)
         {
         }
 
@@ -76,14 +76,14 @@ namespace behaviac
             base.load(node);
         }
 
-        protected override bool onenter(Agent pAgent)
+        protected override Task<bool> onenter(Agent pAgent)
         {
             BehaviorTask pParent = this.GetParent();
 
             //when as child of SelctorLoop, it is not ticked normally
             Debugs.Check(pParent is SelectorLoop.SelectorLoopTask);
 
-            return true;
+            return Task.FromResult(true);
         }
 
         protected override void onexit(Agent pAgent, EBTStatus s)

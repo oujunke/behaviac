@@ -124,7 +124,7 @@ namespace behaviac
             //this.ParamsValue = action.GetParamsValue(pAgent);
         }
 
-        protected override bool onenter(Agent pAgent)
+        override Task<bool> onenter(Agent pAgent)
         {
             Debug.Check(true);
             return true;
@@ -187,7 +187,7 @@ namespace behaviac
         //    this.m_children.Clear();
         //}
 
-        protected override bool onenter(Agent pAgent)
+        override Task<bool> onenter(Agent pAgent)
         {
             this.m_activeChildIndex = 0;
             return true;
@@ -265,7 +265,7 @@ namespace behaviac
         {
         }
 
-        protected override bool onenter(Agent pAgent)
+        override Task<bool> onenter(Agent pAgent)
         {
             base.onenter(pAgent);
 
@@ -349,7 +349,7 @@ namespace behaviac
             }
         }
 
-        protected override bool onenter(Agent pAgent)
+        override Task<bool> onenter(Agent pAgent)
         {
             bool bOk = base.onenter(pAgent);
 
@@ -418,7 +418,7 @@ namespace behaviac
             }
         }
 
-        protected override bool onenter(Agent pAgent)
+        override Task<bool> onenter(Agent pAgent)
         {
             Debug.Check(this.m_node is ReferencedBehavior);
             ReferencedBehavior pNode = this.m_node as ReferencedBehavior;
@@ -499,7 +499,7 @@ namespace behaviac
         {
         }
 
-        protected override bool onenter(Agent pAgent)
+        override Task<bool> onenter(Agent pAgent)
         {
             //this.m_node.Parent.InstantiatePars(this.LocalVars);
             return true;

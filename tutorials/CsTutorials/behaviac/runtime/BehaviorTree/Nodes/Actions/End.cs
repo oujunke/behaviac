@@ -19,9 +19,9 @@ namespace behaviac
 {
     public class End : BehaviorNode
     {
-        protected override void load(int version, string agentType, List<property_t> properties)
+        protected override  async Task  load(int version, string agentType, List<property_t> properties)
         {
-            base.load(version, agentType, properties);
+            await base.load(version, agentType, properties);
 
             for (int i = 0; i < properties.Count; ++i)
             {
@@ -47,9 +47,9 @@ namespace behaviac
             }
         }
 
-        protected virtual EBTStatus GetStatus(Agent pAgent)
+        protected virtual async Task<EBTStatus> GetStatus(Agent pAgent)
         {
-            return this.m_endStatus != null ? ((CInstanceMember<EBTStatus>)this.m_endStatus).GetValue(pAgent) : EBTStatus.BT_SUCCESS;
+            return this.m_endStatus != null ? await ((CInstanceMember<EBTStatus>)this.m_endStatus).GetValue(pAgent) : EBTStatus.BT_SUCCESS;
         }
 
         protected bool GetEndOutside()
@@ -60,19 +60,27 @@ namespace behaviac
         protected IInstanceMember m_endStatus;
         protected bool            m_endOutside;
 
+        public End(Workspace workspace) : base(workspace)
+        {
+        }
+
         protected override BehaviorTask createTask()
         {
-            EndTask pTask = new EndTask();
+            EndTask pTask = new EndTask(Workspace);
 
             return pTask;
         }
 
         private class EndTask : LeafTask
         {
-            private EBTStatus GetStatus(Agent pAgent)
+            public EndTask(Workspace workspace) : base(workspace)
+            {
+            }
+
+            private async Task<EBTStatus> GetStatus(Agent pAgent)
             {
                 End pEndNode = this.GetNode() as End;
-                EBTStatus status = pEndNode != null ? pEndNode.GetStatus(pAgent) : EBTStatus.BT_SUCCESS;
+                EBTStatus status = pEndNode != null ?await pEndNode.GetStatus(pAgent) : EBTStatus.BT_SUCCESS;
                 Debugs.Check(status == EBTStatus.BT_SUCCESS || status == EBTStatus.BT_FAILURE);
                 return status;
             }
@@ -85,14 +93,14 @@ namespace behaviac
 
             protected override Task<bool> onenter(Agent pAgent)
             {
-                return true;
+                return Task.FromResult(true);
             }
 
             protected override void onexit(Agent pAgent, EBTStatus s)
             {
             }
 
-            protected override Task<EBTStatus> update(Agent pAgent, EBTStatus childStatus)
+            protected override async Task<EBTStatus> update(Agent pAgent, EBTStatus childStatus)
             {
                 BehaviorTreeTask rooTask = null;
                 if (!this.GetEndOutside())
@@ -106,10 +114,10 @@ namespace behaviac
 
                 if (rooTask != null)
                 {
-                    rooTask.setEndStatus(this.GetStatus(pAgent));
+                    rooTask.setEndStatus(await this.GetStatus(pAgent));
                 }
 
-                return Task.FromResult(EBTStatus.BT_RUNNING);
+                return EBTStatus.BT_RUNNING;
             }
         }
     }

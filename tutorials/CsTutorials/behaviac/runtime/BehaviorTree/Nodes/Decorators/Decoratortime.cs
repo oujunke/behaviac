@@ -13,6 +13,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace behaviac
 {
@@ -20,9 +21,13 @@ namespace behaviac
     {
         protected IInstanceMember m_time;
 
-        protected override void load(int version, string agentType, List<property_t> properties)
+        public DecoratorTime(Workspace workspace) : base(workspace)
         {
-            base.load(version, agentType, properties);
+        }
+
+        protected override  async Task  load(int version, string agentType, List<property_t> properties)
+        {
+            await base.load(version, agentType, properties);
 
             for (int i = 0; i < properties.Count; ++i)
             {
@@ -44,7 +49,7 @@ namespace behaviac
             }
         }
 
-        protected virtual double GetTime(Agent pAgent)
+        protected virtual async Task<double> GetTime(Agent pAgent)
         {
             double time = 0;
 
@@ -52,22 +57,22 @@ namespace behaviac
             {
                 if (this.m_time is CInstanceMember<double>)
                 {
-                    time = ((CInstanceMember<double>)this.m_time).GetValue(pAgent);
+                    time = await((CInstanceMember<double>)this.m_time).GetValue(pAgent);
                 }
                 else if (this.m_time is CInstanceMember<float>)
                 {
-                    time = ((CInstanceMember<float>)this.m_time).GetValue(pAgent);
+                    time = await((CInstanceMember<float>)this.m_time).GetValue(pAgent);
                 }
                 else if (this.m_time is CInstanceMember<int>)
                 {
-                    time = ((CInstanceMember<int>)this.m_time).GetValue(pAgent);
+                    time = await ((CInstanceMember<int>)this.m_time).GetValue(pAgent);
                 }
             }
 
             return time;
         }
 
-        protected virtual int GetIntTime(Agent pAgent)
+        protected virtual async Task<int>  GetIntTime(Agent pAgent)
         {
             int time = 0;
 
@@ -75,7 +80,7 @@ namespace behaviac
             {
                 if (this.m_time is CInstanceMember<int>)
                 {
-                    time = ((CInstanceMember<int>)this.m_time).GetValue(pAgent);
+                    time =await ((CInstanceMember<int>)this.m_time).GetValue(pAgent);
                 }
             }
 
@@ -84,7 +89,7 @@ namespace behaviac
 
         protected override BehaviorTask createTask()
         {
-            DecoratorTimeTask pTask = new DecoratorTimeTask();
+            DecoratorTimeTask pTask = new DecoratorTimeTask(Workspace);
 
             return pTask;
         }
@@ -95,6 +100,10 @@ namespace behaviac
             private double m_time = 0;
             private long m_intStart = 0;
             private int m_intTime = 0;
+
+            public DecoratorTimeTask(Workspace workspace) : base(workspace)
+            {
+            }
 
             public override void copyto(BehaviorTask target)
             {
@@ -132,37 +141,37 @@ namespace behaviac
                 base.load(node);
             }
 
-            private double GetTime(Agent pAgent)
+            private async Task<double> GetTime(Agent pAgent)
             {
                 Debugs.Check(this.GetNode() is DecoratorTime);
                 DecoratorTime pNode = (DecoratorTime)(this.GetNode());
 
-                return pNode != null ? pNode.GetTime(pAgent) : 0;
+                return pNode != null ?await pNode.GetTime(pAgent) : 0;
             }
 
-            private int GetIntTime(Agent pAgent)
+            private async Task<int>  GetIntTime(Agent pAgent)
             {
                 Debugs.Check(this.GetNode() is DecoratorTime);
                 DecoratorTime pNode = (DecoratorTime)(this.GetNode());
 
-                return pNode != null ? pNode.GetIntTime(pAgent) : 0;
+                return pNode != null ? await pNode.GetIntTime(pAgent) : 0;
             }
 
-            protected override bool onenter(Agent pAgent)
+            protected override async Task<bool> onenter(Agent pAgent)
             {
-                base.onenter(pAgent);
+               await base.onenter(pAgent);
 
                 if (Workspace.UseIntValue)
                 {
                     this.m_intStart = Workspace.IntValueSinceStartup;
-                    this.m_intTime = this.GetIntTime(pAgent);
+                    this.m_intTime =await this.GetIntTime(pAgent);
 
                     return (this.m_intTime >= 0);
                 }
                 else
                 {
                     this.m_start = Workspace.DoubleValueSinceStartup;
-                    this.m_time = this.GetTime(pAgent);
+                    this.m_time =await this.GetTime(pAgent);
 
                     return (this.m_time >= 0);
                 }

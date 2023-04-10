@@ -27,9 +27,13 @@ namespace behaviac
 
     public class SelectorStochastic : CompositeStochastic
     {
-        protected override void load(int version, string agentType, List<property_t> properties)
+        public SelectorStochastic(Workspace workspace) : base(workspace)
         {
-            base.load(version, agentType, properties);
+        }
+
+        protected override async Task load(int version, string agentType, List<property_t> properties)
+        {
+            await base.load(version, agentType, properties);
         }
 
         public override bool IsValid(Agent pAgent, BehaviorTask pTask)
@@ -44,13 +48,17 @@ namespace behaviac
 
         protected override BehaviorTask createTask()
         {
-            SelectorStochasticTask pTask = new SelectorStochasticTask();
+            SelectorStochasticTask pTask = new SelectorStochasticTask(Workspace);
 
             return pTask;
         }
 
         private class SelectorStochasticTask : CompositeStochasticTask
         {
+            public SelectorStochasticTask(Workspace workspace) : base(workspace)
+            {
+            }
+
             protected override void addChild(BehaviorTask pBehavior)
             {
                 base.addChild(pBehavior);
@@ -71,9 +79,9 @@ namespace behaviac
                 base.load(node);
             }
 
-            protected override bool onenter(Agent pAgent)
+            protected override async Task<bool> onenter(Agent pAgent)
             {
-                base.onenter(pAgent);
+                await base.onenter(pAgent);
 
                 return true;
             }
@@ -92,7 +100,7 @@ namespace behaviac
                 SelectorStochastic node = this.m_node as SelectorStochastic;
 
                 // Keep going until a child behavior says its running.
-                for (; ;)
+                for (; ; )
                 {
                     if (s == EBTStatus.BT_RUNNING)
                     {
@@ -104,7 +112,7 @@ namespace behaviac
                             return EBTStatus.BT_FAILURE;
                         }
 
-                        s =await pBehavior.exec(pAgent);
+                        s = await pBehavior.exec(pAgent);
                     }
 
                     // If the child succeeds, or keeps running, do the same.

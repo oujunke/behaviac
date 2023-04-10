@@ -55,7 +55,7 @@ namespace behaviac
 
     public class Parallel : BehaviorNode
     {
-        public Parallel()
+        public Parallel(Workspace workspace) : base(workspace)
         {
             m_failPolicy = FAILURE_POLICY.FAIL_ON_ONE;
             m_succeedPolicy = SUCCESS_POLICY.SUCCEED_ON_ALL;
@@ -94,9 +94,9 @@ namespace behaviac
         }
 #endif//
 
-        protected override void load(int version, string agentType, List<property_t> properties)
+        protected override async Task load(int version, string agentType, List<property_t> properties)
         {
-            base.load(version, agentType, properties);
+            await base.load(version, agentType, properties);
 
             for (int i = 0; i < properties.Count; ++i)
             {
@@ -196,7 +196,7 @@ namespace behaviac
 
         protected override BehaviorTask createTask()
         {
-            ParallelTask pTask = new ParallelTask();
+            ParallelTask pTask = new ParallelTask(Workspace);
 
             return pTask;
         }
@@ -220,7 +220,7 @@ namespace behaviac
 
                 if (bLoop || (treeStatus == EBTStatus.BT_RUNNING || treeStatus == EBTStatus.BT_INVALID))
                 {
-                    EBTStatus status =await pChild.exec(pAgent);
+                    EBTStatus status = await pChild.exec(pAgent);
 
                     if (status == EBTStatus.BT_FAILURE)
                     {
@@ -299,12 +299,16 @@ namespace behaviac
         //the policy for failure, and the policy for success.
         private class ParallelTask : CompositeTask
         {
+            public ParallelTask(Workspace workspace) : base(workspace)
+            {
+            }
+
             //~ParallelTask()
             //{
             //    this.m_children.Clear();
             //}
 
-            protected override bool onenter(Agent pAgent)
+            protected override Task<bool> onenter(Agent pAgent)
             {
                 Debugs.Check(this.m_activeChildIndex == CompositeTask.InvalidChildIndex);
 
@@ -316,7 +320,7 @@ namespace behaviac
                 //    pChild.reset(pAgent);
                 //}
 
-                return true;
+                return Task.FromResult(true);
             }
 
             protected override void onexit(Agent pAgent, EBTStatus s)

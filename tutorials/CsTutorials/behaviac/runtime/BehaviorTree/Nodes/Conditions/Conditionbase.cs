@@ -17,7 +17,7 @@ namespace behaviac
 {
     public abstract class ConditionBase : BehaviorNode
     {
-        public ConditionBase()
+        public ConditionBase(Workspace workspace):base(workspace)
         {
         }
 
@@ -39,7 +39,7 @@ namespace behaviac
     // ============================================================================
     internal class ConditionBaseTask : LeafTask
     {
-        public ConditionBaseTask()
+        public ConditionBaseTask(Workspace workspace) : base(workspace)
         {
         }
 
@@ -47,9 +47,9 @@ namespace behaviac
         //{
         //}
 
-        protected override bool onenter(Agent pAgent)
+        protected override Task<bool> onenter(Agent pAgent)
         {
-            return true;
+            return Task.FromResult(true);
         }
 
         protected override void onexit(Agent pAgent, EBTStatus s)
