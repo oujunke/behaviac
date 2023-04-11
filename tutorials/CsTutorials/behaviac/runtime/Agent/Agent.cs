@@ -44,6 +44,7 @@ namespace behaviac
             Workspace = workspace;
             Configs = workspace.Configs;
             Debugs = workspace.Debugs;
+            Init();
         }
         #region State
 
@@ -146,10 +147,7 @@ namespace behaviac
         #endregion State
 
 #if BEHAVIAC_NOT_USE_MONOBEHAVIOUR
-        protected Agent()
-        {
-            Init();
-        }
+
 
         ~Agent()
         {

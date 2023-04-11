@@ -43,7 +43,7 @@ namespace PluginBehaviac.NodeExporters
 
             if (decoratorCount.Count != null)
             {
-                stream.WriteLine("{0}\t\tprotected override int GetCount(Agent pAgent)", indent);
+                stream.WriteLine("{0}\t\tprotected override Task<int> GetCount(Agent pAgent)", indent);
                 stream.WriteLine("{0}\t\t{{", indent);
 
                 string retStr = VariableCsExporter.GenerateCode(node, decoratorCount.Count, false, stream, indent + "\t\t\t", string.Empty, string.Empty, string.Empty);

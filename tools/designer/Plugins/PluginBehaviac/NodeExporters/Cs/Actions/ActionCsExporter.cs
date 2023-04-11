@@ -99,7 +99,7 @@ namespace PluginBehaviac.NodeExporters
                 return;
             }
 
-            stream.WriteLine("{0}\t\tprotected override EBTStatus update_impl(behaviac.Agent pAgent, behaviac.EBTStatus childStatus)", indent);
+            stream.WriteLine("{0}\t\tprotected override async Task<EBTStatus> update_impl(behaviac.Agent pAgent, behaviac.EBTStatus childStatus)", indent);
             stream.WriteLine("{0}\t\t{{", indent);
 
             string resultStatus = getResultOptionStr(action.ResultOption);
