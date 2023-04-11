@@ -21,19 +21,38 @@ public class FirstAgent : behaviac.Agent
     {
 
     }
-	public void SayHello()
-	{
-///<<< BEGIN WRITING YOUR CODE SayHello
+    private int p1 = 0;
+    public void _set_p1(int value)
+    {
+        p1 = value;
+    }
+    public int _get_p1()
+    {
+        return p1;
+    }
+
+    private SecondAgent pInstance = null;
+    public void _set_pInstance(SecondAgent value)
+    {
+        pInstance = value;
+    }
+    public SecondAgent _get_pInstance()
+    {
+        return pInstance;
+    }
+
+    public void SayHello()
+    {
+        ///<<< BEGIN WRITING YOUR CODE SayHello
         Console.WriteLine();
         Console.WriteLine("Hello Behaviac!");
         Console.WriteLine();
-///<<< END WRITING YOUR CODE
-	}
+        ///<<< END WRITING YOUR CODE
+    }
 
-///<<< BEGIN WRITING YOUR CODE CLASS_PART
+    ///<<< BEGIN WRITING YOUR CODE CLASS_PART
 
-///<<< END WRITING YOUR CODE
-
+    ///<<< END WRITING YOUR CODE
 }
 
 ///<<< BEGIN WRITING YOUR CODE FILE_UNINIT
