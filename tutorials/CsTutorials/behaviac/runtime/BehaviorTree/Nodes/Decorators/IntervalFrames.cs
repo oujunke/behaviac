@@ -8,9 +8,9 @@ namespace behaviac
 {
     public class IntervalFrames : Sequence
     {
-        protected override void load(int version, string agentType, List<property_t> properties)
+        protected override async Task load(int version, string agentType, List<property_t> properties)
         {
-            base.load(version, agentType, properties);
+            await base.load(version, agentType, properties);
 
             for (int i = 0; i < properties.Count; ++i)
             {
@@ -18,31 +18,32 @@ namespace behaviac
 
                 if (p.name == "Count")
                 {
-                    this.m_count = AgentMeta.ParseProperty(p.value);
-                }else if(p.name== "Front")
+                    this.m_count = AgentMeta.ParseProperty(p.value, Workspace);
+                }
+                else if (p.name == "Front")
                 {
-                    this.m_front = AgentMeta.ParseProperty(p.value);
+                    this.m_front = AgentMeta.ParseProperty(p.value, Workspace);
                 }
             }
         }
-        protected virtual int GetCount(Agent pAgent)
+        protected virtual async Task<int> GetCount(Agent pAgent)
         {
             if (this.m_count != null)
             {
-                Debug.Check(this.m_count is CInstanceMember<int>);
-                int count = ((CInstanceMember<int>)this.m_count).GetValue(pAgent);
+                Debugs.Check(this.m_count is CInstanceMember<int>);
+                int count = await ((CInstanceMember<int>)this.m_count).GetValue(pAgent);
 
                 return count;
             }
 
             return 0;
         }
-        protected virtual bool GetFront(Agent pAgent)
+        protected virtual async Task<bool> GetFront(Agent pAgent)
         {
             if (this.m_front != null)
             {
-                Debug.Check(this.m_front is CInstanceMember<int>);
-                var front = ((CInstanceMember<bool>)this.m_front).GetValue(pAgent);
+                Debugs.Check(this.m_front is CInstanceMember<int>);
+                var front = await ((CInstanceMember<bool>)this.m_front).GetValue(pAgent);
 
                 return front;
             }
@@ -51,21 +52,26 @@ namespace behaviac
         }
         protected override BehaviorTask createTask()
         {
-            return new IntervalFramesTask();
+            return new IntervalFramesTask(Workspace);
         }
         protected IInstanceMember m_count;
         protected IInstanceMember m_front;
+
+        public IntervalFrames(Workspace workspace) : base(workspace)
+        {
+        }
+
         public class IntervalFramesTask : SequenceTask
         {
             public override void copyto(BehaviorTask target)
             {
                 base.copyto(target);
 
-                Debug.Check(target is IntervalFramesTask);
-                IntervalFramesTask ttask = (IntervalFramesTask)target;
+                Debugs.Check(target is IntervalFramesTask);
+                IntervalFramesTask task = (IntervalFramesTask)target;
 
-                ttask.m_n = this.m_n;
-                ttask.m_f = this.m_f;
+                task.m_n = this.m_n;
+                task.m_f = this.m_f;
             }
 
             public override void save(ISerializableNode node)
@@ -87,11 +93,11 @@ namespace behaviac
                 base.Init(node);
                 c_n = -1;
             }
-            protected override bool onenter(Agent pAgent)
+            protected override async Task<bool> onenter(Agent pAgent)
             {
-                base.onenter(pAgent);
+                await base.onenter(pAgent);
 
-                int count = this.GetCount(pAgent);
+                int count =await this.GetCount(pAgent);
 
                 if (count == 0)
                 {
@@ -99,7 +105,7 @@ namespace behaviac
                 }
 
                 this.m_n = count;
-                this.m_f = this.GetFront(pAgent);
+                this.m_f =await this.GetFront(pAgent);
                 if (c_n == -1)
                 {
                     if (m_f)
@@ -113,36 +119,40 @@ namespace behaviac
                 }
                 return true;
             }
-            protected override EBTStatus update(Agent pAgent, EBTStatus childStatus)
+            protected override async Task<EBTStatus> update(Agent pAgent, EBTStatus childStatus)
             {
                 if (c_n++ < m_n)
                 {
                     return EBTStatus.BT_SUCCESS;
                 }
                 c_n = 0;
-                return base.update(pAgent, childStatus);
+                return await base.update(pAgent, childStatus);
             }
-            protected override EBTStatus update_current(Agent pAgent, EBTStatus childStatus)
+            protected override Task<EBTStatus> update_current(Agent pAgent, EBTStatus childStatus)
             {
                 return base.update_current(pAgent, childStatus);
             }
-            public int GetCount(Agent pAgent)
+            public async Task<int> GetCount(Agent pAgent)
             {
-                Debug.Check(this.GetNode() is IntervalFrames);
+                Debugs.Check(this.GetNode() is IntervalFrames);
                 IntervalFrames pDecoratorCountNode = (IntervalFrames)(this.GetNode());
 
-                return pDecoratorCountNode != null ? pDecoratorCountNode.GetCount(pAgent) : 0;
+                return pDecoratorCountNode != null ?await pDecoratorCountNode.GetCount(pAgent) : 0;
             }
-            public bool GetFront(Agent pAgent)
+            public async Task<bool>  GetFront(Agent pAgent)
             {
-                Debug.Check(this.GetNode() is IntervalFrames);
+                Debugs.Check(this.GetNode() is IntervalFrames);
                 IntervalFrames pDecoratorCountNode = (IntervalFrames)(this.GetNode());
 
-                return pDecoratorCountNode != null ? pDecoratorCountNode.GetFront(pAgent) : false;
+                return pDecoratorCountNode != null ?await pDecoratorCountNode.GetFront(pAgent) : false;
             }
             protected int m_n;
             protected bool m_f;
             protected int c_n;
+
+            public IntervalFramesTask(Workspace workspace) : base(workspace)
+            {
+            }
         }
     }
 }

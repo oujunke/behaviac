@@ -4,6 +4,7 @@
 // PLEASE MODIFY AND REGENERETE IT IN THE DESIGNER FOR CLASS/MEMBERS/METHODS, ETC.
 // -------------------------------------------------------------------------------
 
+using behaviac;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -17,7 +18,12 @@ public class SecondAgent : behaviac.Agent
 ///<<< END WRITING YOUR CODE
 {
 	private int p2 = 0;
-	public void _set_p2(int value)
+
+    public SecondAgent(Workspace workspace) : base(workspace)
+    {
+    }
+
+    public void _set_p2(int value)
 	{
 		p2 = value;
 	}

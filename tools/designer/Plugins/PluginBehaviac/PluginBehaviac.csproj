@@ -171,14 +171,12 @@
     <Compile Include="NodeExporters\NodeExporter.cs" />
     <Compile Include="Nodes\Actions\Actions.cs" />
     <Compile Include="Nodes\Actions\Assignment.cs" />
-    <Compile Include="Nodes\Actions\CompoundAction.cs" />
     <Compile Include="Nodes\Actions\Compute.cs" />
     <Compile Include="Nodes\Actions\ConnectorCondition.cs" />
     <Compile Include="Nodes\Actions\End.cs" />
     <Compile Include="Nodes\Actions\IntervalFrames.cs" />
     <Compile Include="Nodes\Actions\IntervalTimes.cs" />
     <Compile Include="Nodes\Actions\Noop.cs" />
-    <Compile Include="Nodes\Actions\Nop.cs" />
     <Compile Include="Nodes\Actions\Wait.cs" />
     <Compile Include="Nodes\Actions\WaitforSignal.cs" />
     <Compile Include="Nodes\Actions\WaitFrames.cs" />

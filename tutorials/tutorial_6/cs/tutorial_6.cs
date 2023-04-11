@@ -24,7 +24,7 @@ namespace tutorial_6
         {
             Console.WriteLine("InitPlayer : {0}", btName);
 
-            g_FirstAgent = new FirstAgent();
+            g_FirstAgent = new FirstAgent(Instance);
 
             bool bRet = g_FirstAgent.btload(btName);
             Debug.Assert(bRet);
@@ -38,7 +38,7 @@ namespace tutorial_6
         {
             Console.WriteLine("UpdateLoop");
 
-            behaviac.EBTStatus status = g_FirstAgent.btexec();
+            behaviac.EBTStatus status = g_FirstAgent.btexec().Result;
             Debug.Assert(status == behaviac.EBTStatus.BT_RUNNING);
 
             g_FirstAgent.FireEvent("event_task", 2);
@@ -55,7 +55,7 @@ namespace tutorial_6
         {
             Console.WriteLine("CleanupBehaviac");
 
-            behaviac.Workspace.Instance.Cleanup();
+            Instance.Cleanup();
         }
 
         static void Main(string[] args)

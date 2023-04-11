@@ -1148,6 +1148,7 @@ namespace PluginBehaviac.Exporters
                 file.WriteLine("using System;");
                 file.WriteLine("using System.Collections;");
                 file.WriteLine("using System.Collections.Generic;");
+                file.WriteLine("using System.Threading.Tasks;");
                 file.WriteLine();
 
                 file.WriteLine("namespace behaviac");
@@ -1159,7 +1160,7 @@ namespace PluginBehaviac.Exporters
                 // AgentMeta class
                 file.WriteLine("\tpublic class BehaviorLoaderImplement : BehaviorLoader");
                 file.WriteLine("\t{");
-
+                file.WriteLine("\t\tpublic BehaviorLoaderImplement(Workspace workspace) : base(workspace)\r\n\t\t\t{\r\n\t\t\t}");
                 PreExportMeta(file);
                 file.WriteLine();
 
@@ -1179,7 +1180,7 @@ namespace PluginBehaviac.Exporters
 
                         if (!isStatic)
                         {
-                            file.WriteLine("\t\t\tAgentMeta.Register<{0}>(\"{0}\");", agentType.Name.Replace("::", "."));
+                            file.WriteLine("\t\t\tAgentMeta.Register<{0}>(\"{0}\",Workspace);", agentType.Name.Replace("::", "."));
                         }
                     }
                 }

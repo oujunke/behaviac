@@ -24,7 +24,7 @@ namespace tutorial_5
         {
             Console.WriteLine("InitPlayer : {0}", btName);
 
-            g_FirstAgent = new FirstAgent();
+            g_FirstAgent = new FirstAgent(Instance);
 
             bool bRet = g_FirstAgent.btload(btName);
             Debug.Assert(bRet);
@@ -45,7 +45,7 @@ namespace tutorial_5
             {
                 Console.WriteLine("frame {0}", ++frames);
 
-                status = g_FirstAgent.btexec();
+                status = g_FirstAgent.btexec().Result;
             }
         }
 
@@ -60,7 +60,7 @@ namespace tutorial_5
         {
             Console.WriteLine("CleanupBehaviac");
 
-            behaviac.Workspace.Instance.Cleanup();
+            Instance.Cleanup();
         }
 
         static void Main(string[] args)

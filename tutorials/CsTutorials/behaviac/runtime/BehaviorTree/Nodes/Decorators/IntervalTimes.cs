@@ -8,9 +8,9 @@ namespace behaviac
 {
     public class IntervalTimes : Sequence
     {
-        protected override void load(int version, string agentType, List<property_t> properties)
+        protected override async Task load(int version, string agentType, List<property_t> properties)
         {
-            base.load(version, agentType, properties);
+            await base.load(version, agentType, properties);
 
             for (int i = 0; i < properties.Count; ++i)
             {
@@ -18,31 +18,32 @@ namespace behaviac
 
                 if (p.name == "Time")
                 {
-                    this.m_time = AgentMeta.ParseProperty(p.value);
-                }else if(p.name== "Front")
+                    this.m_time = AgentMeta.ParseProperty(p.value,Workspace);
+                }
+                else if (p.name == "Front")
                 {
-                    this.m_front = AgentMeta.ParseProperty(p.value);
+                    this.m_front = AgentMeta.ParseProperty(p.value,Workspace);
                 }
             }
         }
-        protected virtual int GetTime(Agent pAgent)
+        protected virtual async Task<int> GetTime(Agent pAgent)
         {
             if (this.m_time != null)
             {
-                Debug.Check(this.m_time is CInstanceMember<int>);
-                int count = ((CInstanceMember<int>)this.m_time).GetValue(pAgent);
+                Debugs.Check(this.m_time is CInstanceMember<int>);
+                int count =await ((CInstanceMember<int>)this.m_time).GetValue(pAgent);
 
                 return count;
             }
 
             return 0;
         }
-        protected virtual bool GetFront(Agent pAgent)
+        protected virtual async Task<bool> GetFront(Agent pAgent)
         {
             if (this.m_front != null)
             {
-                Debug.Check(this.m_front is CInstanceMember<int>);
-                var front = ((CInstanceMember<bool>)this.m_front).GetValue(pAgent);
+                Debugs.Check(this.m_front is CInstanceMember<int>);
+                var front =await ((CInstanceMember<bool>)this.m_front).GetValue(pAgent);
 
                 return front;
             }
@@ -51,17 +52,22 @@ namespace behaviac
         }
         protected override BehaviorTask createTask()
         {
-            return new IntervalTimesTask();
+            return new IntervalTimesTask(Workspace);
         }
         protected IInstanceMember m_time;
         protected IInstanceMember m_front;
+
+        public IntervalTimes(Workspace workspace) : base(workspace)
+        {
+        }
+
         public class IntervalTimesTask : SequenceTask
         {
             public override void copyto(BehaviorTask target)
             {
                 base.copyto(target);
 
-                Debug.Check(target is IntervalTimesTask);
+                Debugs.Check(target is IntervalTimesTask);
                 IntervalTimesTask ttask = (IntervalTimesTask)target;
 
                 ttask.m_n = this.m_n;
@@ -87,11 +93,11 @@ namespace behaviac
                 base.Init(node);
                 c_t = DateTime.MinValue;
             }
-            protected override bool onenter(Agent pAgent)
+            protected override async Task<bool> onenter(Agent pAgent)
             {
-                base.onenter(pAgent);
+                await base.onenter(pAgent);
 
-                int count = this.GetCount(pAgent);
+                int count =await this.GetCount(pAgent);
 
                 if (count == 0)
                 {
@@ -99,7 +105,7 @@ namespace behaviac
                 }
 
                 this.m_n = count;
-                this.m_f = this.GetFront(pAgent);
+                this.m_f =await this.GetFront(pAgent);
                 if (c_t == DateTime.MinValue)
                 {
                     if (m_f)
@@ -113,36 +119,40 @@ namespace behaviac
                 }
                 return true;
             }
-            protected override EBTStatus update(Agent pAgent, EBTStatus childStatus)
+            protected override async Task<EBTStatus> update(Agent pAgent, EBTStatus childStatus)
             {
-                if ((DateTime.Now-c_t).TotalSeconds < m_n)
+                if ((DateTime.Now - c_t).TotalSeconds < m_n)
                 {
                     return EBTStatus.BT_SUCCESS;
                 }
                 c_t = DateTime.Now;
-                return base.update(pAgent, childStatus);
+                return await base.update(pAgent, childStatus);
             }
-            protected override EBTStatus update_current(Agent pAgent, EBTStatus childStatus)
+            protected override Task<EBTStatus> update_current(Agent pAgent, EBTStatus childStatus)
             {
                 return base.update_current(pAgent, childStatus);
             }
-            public int GetCount(Agent pAgent)
+            public async Task<int> GetCount(Agent pAgent)
             {
-                Debug.Check(this.GetNode() is IntervalTimes);
+                Debugs.Check(this.GetNode() is IntervalTimes);
                 IntervalTimes pDecoratorCountNode = (IntervalTimes)(this.GetNode());
 
-                return pDecoratorCountNode != null ? pDecoratorCountNode.GetTime(pAgent) : 0;
+                return pDecoratorCountNode != null ?await pDecoratorCountNode.GetTime(pAgent) : 0;
             }
-            public bool GetFront(Agent pAgent)
+            public async Task<bool>  GetFront(Agent pAgent)
             {
-                Debug.Check(this.GetNode() is IntervalTimes);
+                Debugs.Check(this.GetNode() is IntervalTimes);
                 IntervalTimes pDecoratorCountNode = (IntervalTimes)(this.GetNode());
 
-                return pDecoratorCountNode != null ? pDecoratorCountNode.GetFront(pAgent) : false;
+                return pDecoratorCountNode != null ?await pDecoratorCountNode.GetFront(pAgent) : false;
             }
             protected int m_n;
             protected bool m_f;
             protected DateTime c_t;
+
+            public IntervalTimesTask(Workspace workspace) : base(workspace)
+            {
+            }
         }
     }
 }
