@@ -100,7 +100,7 @@ namespace PluginBehaviac.NodeExporters
             string className = GetGeneratedClassName(node, btClassName, nodeName);
 
             // create a new instance of the node
-            stream.WriteLine("{0}\t{1} {2} = new {1}();", indent, className, nodeName);
+            stream.WriteLine("{0}\t{1} {2} = new {1}(bt.Workspace);", indent, className, nodeName);
 
             // set its basic properties
             stream.WriteLine("{0}\t{1}.SetClassNameString(\"{2}\");", indent, nodeName, node.ExportClass);
