@@ -34,10 +34,9 @@ namespace PluginBehaviac.Nodes
         {
             base.CloneProperties(newnode);
         }
-
-        public override void OnPropertyValueChanged(bool wasModified)
+        public override void OnPropertyValueChanged(DesignerPropertyInfo property)
         {
-            base.OnPropertyValueChanged(wasModified);
+            base.OnPropertyValueChanged(property);
         }
     }
 }
