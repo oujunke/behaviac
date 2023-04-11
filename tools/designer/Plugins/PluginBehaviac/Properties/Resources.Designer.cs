@@ -1123,6 +1123,24 @@ namespace PluginBehaviac.Properties {
         }
         
         /// <summary>
+        ///   查找类似 Front 的本地化字符串。
+        /// </summary>
+        internal static string Front {
+            get {
+                return ResourceManager.GetString("Front", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   查找类似 Prejudgment 的本地化字符串。
+        /// </summary>
+        internal static string FrontDesc {
+            get {
+                return ResourceManager.GetString("FrontDesc", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   查找类似 FSM 的本地化字符串。
         /// </summary>
         internal static string FSM {
@@ -1227,6 +1245,42 @@ namespace PluginBehaviac.Properties {
         internal static string ImpulseWithoutEventError {
             get {
                 return ResourceManager.GetString("ImpulseWithoutEventError", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   查找类似 IntervalFrames 的本地化字符串。
+        /// </summary>
+        internal static string IntervalFrames {
+            get {
+                return ResourceManager.GetString("IntervalFrames", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   查找类似 Interval frame number execution 的本地化字符串。
+        /// </summary>
+        internal static string IntervalFramesDesc {
+            get {
+                return ResourceManager.GetString("IntervalFramesDesc", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   查找类似 IntervalTimes 的本地化字符串。
+        /// </summary>
+        internal static string IntervalTimes {
+            get {
+                return ResourceManager.GetString("IntervalTimes", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   查找类似 Interval time number execution 的本地化字符串。
+        /// </summary>
+        internal static string IntervalTimesDesc {
+            get {
+                return ResourceManager.GetString("IntervalTimesDesc", resourceCulture);
             }
         }
         
