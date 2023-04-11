@@ -362,7 +362,7 @@ namespace Behaviac.Design
         {
             //TODO: add a setting in base to hold all these settings
             Node.ColorTheme = (Node.ColorThemes)Settings.Default.ColorTheme;
-            Behaviac.Design.Nodes.Action.NoResultTreatAsError = Settings.Default.NoResultTreatAsError;
+            Behaviac.Design.Nodes.Actions.NoResultTreatAsError = Settings.Default.NoResultTreatAsError;
             NodeViewData.ShowNodeId = Settings.Default.ShowVersionInfo;
             NodeViewData.IsDisplayLengthLimited = Settings.Default.IsDisplayLengthLimited;
             NodeViewData.LimitedDisplayLength = Settings.Default.LimitedDisplayLength;

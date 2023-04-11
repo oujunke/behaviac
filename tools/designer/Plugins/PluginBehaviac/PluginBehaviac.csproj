@@ -170,7 +170,7 @@
     <Compile Include="Nodes\Actions\Compute.cs" />
     <Compile Include="Nodes\Actions\ConnectorCondition.cs" />
     <Compile Include="Nodes\Actions\Noop.cs" />
-    <Compile Include="Nodes\Actions\Action.cs" />
+    <Compile Include="Nodes\Actions\Actions.cs" />
     <Compile Include="Nodes\Actions\Assignment.cs" />
     <Compile Include="Nodes\Actions\End.cs" />
     <Compile Include="Nodes\Actions\Wait.cs" />
@@ -221,8 +221,8 @@
     <Compile Include="Nodes\FSM\WaitFramesState.cs" />
     <Compile Include="Nodes\FSM\WaitState.cs" />
     <Compile Include="Nodes\FSM\WaitTransition.cs" />
-    <Compile Include="Nodes\HTN\Method.cs" />
-    <Compile Include="Nodes\HTN\Task.cs" />
+    <Compile Include="Nodes\HTN\Methods.cs" />
+    <Compile Include="Nodes\HTN\Tasks.cs" />
     <Compile Include="NodeUI\AlwaysTransitionUIPolicy.cs" />
     <Compile Include="NodeUI\EndUIPolicy.cs" />
     <Compile Include="NodeUI\ConditionUIPolicy.cs" />

@@ -139,9 +139,9 @@ namespace Behaviac.Design.Nodes
                 {
                     Behavior refTree_ = referencedBehavior as Behavior;
 
-                    if (refTree_.Children.Count > 0 && refTree_.Children[0] is Task)
+                    if (refTree_.Children.Count > 0 && refTree_.Children[0] is Tasks)
                     {
-                        Task rootTask = refTree_.Children[0] as Task;
+                        Tasks rootTask = refTree_.Children[0] as Tasks;
 
                         if (rootTask.Prototype != null)
                         {

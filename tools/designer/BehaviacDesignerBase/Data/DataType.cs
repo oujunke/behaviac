@@ -2070,7 +2070,7 @@ namespace Behaviac.Design
         {
             get
             {
-                if (this.BasicName.IndexOf(Nodes.Task.LOCAL_TASK_PARAM_PRE) == 0)
+                if (this.BasicName.IndexOf(Nodes.Tasks.LOCAL_TASK_PARAM_PRE) == 0)
                 {
                     return true;
                 }

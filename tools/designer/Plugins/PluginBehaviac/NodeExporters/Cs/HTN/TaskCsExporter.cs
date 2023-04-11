@@ -24,7 +24,7 @@ namespace PluginBehaviac.NodeExporters
     {
         protected override bool ShouldGenerateClass(Node node)
         {
-            Task task = node as Task;
+            Tasks task = node as Tasks;
             return (task != null);
         }
 
@@ -32,7 +32,7 @@ namespace PluginBehaviac.NodeExporters
         {
             base.GenerateConstructor(node, stream, indent, className);
 
-            Task task = node as Task;
+            Tasks task = node as Tasks;
 
             if (task == null)
             {

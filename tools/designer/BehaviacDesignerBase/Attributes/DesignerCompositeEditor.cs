@@ -174,7 +174,7 @@ namespace Behaviac.Design.Attributes
             {
                 //textBox.Text = "(Multiple properties)";
                 MethodDef method = null;
-                Nodes.Action action = this._object as Nodes.Action;
+                Nodes.Actions action = this._object as Nodes.Actions;
 
                 if (action != null)
                 {

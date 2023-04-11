@@ -42,9 +42,9 @@ using PluginBehaviac.Properties;
 namespace PluginBehaviac.Nodes
 {
     [NodeDesc("Actions", NodeIcon.Action)]
-    public class Action : Behaviac.Design.Nodes.Action
+    public class Actions : Behaviac.Design.Nodes.Actions
     {
-        public Action()
+        public Actions()
         : base(Resources.Action, Resources.ActionDesc)
         {
         }
@@ -53,7 +53,7 @@ namespace PluginBehaviac.Nodes
         {
             get
             {
-                return "Action";
+                return "Actions";
             }
         }
 

@@ -232,7 +232,7 @@ namespace Behaviac.Design.Attributes
             else if (param[0] == '{')     //struct
             {
                 //to set it as action.Method is used in the following parsing
-                Nodes.Action action = node as Nodes.Action;
+                Nodes.Actions action = node as Nodes.Actions;
 
                 if (action != null && action.Method == null)
                 {

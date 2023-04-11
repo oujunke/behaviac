@@ -16,18 +16,30 @@ using System.Collections.Generic;
 using System.Text;
 using System.Drawing;
 using Behaviac.Design;
-using PluginBehaviac.Properties;
 using Behaviac.Design.Nodes;
 using Behaviac.Design.Attributes;
 
-namespace PluginBehaviac.Nodes
+namespace Behaviac.Design.Nodes
 {
-    [NodeDesc("HTN", "method_icon")]
-    public class Method : Behaviac.Design.Nodes.Method
+    public class Methods : Behaviac.Design.Nodes.Node
     {
-        public Method()
-        : base(Resources.Method, Resources.MethodDesc)
+        //protected ConnectorSingle _Precondition;
+        protected ConnectorSingle _Task;
+
+        public Methods(string label, string description)
+        : base(label, description)
         {
+            //_Precondition = new ConnectorSingle(_children, Resources.BranchPreconditions, "Precondition");
+            _Task = new ConnectorSingle(_children, string.Empty, "Tasks");
+        }
+
+        private readonly static Brush __defaultBackgroundBrush = new SolidBrush(Color.FromArgb(79, 129, 189));
+        protected override Brush DefaultBackgroundBrush
+        {
+            get
+            {
+                return __defaultBackgroundBrush;
+            }
         }
 
         public override string ExportClass
@@ -38,40 +50,14 @@ namespace PluginBehaviac.Nodes
             }
         }
 
-        public override bool CanAdopt(BaseNode child)
-        {
-            if (base.CanAdopt(child))
-            {
-                return child is Sequence ||
-                       child is Selector ||
-                       child is Parallel ||
-                       child is DecoratorLoop ||
-                       child is Action ||
-                       child is DecoratorIterator ||
-                       child is Behaviac.Design.Nodes.ReferencedBehavior ||
-                       child is Behaviac.Design.Nodes.Behavior;
-            }
 
-            return false;
-        }
-
-        protected override bool CanBeAdoptedBy(BaseNode parent)
+        protected override void CloneProperties(Node newnode)
         {
-            return base.CanBeAdoptedBy(parent) && (parent is Task);
+            base.CloneProperties(newnode);
         }
 
         public override void CheckForErrors(BehaviorNode rootBehavior, List<ErrorCheck> result)
         {
-            if (_Task.Child == null)
-            {
-                result.Add(new Node.ErrorCheck(this, ErrorCheckLevel.Error, Resources.NoMethosError));
-            }
-
-            if (!(this.Parent is Task))
-            {
-                result.Add(new Node.ErrorCheck(this, ErrorCheckLevel.Error, Resources.MethodParentError));
-            }
-
             base.CheckForErrors(rootBehavior, result);
         }
     }

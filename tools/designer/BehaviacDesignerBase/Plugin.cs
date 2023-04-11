@@ -1088,6 +1088,10 @@ namespace Behaviac.Design
         /// <returns>Returns the type if found in any loaded plugin. Retuns null if it could not be found.</returns>
         public static Type GetType(string fullname)
         {
+            if (fullname.EndsWith("Action")|| fullname.EndsWith("Task")|| fullname.EndsWith("Method"))
+            {
+                fullname += "s";
+            }
             // search base class
             Type type = Type.GetType(fullname);
 

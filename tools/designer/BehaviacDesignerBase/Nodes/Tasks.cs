@@ -21,11 +21,11 @@ using Behaviac.Design.Properties;
 
 namespace Behaviac.Design.Nodes
 {
-    public class Task : Behaviac.Design.Nodes.Sequence
+    public class Tasks : Behaviac.Design.Nodes.Sequence
     {
         public const string LOCAL_TASK_PARAM_PRE = "_$local_task_param_$_";
 
-        public Task(string label, string description)
+        public Tasks(string label, string description)
         : base(label, description)
         {
             //don't do error check in the base's CheckForErrors as the error/warning messages in the Behaviac.Design.Nodes.Sequence is not properly.
@@ -48,7 +48,7 @@ namespace Behaviac.Design.Nodes
         {
             get
             {
-                return "Task";
+                return "Tasks";
             }
         }
 
@@ -90,7 +90,7 @@ namespace Behaviac.Design.Nodes
                 for (int i = 0; i < this.Children.Count; ++i)
                 {
                     BaseNode c = this.Children[i];
-                    bool isMethod = c is Method;
+                    bool isMethod = c is Methods;
 
                     if (isMethod)
                     {
@@ -184,7 +184,7 @@ namespace Behaviac.Design.Nodes
                 }
 
                 // 2. only accept it if the newly added one is a Method and the existing Children are all Method
-                if (child is Nodes.Method)
+                if (child is Nodes.Methods)
                 {
                     // insert a Method before a none-method node
                     if (this.Children.Count == 1)
@@ -197,7 +197,7 @@ namespace Behaviac.Design.Nodes
                     for (int i = 0; i < this.Children.Count; ++i)
                     {
                         BaseNode c = this.Children[i];
-                        bool isMethod = c is Method;
+                        bool isMethod = c is Methods;
 
                         if (isMethod)
                         {
@@ -228,7 +228,7 @@ namespace Behaviac.Design.Nodes
         {
             base.CloneProperties(newnode);
 
-            Task right = (Task)newnode;
+            Tasks right = (Tasks)newnode;
 
             if (_task != null)
             {
@@ -256,7 +256,7 @@ namespace Behaviac.Design.Nodes
                 for (int i = 0; i < this.Children.Count; ++i)
                 {
                     BaseNode c = this.Children[i];
-                    bool isMethod = c is Method;
+                    bool isMethod = c is Methods;
 
                     if (isMethod)
                     {

@@ -1043,7 +1043,7 @@ namespace Behaviac.Design
                 // check if there is a Method node on the parent path
                 while (target != null)
                 {
-                    if (target is Nodes.Method)
+                    if (target is Nodes.Methods)
                     {
                         return target.CanAdopt(node);
                     }
@@ -2364,7 +2364,7 @@ namespace Behaviac.Design
 
                     this.beakpointPlanning.Visible = false;
 
-                    if (SelectedNode.Node is Task)
+                    if (SelectedNode.Node is Tasks)
                     {
                         this.beakpointPlanning.Visible = true;
                         beakpointPlanning.Text = SelectedNode.GetBreakpointOperation(HighlightBreakPoint.kPlanning);
@@ -3773,7 +3773,7 @@ namespace Behaviac.Design
         {
             if (SelectedNode != null)
             {
-                Debug.Check(SelectedNode.Node is Task);
+                Debug.Check(SelectedNode.Node is Tasks);
 
                 SelectedNode.SetBreakpoint(HighlightBreakPoint.kPlanning);
                 LayoutChanged();

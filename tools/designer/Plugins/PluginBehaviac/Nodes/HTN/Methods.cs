@@ -16,48 +16,62 @@ using System.Collections.Generic;
 using System.Text;
 using System.Drawing;
 using Behaviac.Design;
+using PluginBehaviac.Properties;
 using Behaviac.Design.Nodes;
 using Behaviac.Design.Attributes;
 
-namespace Behaviac.Design.Nodes
+namespace PluginBehaviac.Nodes
 {
-    public class Method : Behaviac.Design.Nodes.Node
+    [NodeDesc("HTN", "method_icon")]
+    public class Methods : Behaviac.Design.Nodes.Methods
     {
-        //protected ConnectorSingle _Precondition;
-        protected ConnectorSingle _Task;
-
-        public Method(string label, string description)
-        : base(label, description)
+        public Methods()
+        : base(Resources.Method, Resources.MethodDesc)
         {
-            //_Precondition = new ConnectorSingle(_children, Resources.BranchPreconditions, "Precondition");
-            _Task = new ConnectorSingle(_children, string.Empty, "Tasks");
-        }
-
-        private readonly static Brush __defaultBackgroundBrush = new SolidBrush(Color.FromArgb(79, 129, 189));
-        protected override Brush DefaultBackgroundBrush
-        {
-            get
-            {
-                return __defaultBackgroundBrush;
-            }
         }
 
         public override string ExportClass
         {
             get
             {
-                return "Method";
+                return "Methods";
             }
         }
 
-
-        protected override void CloneProperties(Node newnode)
+        public override bool CanAdopt(BaseNode child)
         {
-            base.CloneProperties(newnode);
+            if (base.CanAdopt(child))
+            {
+                return child is Sequence ||
+                       child is Selector ||
+                       child is Parallel ||
+                       child is DecoratorLoop ||
+                       child is Actions ||
+                       child is DecoratorIterator ||
+                       child is Behaviac.Design.Nodes.ReferencedBehavior ||
+                       child is Behaviac.Design.Nodes.Behavior;
+            }
+
+            return false;
+        }
+
+        protected override bool CanBeAdoptedBy(BaseNode parent)
+        {
+            return base.CanBeAdoptedBy(parent) && (parent is Tasks);
         }
 
         public override void CheckForErrors(BehaviorNode rootBehavior, List<ErrorCheck> result)
         {
+            if (_Task.Child == null)
+            {
+                result.Add(new Node.ErrorCheck(this, ErrorCheckLevel.Error, Resources.NoMethosError));
+            }
+
+            if (!(this.Parent is Tasks))
+            {
+                result.Add(new Node.ErrorCheck(this, ErrorCheckLevel.Error, Resources.MethodParentError));
+            }
+
             base.CheckForErrors(rootBehavior, result);
         }
     }

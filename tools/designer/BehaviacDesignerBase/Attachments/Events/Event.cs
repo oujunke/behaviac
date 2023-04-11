@@ -167,9 +167,9 @@ namespace Behaviac.Design.Attachments
         {
             Behaviac.Design.Nodes.Behavior refB = ((Behaviac.Design.Nodes.Behavior)_referencedBehavior);
 
-            if (refB.Children.Count > 0 && refB.Children[0] is Task)
+            if (refB.Children.Count > 0 && refB.Children[0] is Tasks)
             {
-                Task rootTask = refB.Children[0] as Task;
+                Tasks rootTask = refB.Children[0] as Tasks;
 
                 if (rootTask.Prototype != null)
                 {
