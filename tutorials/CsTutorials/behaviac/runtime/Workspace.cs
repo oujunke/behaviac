@@ -275,7 +275,6 @@ namespace behaviac
         public Debug Debugs;
         public FileManager FileManagers;
         public Context Contexts;
-        public BehaviorTask BehaviorTasks;
         public ComparerRegister ComparerRegisters;
         public ComputerRegister ComputerRegisters;
         private Workspace()

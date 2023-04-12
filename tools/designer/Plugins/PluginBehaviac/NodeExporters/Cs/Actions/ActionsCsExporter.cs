@@ -22,7 +22,7 @@ using Actions = Behaviac.Design.Nodes.Actions;
 
 namespace PluginBehaviac.NodeExporters
 {
-    public class ActionCsExporter : NodeCsExporter
+    public class ActionsCsExporter : NodeCsExporter
     {
         private bool isNullMethod(MethodDef method)
         {

@@ -59,7 +59,7 @@ namespace PluginBehaviac.NodeExporters
 
             if (pReferencedBehavior.ReferenceBehavior != null)
             {
-                stream.WriteLine("{0}\t\tpublic override string GetReferencedTree(Agent pAgent)", indent);
+                stream.WriteLine("{0}\t\tpublic override Task<string> GetReferencedTree(Agent pAgent)", indent);
                 stream.WriteLine("{0}\t\t{{", indent);
 
                 string retStr = RightValueCsExporter.GenerateCode(node, pReferencedBehavior.ReferenceBehavior, stream, indent + "\t\t\t", string.Empty, string.Empty, "Behavior");
@@ -99,9 +99,9 @@ namespace PluginBehaviac.NodeExporters
                 return;
             }
 
-            stream.WriteLine("{0}\t\t\tstring szTreePath = this.GetReferencedTree(null);", indent);
+            stream.WriteLine("{0}\t\t\tstring szTreePath = this.GetReferencedTree(null).Result;", indent);
             stream.WriteLine("{0}\t\t\tif (!string.IsNullOrEmpty(szTreePath)) {{", indent);
-            stream.WriteLine("{0}\t\t\tBehaviorTree behaviorTree = Workspace.Instance.LoadBehaviorTree(szTreePath);", indent);
+            stream.WriteLine("{0}\t\t\tBehaviorTree behaviorTree = Workspace.LoadBehaviorTree(szTreePath);", indent);
             stream.WriteLine("{0}\t\t\tif (behaviorTree != null)", indent);
             stream.WriteLine("{0}\t\t\t{{", indent);
             stream.WriteLine("{0}\t\t\t\tthis.m_bHasEvents |= behaviorTree.HasEvents();", indent);

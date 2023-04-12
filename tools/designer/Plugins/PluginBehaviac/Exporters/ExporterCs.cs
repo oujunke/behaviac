@@ -747,7 +747,7 @@ namespace PluginBehaviac.Exporters
                 //file.WriteLine("{0}[behaviac.TypeMetaInfo(\"{1}\", \"{2}\")]", indent, agentDisplayName, agentDescription);
                 string baseClassStr = (agent.Base != null) ? string.Format(" : {0}", agent.Base.Name.Replace("::", ".")) : "";
                 file.WriteLine("{0}public class {1}{2}", indent, agent.BasicName, baseClassStr);
-                methodImpSb.AppendLine($"{indent}public interface I{agent.BasicName}Imp{(agent.Base.BasicName=="Agent"?"":$" : I{agent.Base.BasicName}Imp")}\r\n{indent}{{");
+                methodImpSb.AppendLine($"{indent}public interface I{agent.BasicName}Imp{(agent.Base.BasicName == "Agent" ? "" : $" : I{agent.Base.BasicName}Imp")}\r\n{indent}{{");
                 if (!preview)
                 {
                     ExportBeginComment(file, indent, agent.BasicName);
@@ -827,13 +827,20 @@ namespace PluginBehaviac.Exporters
 
                         string returnType = DataCsExporter.GetGeneratedNativeType(method.ReturnType);
                         string returnValue = DataCsExporter.GetGeneratedDefaultValue(method.ReturnType, returnType);
-
+                        if (returnType == "void")
+                        {
+                            returnType = "Task";
+                        }
+                        else
+                        {
+                            returnType = $"Task<{returnType}>";
+                        }
                         //file.WriteLine("{0}\t[behaviac.MethodMetaInfo(\"{1}\", \"{2}\")]", indent, method.DisplayName, method.BasicDescription);
                         ExportMethodComment(file, "\t" + indent);
                         methodImpSb.AppendLine($"\t{returnType} {method.BasicName}({allParams});");
-                        file.WriteLine("{0}\t{1}{2}{3} {4}({5})", indent, publicStr, staticStr, returnType, method.BasicName, allParams);
+                        file.WriteLine("{0}\t{1}{2}async {3} {4}({5})", indent, publicStr, staticStr, returnType, method.BasicName, allParams);
                         file.WriteLine("{0}\t{{", indent);
-                        file.WriteLine($"{indent}\t\t{(returnValue != null ? "return" : "")} _methodImp.{method.BasicName}({parNames});");
+                        file.WriteLine($"{indent}\t\t{(returnValue != null ? "return" : "")} await _methodImp.{method.BasicName}({parNames});");
                         file.WriteLine("{0}\t}}", indent);
                         file.WriteLine();
                     }
@@ -1578,7 +1585,7 @@ namespace PluginBehaviac.Exporters
                             file.WriteLine("\t\t\t{");
                             file.WriteLine("\t\t\t}");
                             file.WriteLine();
-                            if(methodReturnType == "void")
+                            if (methodReturnType == "void")
                             {
                                 file.WriteLine("\t\t\tpublic CMethod_{0}(CMethod_{0} rhs,Workspace workspace) : base(workspace,rhs)", methodFullname);
                             }
@@ -1586,7 +1593,7 @@ namespace PluginBehaviac.Exporters
                             {
                                 file.WriteLine("\t\t\tpublic CMethod_{0}(CMethod_{0} rhs,Workspace workspace) : base(rhs,workspace)", methodFullname);
                             }
-                            
+
                             file.WriteLine("\t\t\t{");
                             file.WriteLine("\t\t\t}");
                             file.WriteLine();

@@ -633,11 +633,11 @@ namespace behaviac
             return btName;
         }
 
-        private string GetActionResultStr(EActionResult actionResult)
+        private static string GetActionResultStr(EActionResult actionResult,Workspace workspace)
         {
 #if !BEHAVIAC_RELEASE
 
-            if (Configs.IsLoggingOrSocketing)
+            if (workspace.Configs.IsLoggingOrSocketing)
             {
                 string actionResultStr = "";
 
@@ -657,7 +657,7 @@ namespace behaviac
                 {
                     //although actionResult can be EAR_none or EAR_all, but, as this is the real result of an action
                     //it can only be success or failure
-                    Debugs.Check(false);
+                    workspace.Debugs.Check(false);
                 }
 
                 return actionResultStr;
@@ -673,7 +673,7 @@ namespace behaviac
 
             if (pAgent.Configs.IsLoggingOrSocketing)
             {
-                string actionResultStr = pAgent.Workspace.BehaviorTasks.GetActionResultStr(actionResult);
+                string actionResultStr = BehaviorTask.GetActionResultStr(actionResult,pAgent.Workspace);
                 string msg = string.Format("BehaviorTreeTask Breakpoints at: '{0}{1}'\n\nOk to continue.", btMsg, actionResultStr);
 
                 pAgent.Workspace.RespondToBreak(msg, "BehaviorTreeTask Breakpoints");

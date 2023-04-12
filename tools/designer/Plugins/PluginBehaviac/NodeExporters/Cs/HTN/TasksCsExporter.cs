@@ -20,7 +20,7 @@ using Behaviac.Design.Nodes;
 
 namespace PluginBehaviac.NodeExporters
 {
-    public class TaskCsExporter : NodeCsExporter
+    public class TasksCsExporter : NodeCsExporter
     {
         protected override bool ShouldGenerateClass(Node node)
         {

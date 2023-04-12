@@ -109,7 +109,7 @@
     <Compile Include="NodeExporters\Cpp\FSM\WaitFramesStateCppExporter.cs" />
     <Compile Include="NodeExporters\Cpp\FSM\WaitStateCppExporter.cs" />
     <Compile Include="NodeExporters\Cpp\HTN\TaskCppExporter.cs" />
-    <Compile Include="NodeExporters\Cs\Actions\ActionCsExporter.cs" />
+    <Compile Include="NodeExporters\Cs\Actions\ActionsCsExporter.cs" />
     <Compile Include="NodeExporters\Cs\Actions\AssignmentCsExporter.cs" />
     <Compile Include="NodeExporters\Cs\Actions\ComputeCsExporter.cs" />
     <Compile Include="NodeExporters\Cs\Actions\EndCsExporter.cs" />
@@ -145,7 +145,7 @@
     <Compile Include="NodeExporters\Cs\FSM\TransitionConditionCsExporter.cs" />
     <Compile Include="NodeExporters\Cs\FSM\WaitStateCsExporter.cs" />
     <Compile Include="NodeExporters\Cs\FSM\WaitFramesStateCsExporter.cs" />
-    <Compile Include="NodeExporters\Cs\HTN\TaskCsExporter.cs" />
+    <Compile Include="NodeExporters\Cs\HTN\TasksCsExporter.cs" />
     <Compile Include="NodeExporters\Cs\NodeCsExporter.cs" />
     <Compile Include="NodeExporters\Cpp\Actions\ActionCppExporter.cs" />
     <Compile Include="NodeExporters\Cpp\Actions\AssignmentCppExporter.cs" />

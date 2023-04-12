@@ -291,11 +291,11 @@ namespace PluginBehaviac.DataExporters
 
                 if (method.IsStatic)
                 {
-                    retStr = string.Format("{0}.{1}({2})", className, method.BasicName, allParams);
+                    retStr = string.Format("awat {0}.{1}({2})", className, method.BasicName, allParams);
                 }
                 else
                 {
-                    retStr = string.Format("(({0}){1}).{2}({3})", className, agentName, method.BasicName, allParams);
+                    retStr = string.Format("await (({0}){1}).{2}({3})", className, agentName, method.BasicName, allParams);
                 }
             }
             else

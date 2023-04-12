@@ -20,6 +20,7 @@ using Behaviac.Design.Nodes;
 using Behaviac.Design.Attributes;
 using PluginBehaviac.Nodes;
 using PluginBehaviac.DataExporters;
+using System.Threading.Tasks;
 
 namespace PluginBehaviac.NodeExporters
 {
@@ -82,9 +83,9 @@ namespace PluginBehaviac.NodeExporters
 
             if (end.EndStatus != null)
             {
-                stream.WriteLine("{0}\t\tprotected override EBTStatus GetStatus(Agent pAgent)", indent);
+                stream.WriteLine("{0}\t\tprotected override Task<EBTStatus> GetStatus(Agent pAgent)", indent);
                 stream.WriteLine("{0}\t\t{{", indent);
-
+                
                 string retStr = RightValueCsExporter.GenerateCode(node, end.EndStatus, stream, indent + "\t\t\t", string.Empty, string.Empty, "EndStatus");
 
                 stream.WriteLine("{0}\t\t\treturn {1};", indent, retStr);
