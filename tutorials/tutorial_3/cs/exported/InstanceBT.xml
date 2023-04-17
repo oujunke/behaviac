@@ -18,7 +18,7 @@
       <property Opl="int SecondAgentInstance.SecondAgent::p2" />
       <property Opr="int pInstance.SecondAgent::p2" />
     </node>
-    <node class="Action" id="4">
+    <node class="Actions" id="4">
       <property Method="Self.FirstAgent::SayHello()" />
       <property ResultOption="BT_SUCCESS" />
     </node>

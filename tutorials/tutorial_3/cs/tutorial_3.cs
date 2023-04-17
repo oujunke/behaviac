@@ -25,16 +25,16 @@ namespace tutorial_3
         static bool InitPlayer()
         {
             Console.WriteLine("InitPlayer");
-
-            g_FirstAgent = new FirstAgent(Instance);
+            FirstAgentImp agentImp = new FirstAgentImp();
+            g_FirstAgent = new FirstAgent(agentImp,Instance);
             bool bRet = g_FirstAgent.btload("InstanceBT");
             Debug.Assert(bRet);
             g_FirstAgent.btsetcurrent("InstanceBT");
 
-            g_SecondAgent = new SecondAgent(Instance);
+            g_SecondAgent = new SecondAgent(agentImp,Instance);
             g_FirstAgent._set_pInstance(g_SecondAgent);
 
-            g_ThirdAgent = new SecondAgent(Instance);
+            g_ThirdAgent = new SecondAgent(agentImp, Instance);
             behaviac.Agent.BindInstance(g_ThirdAgent, "SecondAgentInstance");
 
             return bRet;

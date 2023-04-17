@@ -1,10 +1,16 @@
-﻿using System;
+﻿using behaviac;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 
 public class SecondAgent : behaviac.Agent
 {
     private int p1 = 0;
+
+    public SecondAgent(Workspace workspace) : base(workspace)
+    {
+    }
+
     public void _set_p1(int value)
     {
         p1 = value;

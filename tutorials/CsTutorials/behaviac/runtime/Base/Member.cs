@@ -67,7 +67,7 @@ namespace behaviac
 
         void SetValue(Agent self, object value);
 
-        void SetValue(Agent self, IInstanceMember right);
+        Task SetValue(Agent self, IInstanceMember right);
 
         void SetValueAs(Agent self, IInstanceMember right);
 
@@ -203,14 +203,14 @@ namespace behaviac
             }
         }
 
-        public void SetValue(Agent self, IInstanceMember right)
+        public async Task SetValue(Agent self, IInstanceMember right)
         {
-            SetValue(self, (CInstanceMember<T>)right);
+          await  SetValue(self, (CInstanceMember<T>)right);
         }
 
-        public void SetValue(Agent self, CInstanceMember<T> right)
+        public async Task SetValue(Agent self, CInstanceMember<T> right)
         {
-            SetValue(self, right.GetValue(self));
+           await SetValue(self,await right.GetValue(self));
         }
 
         public async Task<bool> Compare(Agent self, IInstanceMember right, EOperatorType comparisonType)
@@ -4029,16 +4029,19 @@ namespace behaviac
         public void SetValue(Agent self, object value)
         {
             Debugs.Check(false);
+            
         }
 
         public void SetValueAs(Agent self, IInstanceMember right)
         {
             Debugs.Check(false);
+            
         }
 
-        public void SetValue(Agent self, IInstanceMember right)
+        public Task SetValue(Agent self, IInstanceMember right)
         {
             Debugs.Check(false);
+            return Task.CompletedTask;
         }
 
         public Task<bool> Compare(Agent self, IInstanceMember right, EOperatorType comparisonType)

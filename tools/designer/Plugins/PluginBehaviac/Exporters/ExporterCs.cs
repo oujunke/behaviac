@@ -755,7 +755,7 @@ namespace PluginBehaviac.Exporters
                 }
 
                 file.WriteLine("{0}{{", indent);
-                file.WriteLine($"\tprivate I{agent.BasicName}Imp _methodImp;\r\n\tpublic {agent.BasicName}(I{agent.BasicName}Imp methodImp,behaviac.Workspace workspace):base(workspace){(agent.Base.BasicName == "Agent" ? "" : $" : base(methodImp)")}\r\n\t{{\r\n\t    _methodImp=methodImp;\r\n\t}}");
+                file.WriteLine($"\tprivate I{agent.BasicName}Imp _methodImp;\r\n\tpublic {agent.BasicName}(I{agent.BasicName}Imp methodImp,behaviac.Workspace workspace):base({(agent.Base.BasicName == "Agent" ? "" : $"methodImp,")}workspace)\r\n\t{{\r\n\t    _methodImp=methodImp;\r\n\t}}");
                 IList<PropertyDef> properties = agent.GetProperties(true);
 
                 foreach (PropertyDef prop in properties)
@@ -1446,10 +1446,10 @@ namespace PluginBehaviac.Exporters
                 file.WriteLine();
 
                 // Constructors
-                file.WriteLine("\t\t\tpublic CInstanceConst_{0}(string typeName, string valueStr) : base(typeName, valueStr)", structTypeName);
+                file.WriteLine("\t\t\tpublic CInstanceConst_{0}(string typeName, string valueStr,Workspace workspace) : base(typeName, valueStr,workspace)", structTypeName);
                 file.WriteLine("\t\t\t{");
 
-                file.WriteLine("\t\t\t\tList<string> paramStrs = behaviac.StringUtils.SplitTokensForStruct(valueStr);");
+                file.WriteLine("\t\t\t\tList<string> paramStrs = behaviac.StringUtils.SplitTokensForStruct(valueStr, Workspace);");
 
                 int validPropCount = 0;
                 foreach (PropertyDef prop in structType.Properties)
@@ -1460,7 +1460,7 @@ namespace PluginBehaviac.Exporters
                     }
                 }
 
-                file.WriteLine("\t\t\t\tDebug.Check(paramStrs != null && paramStrs.Count == {0});", validPropCount);
+                file.WriteLine("\t\t\t\tDebugs.Check(paramStrs != null && paramStrs.Count == {0});", validPropCount);
                 file.WriteLine();
 
                 validPropCount = 0;
@@ -1470,7 +1470,7 @@ namespace PluginBehaviac.Exporters
                     {
                         string propType = DataCsExporter.GetGeneratedNativeType(prop.NativeType);
 
-                        file.WriteLine("\t\t\t\t_{0} = (CInstanceMember<{1}>)AgentMeta.ParseProperty<{1}>(paramStrs[{2}]);", prop.BasicName, propType, validPropCount);
+                        file.WriteLine("\t\t\t\t_{0} = (CInstanceMember<{1}>)AgentMeta.ParseProperty<{1}>(paramStrs[{2}], Workspace);", prop.BasicName, propType, validPropCount);
 
                         validPropCount++;
                     }
@@ -1480,7 +1480,7 @@ namespace PluginBehaviac.Exporters
                 file.WriteLine();
 
                 // Run()
-                file.WriteLine("\t\t\tpublic override void Run(Agent self)");
+                file.WriteLine("\t\t\tpublic override async Task Run(Agent self)");
                 file.WriteLine("\t\t\t{");
 
                 if (structType.Properties.Count > 0)
@@ -1504,11 +1504,11 @@ namespace PluginBehaviac.Exporters
 
                         if (Plugin.IsRefType(prop.Type))
                         {
-                            file.WriteLine("\t\t\t\t_value.{0} = ({1})_{0}.GetValueObject(self);", prop.BasicName, propType);
+                            file.WriteLine("\t\t\t\t_value.{0} =await ({1})_{0}.GetValueObject(self);", prop.BasicName, propType);
                         }
                         else
                         {
-                            file.WriteLine("\t\t\t\t_value.{0} = ((CInstanceMember<{1}>)_{0}).GetValue(self);", prop.BasicName, propType);
+                            file.WriteLine("\t\t\t\t_value.{0} =await ((CInstanceMember<{1}>)_{0}).GetValue(self);", prop.BasicName, propType);
                         }
                     }
                 }
@@ -1646,7 +1646,7 @@ namespace PluginBehaviac.Exporters
                             file.WriteLine();
 
                             // Run()
-                            file.WriteLine("\t\t\tpublic override Task Run(Agent self)");
+                            file.WriteLine("\t\t\tpublic override async Task Run(Agent self)");
                             file.WriteLine("\t\t\t{");
 
                             if (method.Params.Count > 0)
@@ -1665,7 +1665,7 @@ namespace PluginBehaviac.Exporters
                             {
                                 if (IsStructType(param))
                                 {
-                                    file.WriteLine("\t\t\t\t_{0}.Run(self);", param.Name);
+                                    file.WriteLine("\t\t\t\tawait _{0}.Run(self);", param.Name);
                                 }
 
                                 if (!string.IsNullOrEmpty(paramValues))
@@ -1674,11 +1674,11 @@ namespace PluginBehaviac.Exporters
                                 }
 
                                 string paramType = DataCsExporter.GetGeneratedNativeType(param.NativeType);
-                                string paramName = string.Format("((CInstanceMember<{0}>)_{1}).GetValue(self)", paramType, param.Name);
+                                string paramName = string.Format("await ((CInstanceMember<{0}>)_{1}).GetValue(self)", paramType, param.Name);
 
                                 if (Plugin.IsRefType(param.Type))
                                 {
-                                    paramName = string.Format("({0})_{1}.GetValueObject(self)", paramType, param.Name);
+                                    paramName = string.Format("await ({0})_{1}.GetValueObject(self)", paramType, param.Name);
                                 }
 
                                 if (param.IsRef || param.IsOut)
@@ -1710,24 +1710,24 @@ namespace PluginBehaviac.Exporters
                             {
                                 if (method.IsPublic)
                                 {
-                                    file.WriteLine("\t\t\t\t{0}.{1}({2});", instanceName, method.BasicName, paramValues);
+                                    file.WriteLine("\t\t\t\tawait {0}.{1}({2});", instanceName, method.BasicName, paramValues);
                                 }
                                 else
                                 {
                                     file.WriteLine("\t\t\t\tobject[] paramArray = new object[] {{ {0} }};", paramValues);
-                                    file.WriteLine("\t\t\t\tAgentMetaVisitor.ExecuteMethod({0}, \"{1}\", paramArray);", instanceName, method.BasicName);
+                                    file.WriteLine("\t\t\t\tawait (Task)AgentMetaVisitor.ExecuteMethod({0}, \"{1}\", paramArray);", instanceName, method.BasicName);
                                 }
                             }
                             else
                             {
                                 if (method.IsPublic)
                                 {
-                                    file.WriteLine("\t\t\t\t_returnValue.value = {0}.{1}({2});", instanceName, method.BasicName, paramValues);
+                                    file.WriteLine("\t\t\t\t_returnValue.value =await {0}.{1}({2});", instanceName, method.BasicName, paramValues);
                                 }
                                 else
                                 {
                                     file.WriteLine("\t\t\t\tobject[] paramArray = new object[] {{ {0} }};", paramValues);
-                                    file.WriteLine("\t\t\t\t_returnValue.value = ({0})AgentMetaVisitor.ExecuteMethod({1}, \"{2}\", paramArray);", methodReturnType, instanceName, method.BasicName);
+                                    file.WriteLine("\t\t\t\t_returnValue.value =await (Task<{0}>)AgentMetaVisitor.ExecuteMethod({1}, \"{2}\", paramArray);", methodReturnType, instanceName, method.BasicName);
                                 }
                             }
 
@@ -1748,7 +1748,7 @@ namespace PluginBehaviac.Exporters
                                     }
                                 }
                             }
-                            file.WriteLine("\t\t\t\treturn Task.CompletedTask;");
+                            file.WriteLine("\t\t\t\t");
                             file.WriteLine("\t\t\t}"); // Run()
 
                             if (method.Params.Count == 1 && methodReturnType == "behaviac.EBTStatus")
@@ -1757,11 +1757,11 @@ namespace PluginBehaviac.Exporters
                                 string paramType = DataCsExporter.GetGeneratedNativeType(method.Params[0].NativeType);
 
                                 file.WriteLine();
-                                file.WriteLine("\t\t\tpublic override IValue GetIValue(Agent self, IInstanceMember firstParam)");
+                                file.WriteLine("\t\t\tpublic override async Task<IValue> GetIValue(Agent self, IInstanceMember firstParam)");
                                 file.WriteLine("\t\t\t{");
                                 file.WriteLine("\t\t\t\tAgent agent = Utils.GetParentAgent(self, _instance);");
                                 file.WriteLine();
-                                file.WriteLine("\t\t\t\t{0} result = ((CInstanceMember<{0}>)firstParam).GetValue(self);", paramType);
+                                file.WriteLine("\t\t\t\t{0} result =await ((CInstanceMember<{0}>)firstParam).GetValue(self);", paramType);
 
                                 MethodDef.Param param = method.Params[0];
 
@@ -1774,12 +1774,12 @@ namespace PluginBehaviac.Exporters
                                         refStr = param.IsRef ? "ref " : "out ";
                                     }
 
-                                    file.WriteLine("\t\t\t\t_returnValue.value = {0}.{1}({2}result);", instanceName, method.BasicName, refStr);
+                                    file.WriteLine("\t\t\t\t_returnValue.value =await {0}.{1}({2}result);", instanceName, method.BasicName, refStr);
                                 }
                                 else
                                 {
                                     file.WriteLine("\t\t\t\tobject[] paramArray = new object[] { result };");
-                                    file.WriteLine("\t\t\t\t_returnValue.value = ({0})AgentMetaVisitor.ExecuteMethod({1}, \"{2}\", paramArray);", methodReturnType, instanceName, method.BasicName);
+                                    file.WriteLine("\t\t\t\t_returnValue.value =await (Task<{0}>)AgentMetaVisitor.ExecuteMethod({1}, \"{2}\", paramArray);", methodReturnType, instanceName, method.BasicName);
                                 }
 
                                 if (param.IsRef || param.IsOut)

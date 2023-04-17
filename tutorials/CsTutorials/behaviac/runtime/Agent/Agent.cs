@@ -2017,11 +2017,12 @@ namespace behaviac
         }
 
         [behaviac.MethodMetaInfo()]
-        public static void LogMessage(string message, Workspace workspace)
+        public static Task LogMessage(string message, Workspace workspace)
         {
             int frames = workspace.FrameSinceStartup;
 
             workspace.Debugs.Log(string.Format("[{0}]{1}\n", frames, message));
+            return Task.CompletedTask;
         }
 
         [behaviac.MethodMetaInfo()]

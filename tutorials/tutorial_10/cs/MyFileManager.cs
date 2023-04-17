@@ -6,7 +6,7 @@ namespace tutorial_10
 {
     public class MyFileManager : behaviac.FileManager
     {
-        public MyFileManager()
+        public MyFileManager(behaviac.Workspace workspace):base(workspace)
         {
         }
 

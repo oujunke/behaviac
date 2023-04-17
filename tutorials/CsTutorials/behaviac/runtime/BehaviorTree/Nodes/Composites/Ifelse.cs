@@ -136,11 +136,11 @@ namespace behaviac
                 else
                 {
                     //return childStatus;
-					//原来是return childStatus(当时如果子节点处于运行状态不会触发,但是不知道这样写的原因,暂时修改,如果知道原因可以修复这里)
+					//原来是return childStatus(当时如果子节点处于运行状态不会触发,会多次执行)
 					BehaviorTask pBehavior = this.m_children[this.m_activeChildIndex];
                     if(pBehavior.m_status!= EBTStatus.BT_RUNNING)
                     {
-                        Debugger.Break();
+                        //Debugger.Break();
                         return childStatus;
                     }
                 }

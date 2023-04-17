@@ -7,6 +7,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Reflection;
+using System.Threading.Tasks;
 
 namespace behaviac
 {
@@ -15,27 +16,27 @@ namespace behaviac
 	[behaviac.GeneratedTypeMetaInfo()]
 	class DecoratorLoop_bt_LoopBT_node1 : behaviac.DecoratorLoop
 	{
-		public DecoratorLoop_bt_LoopBT_node1()
+		public DecoratorLoop_bt_LoopBT_node1(Workspace workspace) : base(workspace)
 		{
 			m_bDecorateWhenChildEnds = true;
 			m_bDoneWithinFrame = false;
 		}
-		protected override int GetCount(Agent pAgent)
+		protected override Task<int> GetCount(Agent pAgent)
 		{
-			return 3;
+			return Task.FromResult(3);
 		}
 	}
 
 	[behaviac.GeneratedTypeMetaInfo()]
-	class Action_bt_LoopBT_node0 : behaviac.Actions
+	class Actions_bt_LoopBT_node0 : behaviac.Actions
 	{
-		public Action_bt_LoopBT_node0()
+		public Actions_bt_LoopBT_node0(Workspace workspace) : base(workspace)
 		{
 			this.m_resultOption = EBTStatus.BT_SUCCESS;
 		}
-		protected override EBTStatus update_impl(behaviac.Agent pAgent, behaviac.EBTStatus childStatus)
+		protected override async Task<EBTStatus> update_impl(behaviac.Agent pAgent, behaviac.EBTStatus childStatus)
 		{
-			((FirstAgent)pAgent).SayHello();
+			await ((FirstAgent)pAgent).SayHello();
 			return EBTStatus.BT_SUCCESS;
 		}
 	}
@@ -53,7 +54,7 @@ namespace behaviac
 #endif
 			// children
 			{
-				DecoratorLoop_bt_LoopBT_node1 node1 = new DecoratorLoop_bt_LoopBT_node1();
+				DecoratorLoop_bt_LoopBT_node1 node1 = new DecoratorLoop_bt_LoopBT_node1(bt.Workspace);
 				node1.SetClassNameString("DecoratorLoop");
 				node1.SetId(1);
 #if !BEHAVIAC_RELEASE
@@ -61,8 +62,8 @@ namespace behaviac
 #endif
 				bt.AddChild(node1);
 				{
-					Action_bt_LoopBT_node0 node0 = new Action_bt_LoopBT_node0();
-					node0.SetClassNameString("Action");
+					Actions_bt_LoopBT_node0 node0 = new Actions_bt_LoopBT_node0(bt.Workspace);
+					node0.SetClassNameString("Actions");
 					node0.SetId(0);
 #if !BEHAVIAC_RELEASE
 					node0.SetAgentType("FirstAgent");
@@ -81,10 +82,10 @@ namespace behaviac
 	[behaviac.GeneratedTypeMetaInfo()]
 	class Assignment_bt_SelectBT_node4 : behaviac.Assignment
 	{
-		public Assignment_bt_SelectBT_node4()
+		public Assignment_bt_SelectBT_node4(Workspace workspace) : base(workspace)
 		{
 		}
-		protected override EBTStatus update_impl(behaviac.Agent pAgent, behaviac.EBTStatus childStatus)
+		protected override async Task<EBTStatus> update_impl(behaviac.Agent pAgent, behaviac.EBTStatus childStatus)
 		{
 			EBTStatus result = EBTStatus.BT_SUCCESS;
 			int opr = 6;
@@ -96,10 +97,10 @@ namespace behaviac
 	[behaviac.GeneratedTypeMetaInfo()]
 	class Condition_bt_SelectBT_node2 : behaviac.Condition
 	{
-		public Condition_bt_SelectBT_node2()
+		public Condition_bt_SelectBT_node2(Workspace workspace) : base(workspace)
 		{
 		}
-		protected override EBTStatus update_impl(behaviac.Agent pAgent, behaviac.EBTStatus childStatus)
+		protected override async Task<EBTStatus> update_impl(behaviac.Agent pAgent, behaviac.EBTStatus childStatus)
 		{
 			int opl = (int)AgentMetaVisitor.GetProperty(pAgent, "p1");
 			int opr = 8;
@@ -109,15 +110,15 @@ namespace behaviac
 	}
 
 	[behaviac.GeneratedTypeMetaInfo()]
-	class Action_bt_SelectBT_node0 : behaviac.Actions
+	class Actions_bt_SelectBT_node0 : behaviac.Actions
 	{
-		public Action_bt_SelectBT_node0()
+		public Actions_bt_SelectBT_node0(Workspace workspace) : base(workspace)
 		{
 			this.m_resultOption = EBTStatus.BT_SUCCESS;
 		}
-		protected override EBTStatus update_impl(behaviac.Agent pAgent, behaviac.EBTStatus childStatus)
+		protected override async Task<EBTStatus> update_impl(behaviac.Agent pAgent, behaviac.EBTStatus childStatus)
 		{
-			((FirstAgent)pAgent).SayHello();
+			await ((FirstAgent)pAgent).SayHello();
 			return EBTStatus.BT_SUCCESS;
 		}
 	}
@@ -135,7 +136,7 @@ namespace behaviac
 #endif
 			// children
 			{
-				Sequence node3 = new Sequence();
+				Sequence node3 = new Sequence(bt.Workspace);
 				node3.SetClassNameString("Sequence");
 				node3.SetId(3);
 #if !BEHAVIAC_RELEASE
@@ -143,7 +144,7 @@ namespace behaviac
 #endif
 				bt.AddChild(node3);
 				{
-					Assignment_bt_SelectBT_node4 node4 = new Assignment_bt_SelectBT_node4();
+					Assignment_bt_SelectBT_node4 node4 = new Assignment_bt_SelectBT_node4(bt.Workspace);
 					node4.SetClassNameString("Assignment");
 					node4.SetId(4);
 #if !BEHAVIAC_RELEASE
@@ -153,7 +154,7 @@ namespace behaviac
 					node3.SetHasEvents(node3.HasEvents() | node4.HasEvents());
 				}
 				{
-					Selector node1 = new Selector();
+					Selector node1 = new Selector(bt.Workspace);
 					node1.SetClassNameString("Selector");
 					node1.SetId(1);
 #if !BEHAVIAC_RELEASE
@@ -161,7 +162,7 @@ namespace behaviac
 #endif
 					node3.AddChild(node1);
 					{
-						Condition_bt_SelectBT_node2 node2 = new Condition_bt_SelectBT_node2();
+						Condition_bt_SelectBT_node2 node2 = new Condition_bt_SelectBT_node2(bt.Workspace);
 						node2.SetClassNameString("Condition");
 						node2.SetId(2);
 #if !BEHAVIAC_RELEASE
@@ -171,8 +172,8 @@ namespace behaviac
 						node1.SetHasEvents(node1.HasEvents() | node2.HasEvents());
 					}
 					{
-						Action_bt_SelectBT_node0 node0 = new Action_bt_SelectBT_node0();
-						node0.SetClassNameString("Action");
+						Actions_bt_SelectBT_node0 node0 = new Actions_bt_SelectBT_node0(bt.Workspace);
+						node0.SetClassNameString("Actions");
 						node0.SetId(0);
 #if !BEHAVIAC_RELEASE
 						node0.SetAgentType("FirstAgent");
@@ -193,10 +194,10 @@ namespace behaviac
 	[behaviac.GeneratedTypeMetaInfo()]
 	class Assignment_bt_SequenceBT_node3 : behaviac.Assignment
 	{
-		public Assignment_bt_SequenceBT_node3()
+		public Assignment_bt_SequenceBT_node3(Workspace workspace) : base(workspace)
 		{
 		}
-		protected override EBTStatus update_impl(behaviac.Agent pAgent, behaviac.EBTStatus childStatus)
+		protected override async Task<EBTStatus> update_impl(behaviac.Agent pAgent, behaviac.EBTStatus childStatus)
 		{
 			EBTStatus result = EBTStatus.BT_SUCCESS;
 			int opr = 6;
@@ -208,10 +209,10 @@ namespace behaviac
 	[behaviac.GeneratedTypeMetaInfo()]
 	class Condition_bt_SequenceBT_node2 : behaviac.Condition
 	{
-		public Condition_bt_SequenceBT_node2()
+		public Condition_bt_SequenceBT_node2(Workspace workspace) : base(workspace)
 		{
 		}
-		protected override EBTStatus update_impl(behaviac.Agent pAgent, behaviac.EBTStatus childStatus)
+		protected override async Task<EBTStatus> update_impl(behaviac.Agent pAgent, behaviac.EBTStatus childStatus)
 		{
 			int opl = (int)AgentMetaVisitor.GetProperty(pAgent, "p1");
 			int opr = 8;
@@ -221,15 +222,15 @@ namespace behaviac
 	}
 
 	[behaviac.GeneratedTypeMetaInfo()]
-	class Action_bt_SequenceBT_node0 : behaviac.Actions
+	class Actions_bt_SequenceBT_node0 : behaviac.Actions
 	{
-		public Action_bt_SequenceBT_node0()
+		public Actions_bt_SequenceBT_node0(Workspace workspace) : base(workspace)
 		{
 			this.m_resultOption = EBTStatus.BT_SUCCESS;
 		}
-		protected override EBTStatus update_impl(behaviac.Agent pAgent, behaviac.EBTStatus childStatus)
+		protected override async Task<EBTStatus> update_impl(behaviac.Agent pAgent, behaviac.EBTStatus childStatus)
 		{
-			((FirstAgent)pAgent).SayHello();
+			await ((FirstAgent)pAgent).SayHello();
 			return EBTStatus.BT_SUCCESS;
 		}
 	}
@@ -247,7 +248,7 @@ namespace behaviac
 #endif
 			// children
 			{
-				Sequence node1 = new Sequence();
+				Sequence node1 = new Sequence(bt.Workspace);
 				node1.SetClassNameString("Sequence");
 				node1.SetId(1);
 #if !BEHAVIAC_RELEASE
@@ -255,7 +256,7 @@ namespace behaviac
 #endif
 				bt.AddChild(node1);
 				{
-					Assignment_bt_SequenceBT_node3 node3 = new Assignment_bt_SequenceBT_node3();
+					Assignment_bt_SequenceBT_node3 node3 = new Assignment_bt_SequenceBT_node3(bt.Workspace);
 					node3.SetClassNameString("Assignment");
 					node3.SetId(3);
 #if !BEHAVIAC_RELEASE
@@ -265,7 +266,7 @@ namespace behaviac
 					node1.SetHasEvents(node1.HasEvents() | node3.HasEvents());
 				}
 				{
-					Condition_bt_SequenceBT_node2 node2 = new Condition_bt_SequenceBT_node2();
+					Condition_bt_SequenceBT_node2 node2 = new Condition_bt_SequenceBT_node2(bt.Workspace);
 					node2.SetClassNameString("Condition");
 					node2.SetId(2);
 #if !BEHAVIAC_RELEASE
@@ -275,8 +276,8 @@ namespace behaviac
 					node1.SetHasEvents(node1.HasEvents() | node2.HasEvents());
 				}
 				{
-					Action_bt_SequenceBT_node0 node0 = new Action_bt_SequenceBT_node0();
-					node0.SetClassNameString("Action");
+					Actions_bt_SequenceBT_node0 node0 = new Actions_bt_SequenceBT_node0(bt.Workspace);
+					node0.SetClassNameString("Actions");
 					node0.SetId(0);
 #if !BEHAVIAC_RELEASE
 					node0.SetAgentType("FirstAgent");
