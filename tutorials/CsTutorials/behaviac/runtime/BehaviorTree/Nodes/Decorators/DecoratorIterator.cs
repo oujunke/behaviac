@@ -67,7 +67,7 @@ namespace behaviac
         }
 #endif//
 
-        protected override  async Task  load(int version, string agentType, List<property_t> properties)
+        protected override async Task load(int version, string agentType, List<property_t> properties)
         {
             await base.load(version, agentType, properties);
 
@@ -81,7 +81,7 @@ namespace behaviac
 
                     if (pParenthesis == -1)
                     {
-                        this.m_opl = AgentMeta.ParseProperty(p.value,Workspace);
+                        this.m_opl = AgentMeta.ParseProperty(p.value, Workspace);
                     }
                     else
                     {
@@ -114,17 +114,17 @@ namespace behaviac
             return base.IsValid(pAgent, pTask);
         }
 
-        public bool IterateIt(Agent pAgent, int index, ref int count)
+        public async Task<(bool,int)> IterateIt(Agent pAgent, int index, int count)
         {
             if (this.m_opl != null && this.m_opr != null)
             {
-                count = this.m_opr.GetCount(pAgent);
+                count = await this.m_opr.GetCount(pAgent);
 
                 if (index >= 0 && index < count)
                 {
-                    this.m_opl.SetValue(pAgent, this.m_opr, index);
+                    await this.m_opl.SetValue(pAgent, this.m_opr, index);
 
-                    return true;
+                    return (true, count);
                 }
             }
             else
@@ -132,7 +132,7 @@ namespace behaviac
                 Debugs.Check(false);
             }
 
-            return false;
+            return (false, count);
         }
 
         protected override BehaviorTask createTask()

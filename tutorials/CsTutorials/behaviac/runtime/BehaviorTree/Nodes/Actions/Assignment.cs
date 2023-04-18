@@ -116,11 +116,11 @@ namespace behaviac
                 {
                     if (pAssignmentNode.m_bCast)
                     {
-                        pAssignmentNode.m_opl.SetValueAs(pAgent, pAssignmentNode.m_opr);
+                        await pAssignmentNode.m_opl.SetValueAs(pAgent, pAssignmentNode.m_opr);
                     }
                     else
                     {
-                        pAssignmentNode.m_opl.SetValue(pAgent, pAssignmentNode.m_opr);
+                        await pAssignmentNode.m_opl.SetValue(pAgent, pAssignmentNode.m_opr);
                     }
                 }
                 else

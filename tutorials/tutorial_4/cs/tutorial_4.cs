@@ -25,7 +25,7 @@ namespace tutorial_4
         {
             Console.WriteLine("InitPlayer");
 
-            g_FirstAgent = new FirstAgent(Instance);
+            g_FirstAgent = new FirstAgent(new FirstAgentImp(),Instance);
 
             bool bRet = g_FirstAgent.btload("ParentBT");
             Debug.Assert(bRet);

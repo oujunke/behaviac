@@ -5,7 +5,7 @@
   <pars>
     <par name="_$local_task_param_$_0" type="int" value="0" />
   </pars>
-  <node class="Task" id="3">
+  <node class="Tasks" id="3">
     <property Prototype="Self.FirstAgent::event_task(0)" />
     <property IsHTN="false" />
     <node class="Sequence" id="0">
@@ -14,7 +14,7 @@
         <property Opl="int Self.FirstAgent::_$local_task_param_$_0" />
         <property Opr="const int 2" />
       </node>
-      <node class="Action" id="2">
+      <node class="Actions" id="2">
         <property Method="Self.FirstAgent::Say(&quot;Hello subtree!&quot;)" />
         <property ResultOption="BT_SUCCESS" />
       </node>

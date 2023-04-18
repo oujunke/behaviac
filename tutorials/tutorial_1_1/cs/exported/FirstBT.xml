@@ -13,7 +13,7 @@
       <property Opl="int Self.FirstAgent::p1" />
       <property Opr="const int 2" />
     </node>
-    <node class="Action" id="0">
+    <node class="Actions" id="0">
       <property Method="Self.FirstAgent::m1(&quot;Hello, First Agent!&quot;)" />
       <property ResultOption="BT_SUCCESS" />
     </node>

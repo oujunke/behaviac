@@ -6,6 +6,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using System.Threading.Tasks;
 
 namespace behaviac
 {
@@ -42,13 +43,13 @@ namespace behaviac
 				_param1 = AgentMeta.ParseProperty<System.Object>(paramStrs[1], Workspace);
 			}
 
-			public override Task Run(Agent self)
+			public override async Task Run(Agent self)
 			{
 				Debugs.Check(_param0 != null);
 				Debugs.Check(_param1 != null);
 
-				behaviac.Agent.VectorAdd((IList)_param0.GetValueObject(self), (System.Object)_param1.GetValueObject(self));
-				return Task.CompletedTask;
+				await behaviac.Agent.VectorAdd((IList)(await _param0.GetValueObject(self)), (System.Object)(await _param1.GetValueObject(self)));
+				
 			}
 		}
 
@@ -77,12 +78,12 @@ namespace behaviac
 				_param0 = AgentMeta.ParseProperty<IList>(paramStrs[0], Workspace);
 			}
 
-			public override Task Run(Agent self)
+			public override async Task Run(Agent self)
 			{
 				Debugs.Check(_param0 != null);
 
-				behaviac.Agent.VectorClear((IList)_param0.GetValueObject(self));
-				return Task.CompletedTask;
+				await behaviac.Agent.VectorClear((IList)(await _param0.GetValueObject(self)));
+				
 			}
 		}
 
@@ -113,13 +114,13 @@ namespace behaviac
 				_param1 = AgentMeta.ParseProperty<System.Object>(paramStrs[1], Workspace);
 			}
 
-			public override Task Run(Agent self)
+			public override async Task Run(Agent self)
 			{
 				Debugs.Check(_param0 != null);
 				Debugs.Check(_param1 != null);
 
-				_returnValue.value = behaviac.Agent.VectorContains((IList)_param0.GetValueObject(self), (System.Object)_param1.GetValueObject(self));
-				return Task.CompletedTask;
+				_returnValue.value =await behaviac.Agent.VectorContains((IList)(await _param0.GetValueObject(self)), (System.Object)(await _param1.GetValueObject(self)));
+				
 			}
 		}
 
@@ -148,12 +149,12 @@ namespace behaviac
 				_param0 = AgentMeta.ParseProperty<IList>(paramStrs[0], Workspace);
 			}
 
-			public override Task Run(Agent self)
+			public override async Task Run(Agent self)
 			{
 				Debugs.Check(_param0 != null);
 
-				_returnValue.value = behaviac.Agent.VectorLength((IList)_param0.GetValueObject(self));
-				return Task.CompletedTask;
+				_returnValue.value =await behaviac.Agent.VectorLength((IList)(await _param0.GetValueObject(self)));
+				
 			}
 		}
 
@@ -184,13 +185,13 @@ namespace behaviac
 				_param1 = AgentMeta.ParseProperty<System.Object>(paramStrs[1], Workspace);
 			}
 
-			public override Task Run(Agent self)
+			public override async Task Run(Agent self)
 			{
 				Debugs.Check(_param0 != null);
 				Debugs.Check(_param1 != null);
 
-				behaviac.Agent.VectorRemove((IList)_param0.GetValueObject(self), (System.Object)_param1.GetValueObject(self));
-				return Task.CompletedTask;
+				await behaviac.Agent.VectorRemove((IList)(await _param0.GetValueObject(self)), (System.Object)(await _param1.GetValueObject(self)));
+				
 			}
 		}
 
@@ -217,7 +218,7 @@ namespace behaviac
 			meta.RegisterMemberProperty(2082220067, new CMemberProperty<int>("p1", delegate(Agent self, int value) { ((FirstAgent)self)._set_p1(value); }, delegate(Agent self) { return ((FirstAgent)self)._get_p1(); }, Workspace));
 			meta.RegisterMemberProperty(1144200279, new CMemberProperty<SecondAgent>("pInstance", delegate(Agent self, SecondAgent value) { ((FirstAgent)self)._set_pInstance(value); }, delegate(Agent self) { return ((FirstAgent)self)._get_pInstance(); }, Workspace));
 			meta.RegisterMethod(1045109914, new CAgentStaticMethodVoid<string>(delegate(string param0) { FirstAgent.LogMessage(param0, Workspace);return Task.CompletedTask; }, Workspace));
-			meta.RegisterMethod(1505908390, new CAgentMethodVoid(delegate(Agent self) { ((FirstAgent)self).SayHello(); return Task.CompletedTask;}, Workspace));
+			meta.RegisterMethod(1505908390, new CAgentMethodVoid(delegate(Agent self) {return ((FirstAgent)self).SayHello();}, Workspace));
 			meta.RegisterMethod(2521019022, new CMethod_behaviac_Agent_VectorAdd(Workspace));
 			meta.RegisterMethod(2306090221, new CMethod_behaviac_Agent_VectorClear(Workspace));
 			meta.RegisterMethod(3483755530, new CMethod_behaviac_Agent_VectorContains(Workspace));

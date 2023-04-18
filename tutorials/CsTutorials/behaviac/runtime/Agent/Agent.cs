@@ -2026,54 +2026,57 @@ namespace behaviac
         }
 
         [behaviac.MethodMetaInfo()]
-        public static int VectorLength(IList vector)
+        public static Task<int> VectorLength(IList vector)
         {
             if (vector != null)
             {
-                return vector.Count;
+                return Task.FromResult(vector.Count);
             }
 
-            return 0;
+            return Task.FromResult(0);
         }
 
         [behaviac.MethodMetaInfo()]
-        public static void VectorAdd(IList vector, object element)
+        public static Task VectorAdd(IList vector, object element)
         {
             if (vector != null)
             {
                 vector.Add(element);
             }
+            return Task.CompletedTask;
         }
 
         [behaviac.MethodMetaInfo()]
-        public static void VectorRemove(IList vector, object element)
+        public static Task VectorRemove(IList vector, object element)
         {
             if (vector != null)
             {
                 vector.Remove(element);
             }
+            return Task.CompletedTask;
         }
 
         [behaviac.MethodMetaInfo()]
-        public static bool VectorContains(IList vector, object element)
+        public static Task<bool> VectorContains(IList vector, object element)
         {
             if (vector != null)
             {
                 bool bOk = vector.IndexOf(element) > -1;
 
-                return bOk;
+                return Task.FromResult(bOk);
             }
 
-            return false;
+            return Task.FromResult(false);
         }
 
         [behaviac.MethodMetaInfo()]
-        public static void VectorClear(IList vector)
+        public static Task VectorClear(IList vector)
         {
             if (vector != null)
             {
                 vector.Clear();
             }
+            return Task.CompletedTask;
         }
 
 

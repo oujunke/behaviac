@@ -3,8 +3,9 @@ using System.Collections.Generic;
 using System.Text;
 using System.IO;
 using System.Diagnostics;
+using tutorial_14;
 
-namespace tutorial_1_1
+namespace tutorial_1_14
 {
     class Program
     {
@@ -24,7 +25,7 @@ namespace tutorial_1_1
         {
             Console.WriteLine("InitPlayer : {0}", btName);
 
-            g_FirstAgent = new FirstAgent(Instance);
+            g_FirstAgent = new FirstAgent(new FirstAgentImp(),Instance);
 
             bool bRet = g_FirstAgent.btload(btName);
             Debug.Assert(bRet);

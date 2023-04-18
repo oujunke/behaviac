@@ -13,7 +13,7 @@
       <property Opl="FirstEnum Self.FirstAgent::p1" />
       <property Opr="const FirstEnum e2" />
     </node>
-    <node class="Action" id="2">
+    <node class="Actions" id="2">
       <property Method="Self.FirstAgent::SayHello()" />
       <property ResultOption="BT_SUCCESS" />
     </node>

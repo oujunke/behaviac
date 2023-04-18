@@ -14,7 +14,7 @@
         <property Opl="int Self.FirstAgent::p1" />
         <property Opr="const int 1" />
       </node>
-      <node class="Action" id="0">
+      <node class="Actions" id="0">
         <property Method="Self.FirstAgent::Say(&quot;Hello Prefab!&quot;)" />
         <property ResultOption="BT_SUCCESS" />
       </node>
@@ -30,7 +30,7 @@
         <property Opl="int Self.FirstAgent::p1" />
         <property Opr="const int 1" />
       </node>
-      <node class="Action" id="11">
+      <node class="Actions" id="11">
         <property Method="Self.FirstAgent::Say(&quot;Hello Prefab!&quot;)" />
         <property ResultOption="BT_SUCCESS" />
       </node>
@@ -42,7 +42,7 @@
         <property Opr1="const int 3" />
         <property Opr2="const int 5" />
       </node>
-      <node class="Action" id="4">
+      <node class="Actions" id="4">
         <property Method="Self.FirstAgent::Say(&quot;Hello Parent!&quot;)" />
         <property ResultOption="BT_SUCCESS" />
       </node>

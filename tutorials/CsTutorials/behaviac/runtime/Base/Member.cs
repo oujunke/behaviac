@@ -60,16 +60,16 @@ namespace behaviac
 
     public interface IInstanceMember
     {
-        int GetCount(Agent self);
-        void SetValue(Agent self, IInstanceMember right, int index);
+        Task<int> GetCount(Agent self);
+        Task SetValue(Agent self, IInstanceMember right, int index);
 
-        object GetValueObject(Agent self);
+        Task<object> GetValueObject(Agent self);
 
-        void SetValue(Agent self, object value);
+        Task SetValue(Agent self, object value);
 
         Task SetValue(Agent self, IInstanceMember right);
 
-        void SetValueAs(Agent self, IInstanceMember right);
+        Task SetValueAs(Agent self, IInstanceMember right);
 
         Task<bool> Compare(Agent self, IInstanceMember right, EOperatorType comparisonType);
 
@@ -132,10 +132,10 @@ namespace behaviac
             _indexMember = rhs._indexMember;
         }
 
-        public int GetCount(Agent self)
+        public async Task<int> GetCount(Agent self)
         {
             //Agent agent = Utils.GetParentAgent(self, _instance);
-            IList list = (IList)this.GetValueObject(self);
+            IList list = (IList)(await this.GetValueObject(self));
 
             if (list != null)
             {
@@ -145,17 +145,17 @@ namespace behaviac
             return 0;
         }
 
-        public void SetValue(Agent self, IInstanceMember right, int index)
+        public async Task SetValue(Agent self, IInstanceMember right, int index)
         {
             //Agent agent = Utils.GetParentAgent(self, _instance);
-            object rightObject = right.GetValueObject(self);
+            object rightObject = await right.GetValueObject(self);
             Debugs.Check(rightObject is IList);
             IList il = (IList)rightObject;
             List<T> list = (List<T>)il;
 
             T item = list[index];
 
-            this.SetValue(self, item);
+            await this.SetValue(self, item);
         }
 
         public virtual Task<T> GetValue(Agent self)
@@ -164,9 +164,9 @@ namespace behaviac
             return Task.FromResult(default(T));
         }
 
-        public object GetValueObject(Agent self)
+        public async Task<object> GetValueObject(Agent self)
         {
-            return GetValue(self);
+            return await GetValue(self);
         }
 
         public virtual Task SetValue(Agent self, T value)
@@ -175,42 +175,42 @@ namespace behaviac
             return Task.CompletedTask;
         }
 
-        public void SetValue(Agent self, object value)
+        public async Task SetValue(Agent self, object value)
         {
             Debugs.Check(value == null || !value.GetType().IsValueType);
 
-            SetValue(self, (T)value);
+            await SetValue(self, (T)value);
         }
 
-        public void SetValueAs(Agent self, IInstanceMember right)
+        public async Task SetValueAs(Agent self, IInstanceMember right)
         {
             if (typeof(T).IsValueType)
             {
                 // this will cause boxing/unboxing
-                object v = right.GetValueObject(self);
+                object v = await right.GetValueObject(self);
 
                 object vv = Convert.ChangeType(v, typeof(T));
 
                 T t = (T)vv;
 
-                SetValue(self, t);
+                await SetValue(self, t);
             }
             else
             {
-                object v = right.GetValueObject(self);
+                object v = await right.GetValueObject(self);
 
-                SetValue(self, v);
+                await SetValue(self, v);
             }
         }
 
         public async Task SetValue(Agent self, IInstanceMember right)
         {
-          await  SetValue(self, (CInstanceMember<T>)right);
+            await SetValue(self, (CInstanceMember<T>)right);
         }
 
         public async Task SetValue(Agent self, CInstanceMember<T> right)
         {
-           await SetValue(self,await right.GetValue(self));
+            await SetValue(self, await right.GetValue(self));
         }
 
         public async Task<bool> Compare(Agent self, IInstanceMember right, EOperatorType comparisonType)
@@ -3984,15 +3984,16 @@ namespace behaviac
             _instance = instance;
         }
 
-        public int GetCount(Agent self)
+        public Task<int> GetCount(Agent self)
         {
             Debugs.Check(false);
-            return 0;
+            return Task.FromResult(0);
         }
 
-        public void SetValue(Agent self, IInstanceMember right, int index)
+        public Task SetValue(Agent self, IInstanceMember right, int index)
         {
             Debugs.Check(false);
+            return Task.CompletedTask;
         }
 
         public virtual Task Run(Agent self)
@@ -4007,10 +4008,10 @@ namespace behaviac
             return Task.FromResult(default(IValue));
         }
 
-        public object GetValueObject(Agent self)
+        public Task<object> GetValueObject(Agent self)
         {
             Debugs.Check(false);
-            return null;
+            return Task.FromResult<object>(null);
         }
 
         public Task<IValue> GetIValue(Agent self, IInstanceMember firstParam)
@@ -4021,21 +4022,22 @@ namespace behaviac
             return GetIValue(self);
         }
 
-        public void SetValue(Agent self, IValue value)
+        public Task SetValue(Agent self, IValue value)
         {
             Debugs.Check(false);
+            return Task.CompletedTask;
         }
 
-        public void SetValue(Agent self, object value)
+        public Task SetValue(Agent self, object value)
         {
             Debugs.Check(false);
-            
+            return Task.CompletedTask;
         }
 
-        public void SetValueAs(Agent self, IInstanceMember right)
+        public Task SetValueAs(Agent self, IInstanceMember right)
         {
             Debugs.Check(false);
-            
+            return Task.CompletedTask;
         }
 
         public Task SetValue(Agent self, IInstanceMember right)

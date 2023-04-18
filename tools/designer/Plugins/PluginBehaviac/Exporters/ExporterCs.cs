@@ -182,6 +182,7 @@ namespace PluginBehaviac.Exporters
             file.WriteLine("using System.Collections;");
             file.WriteLine("using System.Collections.Generic;");
             file.WriteLine("using System.Reflection;");
+            file.WriteLine("using System.Threading.Tasks;");
             file.WriteLine();
 
             // write namespace
@@ -531,6 +532,7 @@ namespace PluginBehaviac.Exporters
                 file.WriteLine("using System;");
                 file.WriteLine("using System.Collections;");
                 file.WriteLine("using System.Collections.Generic;");
+                file.WriteLine("using System.Threading.Tasks;");
                 file.WriteLine();
 
                 if (!preview)
@@ -705,7 +707,7 @@ namespace PluginBehaviac.Exporters
         }
         private string ExportAgentCsFileInterface(AgentType agent, string filename, bool preview)
         {
-            StringBuilder methodImpSb = new StringBuilder("using System;\r\nusing System.Collections;\r\nusing System.Collections.Generic;\r\n");
+            StringBuilder methodImpSb = new StringBuilder("using System;\r\nusing System.Collections;\r\nusing System.Collections.Generic;\r\nusing System.Threading.Tasks;\r\n");
             using (StringWriter file = new StringWriter())
             {
                 string indent = "";
@@ -715,6 +717,7 @@ namespace PluginBehaviac.Exporters
                 file.WriteLine("using System;");
                 file.WriteLine("using System.Collections;");
                 file.WriteLine("using System.Collections.Generic;");
+                file.WriteLine("using System.Threading.Tasks;");
                 file.WriteLine();
 
                 if (!preview)
@@ -900,6 +903,7 @@ namespace PluginBehaviac.Exporters
                     file.WriteLine("using System;");
                     file.WriteLine("using System.Collections;");
                     file.WriteLine("using System.Collections.Generic;");
+                    file.WriteLine("using System.Threading.Tasks;");
                     file.WriteLine();
 
                     if (TypeManager.Instance.HasNonImplementedEnums())
@@ -1197,7 +1201,7 @@ namespace PluginBehaviac.Exporters
                     string enumFullname = enumType.Fullname.Replace("::", ".");
 
                     file.WriteLine("\t\t\tAgentMeta.Register<{0}>(\"{0}\",Workspace);", enumFullname);
-                    file.WriteLine("\t\t\tComparerRegister.RegisterType<{0}, CompareValue_{1}>();", enumFullname, enumFullname.Replace(".", "_"));
+                    file.WriteLine("\t\t\tWorkspace.ComparerRegisters.RegisterType<{0}, CompareValue_{1}>(new CompareValue_{1}(Workspace));", enumFullname, enumFullname.Replace(".", "_"));
                 }
 
                 foreach (StructType structType in TypeManager.Instance.Structs)
@@ -1207,7 +1211,7 @@ namespace PluginBehaviac.Exporters
                     if (structFullname != "System.Object")
                     {
                         file.WriteLine("\t\t\tAgentMeta.Register<{0}>(\"{0}\",Workspace);", structFullname);
-                        file.WriteLine("\t\t\tComparerRegister.RegisterType<{0}, CompareValue_{1}>();", structFullname, structFullname.Replace(".", "_"));
+                        file.WriteLine("\t\t\tWorkspace.ComparerRegisters.RegisterType<{0}, CompareValue_{1}>(new CompareValue_{1}(Workspace));", structFullname, structFullname.Replace(".", "_"));
                     }
                 }
 
@@ -1313,6 +1317,9 @@ namespace PluginBehaviac.Exporters
 
                 file.WriteLine("\tpublic class CompareValue_{0} : ICompareValue<{1}>", enumFullname.Replace(".", "_"), enumFullname);
                 file.WriteLine("\t{");
+                file.WriteLine($"\t\tpublic CompareValue_{enumFullname.Replace(".", "_")}(Workspace workspace) : base(workspace)");
+                file.WriteLine("\t\t{");
+                file.WriteLine("\t\t}");
                 file.WriteLine("\t\tpublic override bool Equal({0} lhs, {0} rhs)", enumFullname);
                 file.WriteLine("\t\t{");
                 file.WriteLine("\t\t\treturn lhs == rhs;");
@@ -1352,6 +1359,9 @@ namespace PluginBehaviac.Exporters
 
                 file.WriteLine("\tpublic class CompareValue_{0} : ICompareValue<{1}>", structFullname.Replace(".", "_"), structFullname);
                 file.WriteLine("\t{");
+                file.WriteLine($"\t\tpublic CompareValue_{structFullname.Replace(".", "_")}(Workspace workspace) : base(workspace)");
+                file.WriteLine("\t\t{");
+                file.WriteLine("\t\t}");
                 file.WriteLine("\t\tpublic override bool Equal({0} lhs, {0} rhs)", structFullname);
                 file.WriteLine("\t\t{");
 
@@ -1504,7 +1514,7 @@ namespace PluginBehaviac.Exporters
 
                         if (Plugin.IsRefType(prop.Type))
                         {
-                            file.WriteLine("\t\t\t\t_value.{0} =await ({1})_{0}.GetValueObject(self);", prop.BasicName, propType);
+                            file.WriteLine("\t\t\t\t_value.{0} =({1})(await _{0}.GetValueObject(self));", prop.BasicName, propType);
                         }
                         else
                         {
@@ -1678,7 +1688,7 @@ namespace PluginBehaviac.Exporters
 
                                 if (Plugin.IsRefType(param.Type))
                                 {
-                                    paramName = string.Format("await ({0})_{1}.GetValueObject(self)", paramType, param.Name);
+                                    paramName = string.Format("({0})(await _{1}.GetValueObject(self))", paramType, param.Name);
                                 }
 
                                 if (param.IsRef || param.IsOut)
@@ -1881,12 +1891,12 @@ namespace PluginBehaviac.Exporters
                             {
                                 if (prop.IsArrayElement)
                                 {
-                                    bindingProperty = string.Format("new CStaticMemberArrayItemProperty<{0}>(\"{1}\", delegate({0} value, int index) {{ {2} }}, delegate(int index) {{ return {3}; }})",
+                                    bindingProperty = string.Format("new CStaticMemberArrayItemProperty<{0}>(\"{1}\", delegate({0} value, int index) {{ {2} }}, delegate(int index) {{ return {3}; }},Workspace)",
                                                                     propType, prop.BasicName, setValue, getValue);
                                 }
                                 else
                                 {
-                                    bindingProperty = string.Format("new CStaticMemberProperty<{0}>(\"{1}\", delegate({0} value) {{ {2} }}, delegate() {{ return {3}; }})",
+                                    bindingProperty = string.Format("new CStaticMemberProperty<{0}>(\"{1}\", delegate({0} value) {{ {2} }}, delegate() {{ return {3}; }},Workspace)",
                                                                     propType, prop.BasicName, setValue, getValue);
                                 }
                             }
@@ -1903,7 +1913,7 @@ namespace PluginBehaviac.Exporters
                                 {
                                     if (prop.IsArrayElement)
                                     {
-                                        bindingProperty = string.Format("new CMemberArrayItemProperty<{0}>(\"{1}\", delegate(Agent self, {0} value, int index) {{ {2} }}, delegate(Agent self, int index) {{ return {3}; }})",
+                                        bindingProperty = string.Format("new CMemberArrayItemProperty<{0}>(\"{1}\", delegate(Agent self, {0} value, int index) {{ {2} }}, delegate(Agent self, int index) {{ return {3}; }},Workspace)",
                                                                         propType, prop.BasicName, setValue, getValue);
                                     }
                                     else
@@ -1920,12 +1930,12 @@ namespace PluginBehaviac.Exporters
                                 if (prop.IsArrayElement)
                                 {
                                     string propName = prop.BasicName.Replace("[]", "");
-                                    bindingProperty = string.Format("new CCustomizedArrayItemProperty<{0}>({1}, \"{2}\")",
+                                    bindingProperty = string.Format("new CCustomizedArrayItemProperty<{0}>({1}, \"{2}\",Workspace)",
                                                                     propType, CRC32.CalcCRC(propName), propName);
                                 }
                                 else
                                 {
-                                    bindingProperty = string.Format("new CCustomizedProperty<{0}>({1}, \"{2}\", \"{3}\")",
+                                    bindingProperty = string.Format("new CCustomizedProperty<{0}>({1}, \"{2}\", \"{3}\",Workspace)",
                                                                     propType, CRC32.CalcCRC(prop.BasicName), prop.BasicName, prop.DefaultValue);
                                 }
                             }
@@ -2047,7 +2057,7 @@ namespace PluginBehaviac.Exporters
                                         paramTypes = string.Format("<{0}>", paramTypes);
                                     }
 
-                                    agentMethod = string.Format("new CAgentMethodVoid{0}(delegate(Agent self{1}) {{ {2}; return Task.CompletedTask;}}, Workspace)",
+                                    agentMethod = string.Format("new CAgentMethodVoid{0}(delegate(Agent self{1}) {{return {2};}}, Workspace)",
                                                                 paramTypes, paramTypeValues, methodStr);
                                 }
                                 else
@@ -2062,7 +2072,7 @@ namespace PluginBehaviac.Exporters
                                         methodStr = string.Format("({0}){1}", methodReturnType, methodStr);
                                     }
 
-                                    agentMethod = string.Format("new CAgentMethod<{0}{1}>(delegate(Agent self{2}) {{ return {3}; return Task.CompletedTask;}}, Workspace)",
+                                    agentMethod = string.Format("new CAgentMethod<{0}{1}>(delegate(Agent self{2}) {{ return {3};}}, Workspace)",
                                                                 methodReturnType, paramTypes, paramTypeValues, methodStr);
                                 }
                             }

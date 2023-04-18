@@ -1067,9 +1067,8 @@ namespace behaviac
             }
         }
 
-        public void RegisterType<T, TCOMPARER>() where TCOMPARER : ICompareValue, new()
+        public void RegisterType<T, TCOMPARER>(TCOMPARER pComparer) where TCOMPARER : ICompareValue
         {
-            TCOMPARER pComparer = new TCOMPARER();
             ms_valueComparers.Add(typeof(T), pComparer);
         }
 

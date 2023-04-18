@@ -25,7 +25,9 @@ namespace tutorial_8
         {
             Console.WriteLine("InitPlayer");
 
-            g_FirstAgent = new FirstAgent(Instance);
+            FirstAgentImp agentImp = new FirstAgentImp();
+            g_FirstAgent = new FirstAgent(agentImp, Instance);
+            agentImp.FirstAgent = g_FirstAgent;
             bool bRet = g_FirstAgent.btload("StructBT");
             Debug.Assert(bRet);
             g_FirstAgent.btsetcurrent("StructBT");

@@ -4,10 +4,10 @@
 // PLEASE MODIFY AND REGENERETE IT IN THE DESIGNER FOR CLASS/MEMBERS/METHODS, ETC.
 // -------------------------------------------------------------------------------
 
-using behaviac;
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 
 ///<<< BEGIN WRITING YOUR CODE FILE_INIT
 
@@ -17,17 +17,24 @@ public class FirstAgent : behaviac.Agent
 ///<<< BEGIN WRITING YOUR CODE FirstAgent
 ///<<< END WRITING YOUR CODE
 {
-    public FirstAgent(Workspace workspace) : base(workspace)
-    {
-
-    }
-	public void SayHello()
+	private IFirstAgentImp _methodImp;
+	public FirstAgent(IFirstAgentImp methodImp,behaviac.Workspace workspace):base(workspace)
 	{
-///<<< BEGIN WRITING YOUR CODE SayHello
-        Console.WriteLine();
-        Console.WriteLine("Hello Behaviac!");
-        Console.WriteLine();
-///<<< END WRITING YOUR CODE
+	    _methodImp=methodImp;
+	}
+	private FirstEnum p1 = FirstEnum.e1;
+	public void _set_p1(FirstEnum value)
+	{
+		p1 = value;
+	}
+	public FirstEnum _get_p1()
+	{
+		return p1;
+	}
+
+	public async Task SayHello()
+	{
+		 await _methodImp.SayHello();
 	}
 
 ///<<< BEGIN WRITING YOUR CODE CLASS_PART

@@ -24,7 +24,7 @@ namespace tutorial_12
         {
             Console.WriteLine("InitPlayer");
 
-            g_FirstAgent = new FirstAgent(Instance);
+            g_FirstAgent = new FirstAgent(new FirstAgentImp(Instance),Instance);
 
             bool bRet = g_FirstAgent.btload("ParallelBT");
             Debug.Assert(bRet);
