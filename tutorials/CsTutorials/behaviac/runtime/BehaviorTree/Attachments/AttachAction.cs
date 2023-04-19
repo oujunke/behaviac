@@ -123,7 +123,7 @@ namespace behaviac
                 {
                     if (this.m_opl != null)
                     {
-                        await this.m_opl.SetValue(pAgent, this.m_opr2);
+                        this.m_opl.SetValue(pAgent, this.m_opr2);
 
                         bValid = true;
                     }

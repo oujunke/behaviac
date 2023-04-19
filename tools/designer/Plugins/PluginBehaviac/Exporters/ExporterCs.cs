@@ -1060,6 +1060,7 @@ namespace PluginBehaviac.Exporters
                 structfile.WriteLine("using System;");
                 structfile.WriteLine("using System.Collections;");
                 structfile.WriteLine("using System.Collections.Generic;");
+                structfile.WriteLine("using System.Threading.Tasks;");
             }
 
             structfile.WriteLine();
@@ -1159,6 +1160,7 @@ namespace PluginBehaviac.Exporters
                 file.WriteLine("using System;");
                 file.WriteLine("using System.Collections;");
                 file.WriteLine("using System.Collections.Generic;");
+                file.WriteLine("using System.Threading.Tasks;");
                 file.WriteLine("using System.Threading.Tasks;");
                 file.WriteLine();
 

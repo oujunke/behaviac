@@ -121,7 +121,12 @@ namespace behaviac
             }
             protected override async Task<EBTStatus> update(Agent pAgent, EBTStatus childStatus)
             {
-                if (c_n++ < m_n)
+                //todo:修改
+                if(m_status == EBTStatus.BT_RUNNING)
+                {
+                    return await base.update(pAgent, childStatus);
+                }
+                if (++c_n < m_n)
                 {
                     return EBTStatus.BT_SUCCESS;
                 }

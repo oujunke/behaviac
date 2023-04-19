@@ -284,10 +284,10 @@ namespace behaviac
         private void Init(Config config)
         {
             Configs = config;
+            Debugs = new Debug(this);
             LogManagers = new LogManager(this);
             SocketUtil = new SocketUtils(this);
             AgentMetas = new AgentMeta(this);
-            Debugs = new Debug(this);
             FileManagers = new FileManager(this);
             Contexts = new Context(-1, this);
             ComparerRegisters = new ComparerRegister(this);
