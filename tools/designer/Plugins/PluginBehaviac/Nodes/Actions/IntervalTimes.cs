@@ -9,12 +9,12 @@ using System.Resources;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace PluginBehaviac.Nodes.Actions
+namespace PluginBehaviac.Nodes
 {
     [NodeDesc("Actions", NodeIcon.Wait)]
     public class IntervalTimes : Behaviac.Design.Nodes.Sequence
     {
-        public IntervalTimes() : base(Resources.IntervalFrames, Resources.IntervalFramesDesc)
+        public IntervalTimes() : base(Resources.IntervalTimes, Resources.IntervalTimesDesc)
         {
             _exportName = "IntervalTimes";
         }
