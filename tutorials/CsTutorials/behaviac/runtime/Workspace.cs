@@ -229,7 +229,19 @@ namespace behaviac
                 m_bIsHotReload = value;
             }
         }
-
+        private bool m_bIsCloseConnectionContinue = true;
+        public bool IsCloseConnectionContinue
+        {
+            get
+            {
+                return m_bIsCloseConnectionContinue;
+            }
+            set
+            {
+                _workspace.Debugs.Check(!_workspace.IsInited, "please call Config.IsCloseConnectionContinue at the very begining!");
+                m_bIsCloseConnectionContinue = value;
+            }
+        }
         private bool m_bIsSuppressingNonPublicWarning;
 
         /// <summary>
@@ -622,7 +634,7 @@ namespace behaviac
 #if BEHAVIAC_HOTRELOAD
 
             // set the file watcher
-            if (behaviac.IsHotReload)
+            if (Configs.IsHotReload)
             {
                 if (this.FileFormat != EFileFormat.EFF_cs)
                 {
@@ -685,7 +697,7 @@ namespace behaviac
 
 #if BEHAVIAC_HOTRELOAD
 
-            if (behaviac.IsHotReload)
+            if (Configs.IsHotReload)
             {
                 m_modifiedFiles.Clear();
 
@@ -999,7 +1011,7 @@ namespace behaviac
         {
 #if !BEHAVIAC_RELEASE
 
-            if (behaviac.IsHotReload)
+            if (Configs.IsHotReload)
             {
                 if (GetModifiedFiles())
                 {
@@ -1009,7 +1021,7 @@ namespace behaviac
 
                         if (m_allBehaviorTreeTasks.ContainsKey(relativePath))
                         {
-                            behaviac.Debugs.LogWarning(string.Format("Hotreload:{0}", relativePath));
+                            Debugs.LogWarning(string.Format("Hotreload:{0}", relativePath));
 
                             if (Load(relativePath, true))
                             {
@@ -1192,7 +1204,7 @@ namespace behaviac
         {
 #if !BEHAVIAC_RELEASE
             string agentName = tokens[1];
-            Agent pAgent = Agent.GetAgent(agentName,this);
+            Agent pAgent = Agent.GetAgent(agentName, this);
 
             //pAgent could be 0
             if (!System.Object.ReferenceEquals(pAgent, null) && tokens.Length == 4)
@@ -1305,7 +1317,7 @@ namespace behaviac
                         {
                             bContinue = true;
                         }
-                        else if (tokens[0] == kCloseConnection)
+                        else if (Configs.IsCloseConnectionContinue && tokens[0] == kCloseConnection)
                         {
                             m_breakpoints.Clear();
                             bContinue = true;
@@ -1319,7 +1331,7 @@ namespace behaviac
 
                 else
                 {
-                    if (!SocketUtil.IsConnected())
+                    if (Configs.IsCloseConnectionContinue && !SocketUtil.IsConnected())
                     {
                         //connection has something wrong
                         bContinue = true;
@@ -1369,14 +1381,14 @@ namespace behaviac
             {
                 int contextId = -1;
 
-               await Contexts.execAgents(contextId);
+                await Contexts.execAgents(contextId);
             }
         }
 
         public async Task LogCurrentStates()
         {
             int contextId = -1;
-           await Contexts.LogCurrentStates(contextId);
+            await Contexts.LogCurrentStates(contextId);
         }
 
         public async Task<bool> CheckBreakpoint(Agent pAgent, BehaviorNode b, string action, EActionResult actionResult)
@@ -1385,7 +1397,7 @@ namespace behaviac
 
             if (Configs.IsSocketing)
             {
-                string bpStr =await BehaviorTask.GetTickInfo(pAgent, b, action);
+                string bpStr = await BehaviorTask.GetTickInfo(pAgent, b, action);
 
                 uint bpid = Utils.MakeVariableId(bpStr);
 
@@ -1940,7 +1952,7 @@ namespace behaviac
 
             if (type != null)
             {
-                object p = Activator.CreateInstance(type,this);
+                object p = Activator.CreateInstance(type, this);
                 return p as BehaviorNode;
             }
 

@@ -461,7 +461,7 @@ namespace behaviac
 
             if (!string.IsNullOrEmpty(instanceName) && instanceName != "Self")
             {
-                pParent = Agent.GetInstance(instanceName, (pParent != null) ? pParent.GetContextId() : 0,pAgent.Workspace);
+                pParent = Agent.GetInstance(instanceName, (pParent != null) ? pParent.GetContextId() : 0, pAgent.Workspace);
 
                 if (pAgent != null && pParent == null && !Utils.IsStaticClass(instanceName))
                 {
@@ -942,14 +942,14 @@ namespace behaviac
             return typeName;
         }
 
-        public static string GetNativeTypeName(Type type,Workspace workspace)
+        public static string GetNativeTypeName(Type type, Workspace workspace)
         {
             workspace.Debugs.Check(type != null);
 
             if (Utils.IsArrayType(type))
             {
                 Type itemType = type.GetGenericArguments()[0];
-                return string.Format("vector<{0}>", Utils.GetNativeTypeName(itemType,workspace));
+                return string.Format("vector<{0}>", Utils.GetNativeTypeName(itemType, workspace));
             }
 
             return Utils.GetNativeTypeName(type.FullName);
@@ -1119,7 +1119,7 @@ namespace behaviac
                 for (int i = 0; i < array.Length; i++)
                 {
                     object item = null;
-                    Utils.Clone(ref item, array.GetValue(i),workspace);
+                    Utils.Clone(ref item, array.GetValue(i), workspace);
                     //object item = Utils.Clone(array.GetValue(i));
 
                     copied.SetValue(item, i);
@@ -1140,7 +1140,7 @@ namespace behaviac
                 }
 
                 var array = c as IList;
-                o = (T)Activator.CreateInstance(type, workspace);
+                o = (T)Activator.CreateInstance(type);
 
                 for (int i = 0; i < array.Count; i++)
                 {
@@ -1166,7 +1166,7 @@ namespace behaviac
 
                     if (o == null)
                     {
-                        o = (T)Activator.CreateInstance(type, workspace);
+                        o = (T)Activator.CreateInstance(type);
                     }
 
                     if (isStruct || isClass)
@@ -1326,7 +1326,7 @@ namespace behaviac
     {
         //it returns true if 'str' starts with a count followed by ':'
         //3:{....}
-        private static bool IsArrayString(string str, int posStart, ref int posEnd,Workspace workspace)
+        private static bool IsArrayString(string str, int posStart, ref int posEnd, Workspace workspace)
         {
             //begin of the count of an array?
             //int posStartOld = posStart;
@@ -1411,7 +1411,7 @@ namespace behaviac
             return -1;
         }
 
-        public static List<string> SplitTokensForStruct(string src,Workspace workspace)
+        public static List<string> SplitTokensForStruct(string src, Workspace workspace)
         {
             List<string> ret = new List<string>();
 
@@ -1451,7 +1451,7 @@ namespace behaviac
                         length = posEnd - posEqual - 1;
 
                         //to check if it is an array
-                        IsArrayString(src, posEqual + 1, ref posEnd,workspace);
+                        IsArrayString(src, posEqual + 1, ref posEnd, workspace);
 
                         length = posEnd - posEqual - 1;
                         memberValueStr = src.Substring(posEqual + 1, length);
@@ -1486,9 +1486,9 @@ namespace behaviac
             return ret;
         }
 
-        private static object FromStringStruct(Type type, string src,Workspace workspace)
+        private static object FromStringStruct(Type type, string src, Workspace workspace)
         {
-            object objValue = Activator.CreateInstance(type, workspace);
+            object objValue = Activator.CreateInstance(type);
             Dictionary<string, FieldInfo> structMembers = new Dictionary<string, FieldInfo>();
             FieldInfo[] fields = type.GetFields(BindingFlags.DeclaredOnly | BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static);
 
@@ -1562,7 +1562,7 @@ namespace behaviac
 
                         if (memberType != null)
                         {
-                            object memberValue = FromString(memberType.FieldType, memberValueStr, false,workspace);
+                            object memberValue = FromString(memberType.FieldType, memberValueStr, false, workspace);
                             memberType.SetValue(objValue, memberValue);
                         }
                     }
@@ -1583,10 +1583,10 @@ namespace behaviac
             return objValue;
         }
 
-        private static object FromStringVector(Type type, string src,Workspace workspace)
+        private static object FromStringVector(Type type, string src, Workspace workspace)
         {
             Type vectorType = typeof(List<>).MakeGenericType(type);
-            IList objVector = (IList)Activator.CreateInstance(vectorType, workspace);
+            IList objVector = (IList)Activator.CreateInstance(vectorType);
 
             if (string.IsNullOrEmpty(src))
             {
@@ -1636,7 +1636,7 @@ namespace behaviac
             {
                 int len = src.Length - b;
                 string elemStr = src.Substring(b, len);
-                object elemObject = FromString(type, elemStr, false,workspace);
+                object elemObject = FromString(type, elemStr, false, workspace);
 
                 objVector.Add(elemObject);
             }
@@ -1679,7 +1679,7 @@ namespace behaviac
                 if (bIsArrayType)
                 {
                     Type elemType = type.GetGenericArguments()[0];
-                    v = StringUtils.FromStringVector(elemType, valStr,workspace);
+                    v = StringUtils.FromStringVector(elemType, valStr, workspace);
                 }
                 else
                 {
@@ -1812,7 +1812,7 @@ namespace behaviac
             return ret;
         }
 
-        public static List<string> SplitTokens(ref string str,Workspace workspace)
+        public static List<string> SplitTokens(ref string str, Workspace workspace)
         {
             List<string> ret = new List<string>();
 

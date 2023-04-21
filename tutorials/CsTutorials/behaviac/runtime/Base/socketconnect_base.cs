@@ -907,6 +907,7 @@ namespace behaviac
         private void CreateAndStartThread()
         {
             s_tracerThread = new System.Threading.Thread(MemTracer_ThreadFunc);
+            s_tracerThread.IsBackground = true;
             s_tracerThread.Start();
         }
 

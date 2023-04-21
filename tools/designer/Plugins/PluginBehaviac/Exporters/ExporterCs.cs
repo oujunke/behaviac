@@ -2012,6 +2012,7 @@ namespace PluginBehaviac.Exporters
                         {
                             if (method.IsStatic)
                             {
+                                var baseAgentTypeName= method.AgentType.Name.Replace("::", ".");
                                 if (paramTypeValues.StartsWith(", "))
                                 {
                                     paramTypeValues = paramTypeValues.Substring(2);
@@ -2025,7 +2026,7 @@ namespace PluginBehaviac.Exporters
                                     }
 
                                     agentMethod = string.Format("new CAgentStaticMethodVoid{0}(delegate({1}) {{ {2}.{3}({4}, Workspace);return Task.CompletedTask; }}, Workspace)",
-                                                                paramTypes, paramTypeValues, agentTypeName, method.BasicName, paramValues);
+                                                                paramTypes, paramTypeValues, baseAgentTypeName, method.BasicName, paramValues);
                                 }
                                 else
                                 {
