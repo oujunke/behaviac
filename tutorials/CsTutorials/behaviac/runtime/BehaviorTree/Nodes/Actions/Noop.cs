@@ -12,13 +12,15 @@
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace behaviac
 {
     // ============================================================================
     public class Noop : BehaviorNode
     {
-        public Noop()
+
+        public Noop(Workspace workspace) : base(workspace)
         {
         }
 
@@ -26,9 +28,9 @@ namespace behaviac
         //{
         //}
 
-        protected override void load(int version, string agentType, List<property_t> properties)
+        protected override  async Task  load(int version, string agentType, List<property_t> properties)
         {
-            base.load(version, agentType, properties);
+            await base.load(version, agentType, properties);
         }
 
         public override bool IsValid(Agent pAgent, BehaviorTask pTask)
@@ -45,7 +47,7 @@ namespace behaviac
 
         protected override BehaviorTask createTask()
         {
-            NoopTask pTask = new NoopTask();
+            NoopTask pTask = new NoopTask(Workspace);
 
             return pTask;
         }
@@ -56,8 +58,7 @@ namespace behaviac
 
         private class NoopTask : LeafTask
         {
-            public NoopTask()
-            : base()
+            public NoopTask(Workspace workspace) : base(workspace)
             {
             }
 
@@ -76,20 +77,20 @@ namespace behaviac
                 base.load(node);
             }
 
-            protected override bool onenter(Agent pAgent)
+            protected override Task<bool> onenter(Agent pAgent)
             {
-                return true;
+                return Task.FromResult(true);
             }
 
             protected override void onexit(Agent pAgent, EBTStatus s)
             {
             }
 
-            protected override EBTStatus update(Agent pAgent, EBTStatus childStatus)
+            protected override Task<EBTStatus> update(Agent pAgent, EBTStatus childStatus)
             {
-                Debug.Check(childStatus == EBTStatus.BT_RUNNING);
+                Debugs.Check(childStatus == EBTStatus.BT_RUNNING);
 
-                return EBTStatus.BT_SUCCESS;
+                return Task.FromResult(EBTStatus.BT_SUCCESS);
             }
         }
     }

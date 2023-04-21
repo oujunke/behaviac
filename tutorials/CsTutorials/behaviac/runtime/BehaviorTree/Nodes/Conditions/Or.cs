@@ -12,12 +12,13 @@
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace behaviac
 {
     public class Or : ConditionBase
     {
-        public Or()
+        public Or(Workspace workspace) : base(workspace)
         {
         }
 
@@ -25,9 +26,9 @@ namespace behaviac
         //{
         //}
 
-        protected override void load(int version, string agentType, List<property_t> properties)
+        protected override  async Task  load(int version, string agentType, List<property_t> properties)
         {
-            base.load(version, agentType, properties);
+            await base.load(version, agentType, properties);
         }
 
         public override bool IsValid(Agent pAgent, BehaviorTask pTask)
@@ -40,14 +41,14 @@ namespace behaviac
             return base.IsValid(pAgent, pTask);
         }
 
-        public override bool Evaluate(Agent pAgent)
+        public override async Task<bool> Evaluate(Agent pAgent)
         {
             bool ret = true;
 
             for (int i = 0; i < this.m_children.Count; ++i)
             {
                 BehaviorNode c = this.m_children[i];
-                ret = c.Evaluate(pAgent);
+                ret =await c.Evaluate(pAgent);
 
                 if (ret)
                 {
@@ -60,7 +61,7 @@ namespace behaviac
 
         protected override BehaviorTask createTask()
         {
-            OrTask pTask = new OrTask();
+            OrTask pTask = new OrTask(Workspace);
 
             return pTask;
         }
@@ -68,8 +69,7 @@ namespace behaviac
         // ============================================================================
         private class OrTask : Selector.SelectorTask
         {
-            public OrTask()
-            : base()
+            public OrTask(Workspace workspace) : base(workspace)
             {
             }
 
@@ -92,15 +92,15 @@ namespace behaviac
                 base.load(node);
             }
 
-            protected override EBTStatus update(Agent pAgent, EBTStatus childStatus)
+            protected override async Task<EBTStatus> update(Agent pAgent, EBTStatus childStatus)
             {
-                Debug.Check(childStatus == EBTStatus.BT_RUNNING);
+                Debugs.Check(childStatus == EBTStatus.BT_RUNNING);
 
                 //Debug.Check(this.m_children.Count == 2);
                 for (int i = 0; i < this.m_children.Count; ++i)
                 {
                     BehaviorTask pBehavior = this.m_children[i];
-                    EBTStatus s = pBehavior.exec(pAgent);
+                    EBTStatus s =await pBehavior.exec(pAgent);
 
                     // If the child succeeds, succeeds
                     if (s == EBTStatus.BT_SUCCESS)
@@ -108,7 +108,7 @@ namespace behaviac
                         return s;
                     }
 
-                    Debug.Check(s == EBTStatus.BT_FAILURE);
+                    Debugs.Check(s == EBTStatus.BT_FAILURE);
                 }
 
                 return EBTStatus.BT_FAILURE;

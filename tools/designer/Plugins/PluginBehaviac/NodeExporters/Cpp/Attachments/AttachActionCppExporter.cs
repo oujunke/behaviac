@@ -94,7 +94,7 @@ namespace PluginBehaviac.NodeExporters
                 return;
             }
 
-            stream.WriteLine("{0}\t\tvirtual EBTStatus update_impl(Agent* pAgent, EBTStatus childStatus)", indent);
+            stream.WriteLine("{0}\t\tvirtual async Task<EBTStatus> update_impl(Agent* pAgent, EBTStatus childStatus)", indent);
             stream.WriteLine("{0}\t\t{{", indent);
             stream.WriteLine("{0}\t\t\tEBTStatus result = BT_SUCCESS;", indent);
 

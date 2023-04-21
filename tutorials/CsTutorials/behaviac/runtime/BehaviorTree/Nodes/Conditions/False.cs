@@ -12,12 +12,13 @@
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace behaviac
 {
     public class False : ConditionBase
     {
-        public False()
+        public False(Workspace workspace):base(workspace)
         {
         }
 
@@ -25,9 +26,9 @@ namespace behaviac
         //{
         //}
 
-        protected override void load(int version, string agentType, List<property_t> properties)
+        protected override  async Task  load(int version, string agentType, List<property_t> properties)
         {
-            base.load(version, agentType, properties);
+            await base.load(version, agentType, properties);
         }
 
         public override bool IsValid(Agent pAgent, BehaviorTask pTask)
@@ -42,7 +43,7 @@ namespace behaviac
 
         protected override BehaviorTask createTask()
         {
-            FalseTask pTask = new FalseTask();
+            FalseTask pTask = new FalseTask(Workspace);
 
             return pTask;
         }
@@ -50,8 +51,7 @@ namespace behaviac
         // ============================================================================
         private class FalseTask : ConditionBaseTask
         {
-            public FalseTask()
-            : base()
+            public FalseTask(Workspace workspace) : base(workspace)
             {
             }
 
@@ -74,11 +74,11 @@ namespace behaviac
                 base.load(node);
             }
 
-            protected override EBTStatus update(Agent pAgent, EBTStatus childStatus)
+            protected override Task<EBTStatus> update(Agent pAgent, EBTStatus childStatus)
             {
-                Debug.Check(childStatus == EBTStatus.BT_RUNNING);
+                Debugs.Check(childStatus == EBTStatus.BT_RUNNING);
 
-                return EBTStatus.BT_FAILURE;
+                return Task.FromResult(EBTStatus.BT_FAILURE);
             }
         }
     }

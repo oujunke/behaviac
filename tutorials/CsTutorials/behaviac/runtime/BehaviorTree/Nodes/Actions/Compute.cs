@@ -13,14 +13,15 @@
 
 using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace behaviac
 {
     public class Compute : BehaviorNode
     {
-        protected override void load(int version, string agentType, List<property_t> properties)
+        protected override async Task load(int version, string agentType, List<property_t> properties)
         {
-            base.load(version, agentType, properties);
+            await base.load(version, agentType, properties);
 
             for (int i = 0; i < properties.Count; ++i)
             {
@@ -28,13 +29,13 @@ namespace behaviac
 
                 if (p.name == "Opl")
                 {
-                    this.m_opl = AgentMeta.ParseProperty(p.value);
+                    this.m_opl = AgentMeta.ParseProperty(p.value, Workspace);
                 }
                 else if (p.name == "Operator")
                 {
-                    Debug.Check(p.value == "Add" || p.value == "Sub" || p.value == "Mul" || p.value == "Div");
+                    Debugs.Check(p.value == "Add" || p.value == "Sub" || p.value == "Mul" || p.value == "Div");
 
-                    this.m_operator = OperationUtils.ParseOperatorType(p.value);
+                    this.m_operator = OperationUtils.ParseOperatorType(p.value, Workspace);
                 }
                 else if (p.name == "Opr1")
                 {
@@ -42,11 +43,11 @@ namespace behaviac
 
                     if (pParenthesis == -1)
                     {
-                        this.m_opr1 = AgentMeta.ParseProperty(p.value);
+                        this.m_opr1 = AgentMeta.ParseProperty(p.value, Workspace);
                     }
                     else
                     {
-                        this.m_opr1 = AgentMeta.ParseMethod(p.value);
+                        this.m_opr1 = AgentMeta.ParseMethod(p.value, Workspace);
                     }
                 }
                 else if (p.name == "Opr2")
@@ -55,11 +56,11 @@ namespace behaviac
 
                     if (pParenthesis == -1)
                     {
-                        this.m_opr2 = AgentMeta.ParseProperty(p.value);
+                        this.m_opr2 = AgentMeta.ParseProperty(p.value, Workspace);
                     }
                     else
                     {
-                        this.m_opr2 = AgentMeta.ParseMethod(p.value);
+                        this.m_opr2 = AgentMeta.ParseMethod(p.value, Workspace);
                     }
                 }
             }
@@ -77,7 +78,7 @@ namespace behaviac
 
         protected override BehaviorTask createTask()
         {
-            return new ComputeTask();
+            return new ComputeTask(Workspace);
         }
 
         protected IInstanceMember m_opl;
@@ -85,8 +86,16 @@ namespace behaviac
         protected IInstanceMember m_opr2;
         protected EOperatorType m_operator = EOperatorType.E_INVALID;
 
+        public Compute(Workspace workspace) : base(workspace)
+        {
+        }
+
         private class ComputeTask : LeafTask
         {
+            public ComputeTask(Workspace workspace) : base(workspace)
+            {
+            }
+
             public override void copyto(BehaviorTask target)
             {
                 base.copyto(target);
@@ -102,22 +111,22 @@ namespace behaviac
                 base.load(node);
             }
 
-            protected override bool onenter(Agent pAgent)
+            protected override Task<bool> onenter(Agent pAgent)
             {
-                return true;
+                return Task.FromResult(true);
             }
 
             protected override void onexit(Agent pAgent, EBTStatus s)
             {
             }
 
-            protected override EBTStatus update(Agent pAgent, EBTStatus childStatus)
+            protected override async Task<EBTStatus> update(Agent pAgent, EBTStatus childStatus)
             {
-                Debug.Check(childStatus == EBTStatus.BT_RUNNING);
+                Debugs.Check(childStatus == EBTStatus.BT_RUNNING);
 
                 EBTStatus result = EBTStatus.BT_SUCCESS;
 
-                Debug.Check(this.GetNode() is Compute);
+                Debugs.Check(this.GetNode() is Compute);
                 Compute pComputeNode = (Compute)(this.GetNode());
 
 #if !BEHAVIAC_RELEASE
@@ -131,21 +140,21 @@ namespace behaviac
 
                     if (Math.Abs(f) < 0.00001f)
                     {
-                        Debug.LogError(string.Format("Compute {0}: right is 0", this.m_id));
+                        Debugs.LogError(string.Format("Compute {0}: right is 0", this.m_id));
                     }
 
                     double d = Convert.ToDouble(v);
 
                     if (Math.Abs(d) < 0.00001)
                     {
-                        Debug.LogError(string.Format("Compute {0}: right is 0", this.m_id));
+                        Debugs.LogError(string.Format("Compute {0}: right is 0", this.m_id));
                     }
 
                     int n = Convert.ToInt32(v);
 
                     if (n == 0)
                     {
-                        Debug.LogError(string.Format("Compute {0} has right is 0", this.m_id));
+                        Debugs.LogError(string.Format("Compute {0} has right is 0", this.m_id));
                     }
                 }
 
@@ -153,11 +162,11 @@ namespace behaviac
 
                 if (pComputeNode.m_opl != null)
                 {
-                    pComputeNode.m_opl.Compute(pAgent, pComputeNode.m_opr1, pComputeNode.m_opr2, pComputeNode.m_operator);
+                    await pComputeNode.m_opl.Compute(pAgent, pComputeNode.m_opr1, pComputeNode.m_opr2, pComputeNode.m_operator);
                 }
                 else
                 {
-                    result = pComputeNode.update_impl(pAgent, childStatus);
+                    result = await pComputeNode.update_impl(pAgent, childStatus);
                 }
 
                 return result;

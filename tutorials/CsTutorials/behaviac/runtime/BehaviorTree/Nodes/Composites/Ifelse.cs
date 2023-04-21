@@ -12,12 +12,15 @@
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.Threading.Tasks;
 
 namespace behaviac
 {
     public class IfElse : BehaviorNode
     {
-        public IfElse()
+
+        public IfElse(Workspace workspace) : base(workspace)
         {
         }
 
@@ -25,9 +28,9 @@ namespace behaviac
         //{
         //}
 
-        protected override void load(int version, string agentType, List<property_t> properties)
+        protected override  async Task  load(int version, string agentType, List<property_t> properties)
         {
-            base.load(version, agentType, properties);
+            await base.load(version, agentType, properties);
         }
 
         public override bool IsValid(Agent pAgent, BehaviorTask pTask)
@@ -42,7 +45,7 @@ namespace behaviac
 
         protected override BehaviorTask createTask()
         {
-            IfElseTask pTask = new IfElseTask();
+            IfElseTask pTask = new IfElseTask(Workspace);
 
             return pTask;
         }
@@ -57,8 +60,7 @@ namespace behaviac
 
         private class IfElseTask : CompositeTask
         {
-            public IfElseTask()
-            : base()
+            public IfElseTask(Workspace workspace) : base(workspace)
             {
             }
 
@@ -77,19 +79,19 @@ namespace behaviac
                 base.load(node);
             }
 
-            protected override bool onenter(Agent pAgent)
+            protected override Task<bool> onenter(Agent pAgent)
             {
                 //reset it as it will be checked for the condition execution at the first time
                 this.m_activeChildIndex = CompositeTask.InvalidChildIndex;
 
                 if (this.m_children.Count == 3)
                 {
-                    return true;
+                    return Task.FromResult(true);
                 }
 
-                Debug.Check(false, "IfElseTask has to have three children: condition, if, else");
+                Debugs.Check(false, "IfElseTask has to have three children: condition, if, else");
 
-                return false;
+                return Task.FromResult(false);
             }
 
             protected override void onexit(Agent pAgent, EBTStatus s)
@@ -97,10 +99,10 @@ namespace behaviac
                 base.onexit(pAgent, s);
             }
 
-            protected override EBTStatus update(Agent pAgent, EBTStatus childStatus)
+            protected override async Task<EBTStatus> update(Agent pAgent, EBTStatus childStatus)
             {
-                Debug.Check(childStatus != EBTStatus.BT_INVALID);
-                Debug.Check(this.m_children.Count == 3);
+                Debugs.Check(childStatus != EBTStatus.BT_INVALID);
+                Debugs.Check(this.m_children.Count == 3);
 
                 EBTStatus conditionResult = EBTStatus.BT_INVALID;
 
@@ -117,7 +119,7 @@ namespace behaviac
                     if (conditionResult == EBTStatus.BT_INVALID)
                     {
                         // condition has not been checked
-                        conditionResult = pCondition.exec(pAgent);
+                        conditionResult =await pCondition.exec(pAgent);
                     }
 
                     if (conditionResult == EBTStatus.BT_SUCCESS)
@@ -134,11 +136,11 @@ namespace behaviac
                 else
                 {
                     //return childStatus;
-					//原来是return childStatus(当时如果子节点处于运行状态不会触发,但是不知道这样写的原因,暂时修改,如果知道原因可以修复这里)
+					//原来是return childStatus(当时如果子节点处于运行状态不会触发,会多次执行)
 					BehaviorTask pBehavior = this.m_children[this.m_activeChildIndex];
                     if(pBehavior.m_status!= EBTStatus.BT_RUNNING)
                     {
-                        Debugger.Break();
+                        //Debugger.Break();
                         return childStatus;
                     }
                 }
@@ -146,7 +148,7 @@ namespace behaviac
                 if (this.m_activeChildIndex != CompositeTask.InvalidChildIndex)
                 {
                     BehaviorTask pBehavior = this.m_children[this.m_activeChildIndex];
-                    EBTStatus s = pBehavior.exec(pAgent);
+                    EBTStatus s =await pBehavior.exec(pAgent);
 
                     return s;
                 }

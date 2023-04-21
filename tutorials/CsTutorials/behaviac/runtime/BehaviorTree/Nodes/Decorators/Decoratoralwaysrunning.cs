@@ -12,12 +12,13 @@
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace behaviac
 {
     public class DecoratorAlwaysRunning : DecoratorNode
     {
-        public DecoratorAlwaysRunning()
+        public DecoratorAlwaysRunning(Workspace workspace) : base(workspace)
         {
         }
 
@@ -25,9 +26,9 @@ namespace behaviac
         //{
         //}
 
-        protected override void load(int version, string agentType, List<property_t> properties)
+        protected override  async Task  load(int version, string agentType, List<property_t> properties)
         {
-            base.load(version, agentType, properties);
+            await base.load(version, agentType, properties);
         }
 
         public override bool IsValid(Agent pAgent, BehaviorTask pTask)
@@ -42,15 +43,14 @@ namespace behaviac
 
         protected override BehaviorTask createTask()
         {
-            DecoratorAlwaysRunningTask pTask = new DecoratorAlwaysRunningTask();
+            DecoratorAlwaysRunningTask pTask = new DecoratorAlwaysRunningTask(Workspace);
 
             return pTask;
         }
 
         private class DecoratorAlwaysRunningTask : DecoratorTask
         {
-            public DecoratorAlwaysRunningTask()
-            : base()
+            public DecoratorAlwaysRunningTask(Workspace workspace) : base(workspace)
             {
             }
 

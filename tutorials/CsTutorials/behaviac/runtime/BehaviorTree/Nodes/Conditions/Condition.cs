@@ -12,14 +12,15 @@
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace behaviac
 {
     public class Condition : ConditionBase
     {
-        protected override void load(int version, string agentType, List<property_t> properties)
+        protected override  async Task  load(int version, string agentType, List<property_t> properties)
         {
-            base.load(version, agentType, properties);
+            await base.load(version, agentType, properties);
 
             for (int i = 0; i < properties.Count; ++i)
             {
@@ -31,16 +32,16 @@ namespace behaviac
 
                     if (pParenthesis == -1)
                     {
-                        this.m_opl = AgentMeta.ParseProperty(p.value);
+                        this.m_opl = AgentMeta.ParseProperty(p.value, Workspace);
                     }
                     else
                     {
-                        this.m_opl = AgentMeta.ParseMethod(p.value);
+                        this.m_opl = AgentMeta.ParseMethod(p.value, Workspace);
                     }
                 }
                 else if (p.name == "Operator")
                 {
-                    this.m_operator = OperationUtils.ParseOperatorType(p.value);
+                    this.m_operator = OperationUtils.ParseOperatorType(p.value,Workspace);
                 }
                 else if (p.name == "Opr")
                 {
@@ -48,11 +49,11 @@ namespace behaviac
 
                     if (pParenthesis == -1)
                     {
-                        this.m_opr = AgentMeta.ParseProperty(p.value);
+                        this.m_opr = AgentMeta.ParseProperty(p.value, Workspace);
                     }
                     else
                     {
-                        this.m_opr = AgentMeta.ParseMethod(p.value);
+                        this.m_opr = AgentMeta.ParseMethod(p.value, Workspace);
                     }
                 }
             }
@@ -68,23 +69,23 @@ namespace behaviac
             return base.IsValid(pAgent, pTask);
         }
 
-        public override bool Evaluate(Agent pAgent)
+        public override async Task<bool> Evaluate(Agent pAgent)
         {
             if (this.m_opl != null && this.m_opr != null)
             {
-                return this.m_opl.Compare(pAgent, this.m_opr, this.m_operator);
+                return await this.m_opl.Compare(pAgent, this.m_opr, this.m_operator);
             }
             else
             {
                 EBTStatus childStatus = EBTStatus.BT_INVALID;
-                EBTStatus result = this.update_impl(pAgent, childStatus);
+                EBTStatus result =await this.update_impl(pAgent, childStatus);
                 return result == EBTStatus.BT_SUCCESS;
             }
         }
 
         protected override BehaviorTask createTask()
         {
-            ConditionTask pTask = new ConditionTask();
+            ConditionTask pTask = new ConditionTask(Workspace);
 
             return pTask;
         }
@@ -93,8 +94,16 @@ namespace behaviac
         protected IInstanceMember m_opr;
         protected EOperatorType m_operator = EOperatorType.E_EQUAL;
 
+        public Condition(Workspace workspace) : base(workspace)
+        {
+        }
+
         private class ConditionTask : ConditionBaseTask
         {
+            public ConditionTask(Workspace workspace) : base(workspace)
+            {
+            }
+
             public override void copyto(BehaviorTask target)
             {
                 base.copyto(target);
@@ -110,23 +119,23 @@ namespace behaviac
                 base.load(node);
             }
 
-            protected override bool onenter(Agent pAgent)
+            protected override Task<bool> onenter(Agent pAgent)
             {
-                return true;
+                return Task.FromResult(true);
             }
 
             protected override void onexit(Agent pAgent, EBTStatus s)
             {
             }
 
-            protected override EBTStatus update(Agent pAgent, EBTStatus childStatus)
+            protected override async Task<EBTStatus> update(Agent pAgent, EBTStatus childStatus)
             {
-                Debug.Check(childStatus == EBTStatus.BT_RUNNING);
+                Debugs.Check(childStatus == EBTStatus.BT_RUNNING);
 
-                Debug.Check(this.GetNode() is Condition);
+                Debugs.Check(this.GetNode() is Condition);
                 Condition pConditionNode = (Condition)(this.GetNode());
 
-                bool ret = pConditionNode.Evaluate(pAgent);
+                bool ret =await pConditionNode.Evaluate(pAgent);
 
                 return ret ? EBTStatus.BT_SUCCESS : EBTStatus.BT_FAILURE;
             }

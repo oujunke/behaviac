@@ -16,7 +16,7 @@
     <node class="ReferencedBehavior" id="4">
       <property ReferenceBehavior="const string &quot;subtree2&quot;" />
     </node>
-    <node class="Action" id="5">
+    <node class="Actions" id="5">
       <property Method="Self.FirstAgent::m1(&quot;Hello, maintree2!&quot;)" />
       <property ResultOption="BT_SUCCESS" />
     </node>

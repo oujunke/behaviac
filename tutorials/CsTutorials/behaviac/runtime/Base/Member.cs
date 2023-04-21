@@ -14,6 +14,8 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.Threading.Tasks;
 
 namespace behaviac
 {
@@ -26,19 +28,19 @@ namespace behaviac
     {
         public T value;
 
-        public TValue(T v)
+        public TValue(T v, Workspace workspace)
         {
-            Utils.Clone(ref value, v);
+            Utils.Clone(ref value, v, workspace);
         }
 
-        public TValue(TValue<T> rhs)
+        public TValue(TValue<T> rhs, Workspace workspace)
         {
-            Utils.Clone(ref value, rhs.value);
+            Utils.Clone(ref value, rhs.value, workspace);
         }
 
-        public TValue<T> Clone()
+        public TValue<T> Clone(Workspace workspace)
         {
-            return new TValue<T>(this);
+            return new TValue<T>(this, workspace);
         }
 
         public void Log(Agent agent, string name, bool bForce)
@@ -46,9 +48,9 @@ namespace behaviac
 #if !BEHAVIAC_RELEASE
             T currentValue = agent.GetVariable<T>(name);
 
-            if (bForce || OperationUtils.Compare<T>(currentValue, this.value, EOperatorType.E_NOTEQUAL))
+            if (bForce || OperationUtils.Compare<T>(currentValue, this.value, EOperatorType.E_NOTEQUAL, agent.Workspace))
             {
-                LogManager.Instance.LogVarValue(agent, name, currentValue);
+                agent.Workspace.LogManagers.LogVarValue(agent, name, currentValue);
                 this.value = currentValue;
             }
 
@@ -58,22 +60,22 @@ namespace behaviac
 
     public interface IInstanceMember
     {
-        int GetCount(Agent self);
-        void SetValue(Agent self, IInstanceMember right, int index);
+        Task<int> GetCount(Agent self);
+        Task SetValue(Agent self, IInstanceMember right, int index);
 
-        object GetValueObject(Agent self);
+        Task<object> GetValueObject(Agent self);
 
-        void SetValue(Agent self, object value);
+        Task SetValue(Agent self, object value);
 
-        void SetValue(Agent self, IInstanceMember right);
+        Task SetValue(Agent self, IInstanceMember right);
 
-        void SetValueAs(Agent self, IInstanceMember right);
+        Task SetValueAs(Agent self, IInstanceMember right);
 
-        bool Compare(Agent self, IInstanceMember right, EOperatorType comparisonType);
+        Task<bool> Compare(Agent self, IInstanceMember right, EOperatorType comparisonType);
 
-        void Compute(Agent self, IInstanceMember right1, IInstanceMember right2, EOperatorType computeType);
+        Task Compute(Agent self, IInstanceMember right1, IInstanceMember right2, EOperatorType computeType);
 
-        void Run(Agent self);
+        Task Run(Agent self);
     }
 
     public interface IProperty
@@ -83,7 +85,7 @@ namespace behaviac
             get;
         }
 
-        void SetValue(Agent self, IInstanceMember right);
+        Task SetValue(Agent self, IInstanceMember right);
 
         void SetValueFromString(Agent self, string valueStr);
 
@@ -107,28 +109,33 @@ namespace behaviac
     {
         protected string _instance = "Self";
         protected IInstanceMember _indexMember = null;
-
-        public CInstanceMember()
+        public Workspace Workspace { get; private set; }
+        public Config Configs { set; get; }
+        public Debug Debugs { set; get; }
+        public CInstanceMember(Workspace workspace)
         {
+            Workspace = workspace;
+            Configs = workspace.Configs;
+            Debugs = workspace.Debugs;
             _indexMember = null;
         }
 
-        public CInstanceMember(string instance, IInstanceMember indexMember)
+        public CInstanceMember(string instance, IInstanceMember indexMember, Workspace workspace) : this(workspace)
         {
             _instance = instance;
             _indexMember = indexMember;
         }
 
-        public CInstanceMember(CInstanceMember<T> rhs)
+        public CInstanceMember(CInstanceMember<T> rhs, Workspace workspace) : this(workspace)
         {
             _instance = rhs._instance;
             _indexMember = rhs._indexMember;
         }
 
-        public int GetCount(Agent self)
+        public async Task<int> GetCount(Agent self)
         {
             //Agent agent = Utils.GetParentAgent(self, _instance);
-            IList list = (IList)this.GetValueObject(self);
+            IList list = (IList)(await this.GetValueObject(self));
 
             if (list != null)
             {
@@ -138,91 +145,93 @@ namespace behaviac
             return 0;
         }
 
-        public void SetValue(Agent self, IInstanceMember right, int index)
+        public async Task SetValue(Agent self, IInstanceMember right, int index)
         {
             //Agent agent = Utils.GetParentAgent(self, _instance);
-            object rightObject = right.GetValueObject(self);
-            Debug.Check(rightObject is IList);
+            object rightObject = await right.GetValueObject(self);
+            Debugs.Check(rightObject is IList);
             IList il = (IList)rightObject;
             List<T> list = (List<T>)il;
 
             T item = list[index];
 
-            this.SetValue(self, item);
+            await this.SetValue(self, item);
         }
 
-        public virtual T GetValue(Agent self)
+        public virtual Task<T> GetValue(Agent self)
         {
-            Debug.Check(false);
-            return default(T);
+            Debugs.Check(false);
+            return Task.FromResult(default(T));
         }
 
-        public object GetValueObject(Agent self)
+        public async Task<object> GetValueObject(Agent self)
         {
-            return GetValue(self);
+            return await GetValue(self);
         }
 
-        public virtual void SetValue(Agent self, T value)
+        public virtual Task SetValue(Agent self, T value)
         {
-            Debug.Check(false);
+            Debugs.Check(false);
+            return Task.CompletedTask;
         }
 
-        public void SetValue(Agent self, object value)
+        public async Task SetValue(Agent self, object value)
         {
-            Debug.Check(value == null || !value.GetType().IsValueType);
+            Debugs.Check(value == null || !value.GetType().IsValueType);
 
-            SetValue(self, (T)value);
+            await SetValue(self, (T)value);
         }
 
-        public void SetValueAs(Agent self, IInstanceMember right)
+        public async Task SetValueAs(Agent self, IInstanceMember right)
         {
             if (typeof(T).IsValueType)
             {
                 // this will cause boxing/unboxing
-                object v = right.GetValueObject(self);
+                object v = await right.GetValueObject(self);
 
                 object vv = Convert.ChangeType(v, typeof(T));
 
                 T t = (T)vv;
 
-                SetValue(self, t);
+                await SetValue(self, t);
             }
             else
             {
-                object v = right.GetValueObject(self);
+                object v = await right.GetValueObject(self);
 
-                SetValue(self, v);
+                await SetValue(self, v);
             }
         }
 
-        public void SetValue(Agent self, IInstanceMember right)
+        public async Task SetValue(Agent self, IInstanceMember right)
         {
-            SetValue(self, (CInstanceMember<T>)right);
+            await SetValue(self, (CInstanceMember<T>)right);
         }
 
-        public void SetValue(Agent self, CInstanceMember<T> right)
+        public async Task SetValue(Agent self, CInstanceMember<T> right)
         {
-            SetValue(self, right.GetValue(self));
+            await SetValue(self, await right.GetValue(self));
         }
 
-        public bool Compare(Agent self, IInstanceMember right, EOperatorType comparisonType)
+        public async Task<bool> Compare(Agent self, IInstanceMember right, EOperatorType comparisonType)
         {
-            T leftValue = this.GetValue(self);
-            T rightValue = ((CInstanceMember<T>)right).GetValue(self);
+            T leftValue = await this.GetValue(self);
+            T rightValue = await ((CInstanceMember<T>)right).GetValue(self);
 
-            return OperationUtils.Compare(leftValue, rightValue, comparisonType);
+            return OperationUtils.Compare(leftValue, rightValue, comparisonType, Workspace);
         }
 
-        public void Compute(Agent self, IInstanceMember right1, IInstanceMember right2, EOperatorType computeType)
+        public async Task Compute(Agent self, IInstanceMember right1, IInstanceMember right2, EOperatorType computeType)
         {
-            T rightValue1 = ((CInstanceMember<T>)right1).GetValue(self);
-            T rightValue2 = ((CInstanceMember<T>)right2).GetValue(self);
+            T rightValue1 = await ((CInstanceMember<T>)right1).GetValue(self);
+            T rightValue2 = await ((CInstanceMember<T>)right2).GetValue(self);
 
-            SetValue(self, OperationUtils.Compute(rightValue1, rightValue2, computeType));
+            await SetValue(self, OperationUtils.Compute(rightValue1, rightValue2, computeType, Workspace));
         }
 
-        public virtual void Run(Agent self)
+        public virtual Task Run(Agent self)
         {
+            return Task.CompletedTask;
         }
     }
 
@@ -246,20 +255,25 @@ namespace behaviac
             }
         }
 #endif
-
-        public CProperty(string name)
+        public Workspace Workspace { get; private set; }
+        public Config Configs { set; get; }
+        public Debug Debugs { set; get; }
+        public CProperty(string name, Workspace workspace)
         {
+            Workspace = workspace;
+            Configs = workspace.Configs;
+            Debugs = workspace.Debugs;
             _name = name;
         }
 
         public IInstanceMember CreateInstance(string instance, IInstanceMember indexMember)
         {
-            return new CInstanceProperty<T>(instance, indexMember, this);
+            return new CInstanceProperty<T>(instance, indexMember, this, Workspace);
         }
 
         public IValue CreateIValue()
         {
-            return new TValue<T>(default(T));
+            return new TValue<T>(default(T), Workspace);
         }
 
         public object GetValueObject(Agent self)
@@ -275,37 +289,37 @@ namespace behaviac
         public void SetValueFromString(Agent self, string valueStr)
         {
             T value;
-            ValueConverter<T>.Convert(valueStr, out value);
+            ValueConverter<T>.Convert(valueStr, out value, Workspace);
 
             SetValue(self, value);
         }
 
-        public void SetValue(Agent self, IInstanceMember right)
+        public async Task SetValue(Agent self, IInstanceMember right)
         {
-            T rightValue = ((CInstanceMember<T>)right).GetValue(self);
+            T rightValue = await ((CInstanceMember<T>)right).GetValue(self);
 
             SetValue(self, rightValue);
         }
 
         public virtual void SetValue(Agent self, T value)
         {
-            Debug.Check(false);
+            Debugs.Check(false);
         }
 
         public virtual void SetValue(Agent self, T value, int index)
         {
-            Debug.Check(false);
+            Debugs.Check(false);
         }
 
         public virtual T GetValue(Agent self)
         {
-            Debug.Check(false);
+            Debugs.Check(false);
             return default(T);
         }
 
         public virtual T GetValue(Agent self, int index)
         {
-            Debug.Check(false);
+            Debugs.Check(false);
             return default(T);
         }
 
@@ -315,32 +329,32 @@ namespace behaviac
     {
         CProperty<T> _property;
 
-        public CInstanceProperty(string instance, IInstanceMember indexMember, CProperty<T> prop)
-        : base(instance, indexMember)
+        public CInstanceProperty(string instance, IInstanceMember indexMember, CProperty<T> prop, Workspace workspace)
+        : base(instance, indexMember, workspace)
         {
             _property = prop;
         }
 
-        public override T GetValue(Agent self)
+        public override async Task<T> GetValue(Agent self)
         {
             Agent agent = Utils.GetParentAgent(self, _instance);
 
             if (_indexMember != null)
             {
-                int indexValue = ((CInstanceMember<int>)_indexMember).GetValue(self);
+                int indexValue = await ((CInstanceMember<int>)_indexMember).GetValue(self);
                 return _property.GetValue(agent, indexValue);
             }
 
             return _property.GetValue(agent);
         }
 
-        public override void SetValue(Agent self, T value)
+        public override async Task SetValue(Agent self, T value)
         {
             Agent agent = Utils.GetParentAgent(self, _instance);
 
             if (_indexMember != null)
             {
-                int indexValue = ((CInstanceMember<int>)_indexMember).GetValue(self);
+                int indexValue = await ((CInstanceMember<int>)_indexMember).GetValue(self);
                 _property.SetValue(agent, value, indexValue);
             }
             else
@@ -358,8 +372,8 @@ namespace behaviac
         SetFunctionPointer _sfp;
         GetFunctionPointer _gfp;
 
-        public CStaticMemberProperty(string name, SetFunctionPointer sfp, GetFunctionPointer gfp)
-        : base(name)
+        public CStaticMemberProperty(string name, SetFunctionPointer sfp, GetFunctionPointer gfp, Workspace workspace)
+        : base(name, workspace)
         {
             _sfp = sfp;
             _gfp = gfp;
@@ -367,14 +381,14 @@ namespace behaviac
 
         public override T GetValue(Agent self)
         {
-            Debug.Check(_gfp != null);
+            Debugs.Check(_gfp != null);
 
             return _gfp();
         }
 
         public override void SetValue(Agent self, T value)
         {
-            Debug.Check(_sfp != null);
+            Debugs.Check(_sfp != null);
 
             _sfp(value);
         }
@@ -388,8 +402,8 @@ namespace behaviac
         SetFunctionPointer _sfp;
         GetFunctionPointer _gfp;
 
-        public CStaticMemberArrayItemProperty(string name, SetFunctionPointer sfp, GetFunctionPointer gfp)
-        : base(name)
+        public CStaticMemberArrayItemProperty(string name, SetFunctionPointer sfp, GetFunctionPointer gfp, Workspace workspace)
+        : base(name, workspace)
         {
             _sfp = sfp;
             _gfp = gfp;
@@ -406,14 +420,14 @@ namespace behaviac
 #endif
         public override T GetValue(Agent self, int index)
         {
-            Debug.Check(_gfp != null);
+            Debugs.Check(_gfp != null);
 
             return _gfp(index);
         }
 
         public override void SetValue(Agent self, T value, int index)
         {
-            Debug.Check(_sfp != null);
+            Debugs.Check(_sfp != null);
 
             _sfp(value, index);
         }
@@ -427,8 +441,8 @@ namespace behaviac
         SetFunctionPointer _sfp;
         GetFunctionPointer _gfp;
 
-        public CMemberProperty(string name, SetFunctionPointer sfp, GetFunctionPointer gfp)
-        : base(name)
+        public CMemberProperty(string name, SetFunctionPointer sfp, GetFunctionPointer gfp, Workspace workspace)
+        : base(name, workspace)
         {
             _sfp = sfp;
             _gfp = gfp;
@@ -436,7 +450,7 @@ namespace behaviac
 
         public override T GetValue(Agent self)
         {
-            Debug.Check(_gfp != null);
+            Debugs.Check(_gfp != null);
 
 #if BEHAVIAC_USE_HTN
 
@@ -459,7 +473,7 @@ namespace behaviac
 
         public override void SetValue(Agent self, T value)
         {
-            Debug.Check(_sfp != null);
+            Debugs.Check(_sfp != null);
 
 #if BEHAVIAC_USE_HTN
 
@@ -495,8 +509,8 @@ namespace behaviac
         SetFunctionPointer _sfp;
         GetFunctionPointer _gfp;
 
-        public CMemberArrayItemProperty(string name, SetFunctionPointer sfp, GetFunctionPointer gfp)
-        : base(name)
+        public CMemberArrayItemProperty(string name, SetFunctionPointer sfp, GetFunctionPointer gfp, Workspace workspace)
+        : base(name, workspace)
         {
             _sfp = sfp;
             _gfp = gfp;
@@ -514,14 +528,14 @@ namespace behaviac
 
         public override T GetValue(Agent self, int index)
         {
-            Debug.Check(_gfp != null);
+            Debugs.Check(_gfp != null);
 
             return _gfp(self, index);
         }
 
         public override void SetValue(Agent self, T value, int index)
         {
-            Debug.Check(_sfp != null);
+            Debugs.Check(_sfp != null);
 
             _sfp(self, value, index);
         }
@@ -562,11 +576,11 @@ namespace behaviac
         uint _id;
         T _defaultValue;
 
-        public CCustomizedProperty(uint id, string name, string valueStr)
-        : base(name)
+        public CCustomizedProperty(uint id, string name, string valueStr, Workspace workspace)
+        : base(name, workspace)
         {
             _id = id;
-            ValueConverter<T>.Convert(valueStr, out _defaultValue);
+            ValueConverter<T>.Convert(valueStr, out _defaultValue, workspace);
         }
 
         public override T GetValue(Agent self)
@@ -587,14 +601,14 @@ namespace behaviac
         public override void SetValue(Agent self, T value)
         {
             bool bOk = self.SetVarValue<T>(_id, value);
-            Debug.Check(bOk);
+            Debugs.Check(bOk);
         }
 
         public IInstantiatedVariable Instantiate()
         {
             T value = default(T);
-            Utils.Clone(ref value, _defaultValue);
-            return new CVariable<T>(this.Name, value);
+            Utils.Clone(ref value, _defaultValue, Workspace);
+            return new CVariable<T>(this.Name, value, Workspace);
         }
     }
 
@@ -602,8 +616,8 @@ namespace behaviac
     {
         uint _parentId;
 
-        public CCustomizedArrayItemProperty(uint parentId, string parentName)
-        : base(parentName)
+        public CCustomizedArrayItemProperty(uint parentId, string parentName, Workspace workspace)
+        : base(parentName, workspace)
         {
             _parentId = parentId;
         }
@@ -621,11 +635,11 @@ namespace behaviac
         public override T GetValue(Agent self, int index)
         {
             List<T> arrayValue = self.GetVariable<List<T>>(_parentId);
-            Debug.Check(arrayValue != null);
+            Debugs.Check(arrayValue != null);
 
             if (arrayValue != null)
             {
-                Debug.Check(index >= 0 && index < arrayValue.Count);
+                Debugs.Check(index >= 0 && index < arrayValue.Count);
                 return arrayValue[index];
             }
 
@@ -635,7 +649,7 @@ namespace behaviac
         public override void SetValue(Agent self, T value, int index)
         {
             List<T> arrayValue = self.GetVariable<List<T>>(_parentId);
-            Debug.Check(arrayValue != null);
+            Debugs.Check(arrayValue != null);
 
             if (arrayValue != null)
             {
@@ -645,7 +659,7 @@ namespace behaviac
 
         public IInstantiatedVariable Instantiate()
         {
-            return new CArrayItemVariable<T>(_parentId, this.Name);
+            return new CArrayItemVariable<T>(_parentId, this.Name, Workspace);
         }
     }
 
@@ -654,7 +668,7 @@ namespace behaviac
         T _value;
 
         string _name;
-
+        public Workspace Workspace { set; get; }
 #if !BEHAVIAC_RELEASE
         bool _isModified = false;
         internal bool IsModified
@@ -671,10 +685,10 @@ namespace behaviac
         }
 #endif
 
-        public CVariable(string name, T value)
+        public CVariable(string name, T value, Workspace workspace)
         {
-            Utils.Clone<T>(ref this._value, value);
-
+            Utils.Clone<T>(ref this._value, value, workspace);
+            Workspace = workspace;
             _name = name;
 
 #if !BEHAVIAC_RELEASE
@@ -682,10 +696,10 @@ namespace behaviac
 #endif
         }
 
-        public CVariable(string name, string valueStr)
+        public CVariable(string name, string valueStr, Workspace workspace)
         {
-            ValueConverter<T>.Convert(valueStr, out _value);
-
+            ValueConverter<T>.Convert(valueStr, out _value, workspace);
+            Workspace = workspace;
             _name = name;
 
 #if !BEHAVIAC_RELEASE
@@ -711,7 +725,7 @@ namespace behaviac
 
         public void SetValueFromString(Agent self, string valueStr)
         {
-            ValueConverter<T>.Convert(valueStr, out _value);
+            ValueConverter<T>.Convert(valueStr, out _value, self.Workspace);
         }
 
         public void SetValue(Agent self, T value)
@@ -730,7 +744,7 @@ namespace behaviac
 
         public void SetValue(Agent self, object value, int index)
         {
-            Debug.Check(false);
+            self.Workspace.Debugs.Check(false);
         }
 
         public string Name
@@ -747,7 +761,7 @@ namespace behaviac
 
             if (_isModified)
             {
-                LogManager.Instance.LogVarValue(self, this.Name, this._value);
+                self.Workspace.LogManagers.LogVarValue(self, this.Name, this._value);
 
                 // clear it
                 _isModified = false;
@@ -759,7 +773,7 @@ namespace behaviac
         public void CopyTo(Agent pAgent)
         {
             //TODO:
-            Debug.Check(false);
+            pAgent.Debugs.Check(false);
         }
 
         public void Save(ISerializableNode node)
@@ -777,7 +791,7 @@ namespace behaviac
 
         public IInstantiatedVariable clone()
         {
-            CVariable<T> p = new CVariable<T>(this._name, this._value);
+            CVariable<T> p = new CVariable<T>(this._name, this._value, Workspace);
 
             return p;
         }
@@ -787,10 +801,12 @@ namespace behaviac
     {
         string _name;
         uint _parentId;
-        public CArrayItemVariable(uint parentId, string name)
+        Workspace Workspace { set; get; }
+        public CArrayItemVariable(uint parentId, string name, Workspace workspace)
         {
             _parentId = parentId;
             _name = name;
+            Workspace = workspace;
         }
 
         public T GetValue(Agent self, int index)
@@ -817,7 +833,7 @@ namespace behaviac
 
         public void SetValueFromString(Agent self, string valueStr)
         {
-            Debug.Check(false);
+            self.Debugs.Check(false);
         }
 
         public void SetValue(Agent self, T value, int index)
@@ -837,7 +853,7 @@ namespace behaviac
 
         public object GetValueObject(Agent self)
         {
-            Debug.Check(false);
+            self.Debugs.Check(false);
             return null;
         }
 
@@ -848,7 +864,7 @@ namespace behaviac
 
         public void SetValue(Agent self, object value)
         {
-            Debug.Check(false);
+            self.Debugs.Check(false);
         }
 
         public void SetValue(Agent self, object value, int index)
@@ -872,7 +888,7 @@ namespace behaviac
 
             if (arrayVar != null && arrayVar.IsModified)
             {
-                LogManager.Instance.LogVarValue(self, this.Name, arrayVar);
+                self.Workspace.LogManagers.LogVarValue(self, this.Name, arrayVar);
             }
 
 #endif
@@ -880,17 +896,18 @@ namespace behaviac
 
         public void CopyTo(Agent pAgent)
         {
-            Debug.Check(false);
+            pAgent.Debugs.Check(false);
         }
 
         public void Save(ISerializableNode node)
         {
-            Debug.Check(false);
+
+            Workspace.Debugs.Check(false);
         }
 
         public IInstantiatedVariable clone()
         {
-            CArrayItemVariable<T> p = new CArrayItemVariable<T>(this._parentId, this._name);
+            CArrayItemVariable<T> p = new CArrayItemVariable<T>(this._parentId, this._name, Workspace);
 
             return p;
         }
@@ -900,13 +917,13 @@ namespace behaviac
     {
         uint _id;
 
-        public CInstanceCustomizedProperty(string instance, IInstanceMember indexMember, uint id)
-        : base(instance, indexMember)
+        public CInstanceCustomizedProperty(string instance, IInstanceMember indexMember, uint id, Workspace workspace)
+        : base(instance, indexMember, workspace)
         {
             _id = id;
         }
 
-        public override T GetValue(Agent self)
+        public override async Task<T> GetValue(Agent self)
         {
             if (self != null)
             {
@@ -914,7 +931,7 @@ namespace behaviac
 
                 if (_indexMember != null)
                 {
-                    int indexValue = ((CInstanceMember<int>)_indexMember).GetValue(self);
+                    int indexValue = await ((CInstanceMember<int>)_indexMember).GetValue(self);
                     return agent.GetVariable<T>(_id, indexValue);
                 }
                 else
@@ -926,13 +943,13 @@ namespace behaviac
             return default(T);
         }
 
-        public override void SetValue(Agent self, T value)
+        public override async Task SetValue(Agent self, T value)
         {
             Agent agent = Utils.GetParentAgent(self, _instance);
 
             if (_indexMember != null)
             {
-                int indexValue = ((CInstanceMember<int>)_indexMember).GetValue(self);
+                int indexValue = await ((CInstanceMember<int>)_indexMember).GetValue(self);
                 agent.SetVariable<T>("", _id, value, indexValue);
             }
             else
@@ -946,19 +963,20 @@ namespace behaviac
     {
         protected T _value;
 
-        public CInstanceConst(string typeName, string valueStr)
+        public CInstanceConst(string typeName, string valueStr, Workspace workspace) : base(workspace)
         {
-            this._value = (T)AgentMeta.ParseTypeValue(typeName, valueStr);
+            this._value = (T)AgentMeta.ParseTypeValue(typeName, valueStr, workspace);
         }
 
-        public override T GetValue(Agent self)
+        public override Task<T> GetValue(Agent self)
         {
-            return _value;
+            return Task.FromResult(_value);
         }
 
-        public override void SetValue(Agent self, T value)
+        public override Task SetValue(Agent self, T value)
         {
             _value = value;
+            return Task.CompletedTask;
         }
     }
 
@@ -968,9 +986,9 @@ namespace behaviac
 
         void Load(string instance, string[] paramStrs);
 
-        IValue GetIValue(Agent self);
+        Task<IValue> GetIValue(Agent self);
 
-        IValue GetIValue(Agent self, IInstanceMember firstParam);
+        Task<IValue> GetIValue(Agent self, IInstanceMember firstParam);
 
         void SetTaskParams(Agent self, BehaviorTreeTask treeTask);
     }
@@ -979,100 +997,101 @@ namespace behaviac
     {
         protected TValue<T> _returnValue;
 
-        protected CAgentMethodBase()
+        public CAgentMethodBase(Workspace workspace) : base(workspace)
         {
-            _returnValue = new TValue<T>(default(T));
+            _returnValue = new TValue<T>(default(T), workspace);
         }
 
-        protected CAgentMethodBase(CAgentMethodBase<T> rhs)
+        public CAgentMethodBase(CAgentMethodBase<T> rhs, Workspace workspace) : base(workspace)
         {
-            _returnValue = rhs._returnValue.Clone();
+            _returnValue = rhs._returnValue.Clone(workspace);
         }
 
         public virtual IMethod Clone()
         {
-            Debug.Check(false);
+            Debugs.Check(false);
             return null;
         }
 
         public virtual void Load(string instance, string[] paramStrs)
         {
-            Debug.Check(false);
+            Debugs.Check(false);
         }
 
-        public override void Run(Agent self)
+        public override Task Run(Agent self)
         {
-            Debug.Check(false);
+            Debugs.Check(false);
+            return Task.CompletedTask;
         }
 
-        public override T GetValue(Agent self)
+        public override async Task<T> GetValue(Agent self)
         {
             if (!System.Object.ReferenceEquals(self, null))
             {
-                Run(self);
+                await Run(self);
             }
 
             return _returnValue.value;
         }
 
-        public virtual IValue GetIValue(Agent self)
+        public virtual async Task<IValue> GetIValue(Agent self)
         {
             if (!System.Object.ReferenceEquals(self, null))
             {
-                Run(self);
+                await Run(self);
             }
 
             return _returnValue;
         }
 
-        public virtual IValue GetIValue(Agent self, IInstanceMember firstParam)
+        public virtual async Task<IValue> GetIValue(Agent self, IInstanceMember firstParam)
         {
             Agent agent = Utils.GetParentAgent(self, _instance);
-            firstParam.Run(agent);
+            await firstParam.Run(agent);
 
-            return GetIValue(self);
+            return await GetIValue(self);
         }
 
         public virtual void SetTaskParams(Agent self, BehaviorTreeTask treeTask)
         {
-            Debug.Check(false);
+            Debugs.Check(false);
         }
     }
 
     public class CAgentMethod<T> : CAgentMethodBase<T>
     {
-        public delegate T FunctionPointer(Agent a);
+        public delegate Task<T> FunctionPointer(Agent a);
 
         FunctionPointer _fp;
 
-        public CAgentMethod(FunctionPointer f)
+        public CAgentMethod(FunctionPointer f, Workspace workspace) : base(workspace)
         {
             _fp = f;
         }
 
-        public CAgentMethod(CAgentMethod<T> rhs)
-        : base(rhs)
+        public CAgentMethod(CAgentMethod<T> rhs, Workspace workspace)
+        : base(rhs, workspace)
         {
             _fp = rhs._fp;
         }
 
         public override IMethod Clone()
         {
-            return new CAgentMethod<T>(this);
+            return new CAgentMethod<T>(this, Workspace);
         }
 
         public override void Load(string instance, string[] paramStrs)
         {
-            Debug.Check(paramStrs.Length == 0);
+            Debugs.Check(paramStrs.Length == 0);
 
             _instance = instance;
         }
 
-        public override void Run(Agent self)
+        public override async Task Run(Agent self)
         {
             Agent agent = Utils.GetParentAgent(self, _instance);
 
-            _returnValue.value = _fp(agent);
+            _returnValue.value = await _fp(agent);
         }
 
         public override void SetTaskParams(Agent self, BehaviorTreeTask treeTask)
@@ -1082,18 +1101,18 @@ namespace behaviac
 
     public class CAgentMethod<T, P1> : CAgentMethodBase<T>
     {
-        public delegate T FunctionPointer(Agent a, P1 p1);
+        public delegate Task<T> FunctionPointer(Agent a, P1 p1);
 
         FunctionPointer _fp;
         IInstanceMember _p1;
 
-        public CAgentMethod(FunctionPointer f)
+        public CAgentMethod(FunctionPointer f, Workspace workspace) : base(workspace)
         {
             _fp = f;
         }
 
-        public CAgentMethod(CAgentMethod<T, P1> rhs)
-        : base(rhs)
+        public CAgentMethod(CAgentMethod<T, P1> rhs, Workspace workspace)
+        : base(rhs, workspace)
         {
             _fp = rhs._fp;
             _p1 = rhs._p1;
@@ -1101,59 +1120,59 @@ namespace behaviac
 
         public override IMethod Clone()
         {
-            return new CAgentMethod<T, P1>(this);
+            return new CAgentMethod<T, P1>(this, Workspace);
         }
 
         public override void Load(string instance, string[] paramStrs)
         {
-            Debug.Check(paramStrs.Length == 1);
+            Debugs.Check(paramStrs.Length == 1);
 
             _instance = instance;
-            _p1 = AgentMeta.ParseProperty<P1>(paramStrs[0]);
+            _p1 = AgentMeta.ParseProperty<P1>(paramStrs[0], Workspace);
         }
 
-        public override void Run(Agent self)
+        public override async Task Run(Agent self)
         {
-            Debug.Check(_p1 != null);
+            Debugs.Check(_p1 != null);
 
             Agent agent = Utils.GetParentAgent(self, _instance);
 
-            _returnValue.value = _fp(agent, ((CInstanceMember<P1>)_p1).GetValue(self));
+            _returnValue.value = await _fp(agent, await ((CInstanceMember<P1>)_p1).GetValue(self));
         }
 
-        public override IValue GetIValue(Agent self, IInstanceMember firstParam)
+        public override async Task<IValue> GetIValue(Agent self, IInstanceMember firstParam)
         {
-            Debug.Check(_p1 != null);
+            Debugs.Check(_p1 != null);
 
             Agent agent = Utils.GetParentAgent(self, _instance);
 
-            _returnValue.value = _fp(agent, ((CInstanceMember<P1>)firstParam).GetValue(self));
+            _returnValue.value = await _fp(agent, await ((CInstanceMember<P1>)firstParam).GetValue(self));
 
             return _returnValue;
         }
 
         public override void SetTaskParams(Agent self, BehaviorTreeTask treeTask)
         {
-            string paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 0);
+            string paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 0);
             treeTask.SetVariable(paramName, ((CInstanceMember<P1>)_p1).GetValue(self));
         }
     }
 
     public class CAgentMethod<T, P1, P2> : CAgentMethodBase<T>
     {
-        public delegate T FunctionPointer(Agent a, P1 p1, P2 p2);
+        public delegate Task<T> FunctionPointer(Agent a, P1 p1, P2 p2);
 
         FunctionPointer _fp;
         IInstanceMember _p1;
         IInstanceMember _p2;
 
-        public CAgentMethod(FunctionPointer f)
+        public CAgentMethod(FunctionPointer f, Workspace workspace) : base(workspace)
         {
             _fp = f;
         }
 
-        public CAgentMethod(CAgentMethod<T, P1, P2> rhs)
-        : base(rhs)
+        public CAgentMethod(CAgentMethod<T, P1, P2> rhs, Workspace workspace)
+        : base(rhs, workspace)
         {
             _fp = rhs._fp;
             _p1 = rhs._p1;
@@ -1162,56 +1181,56 @@ namespace behaviac
 
         public override IMethod Clone()
         {
-            return new CAgentMethod<T, P1, P2>(this);
+            return new CAgentMethod<T, P1, P2>(this, Workspace);
         }
 
         public override void Load(string instance, string[] paramStrs)
         {
-            Debug.Check(paramStrs.Length == 2);
+            Debugs.Check(paramStrs.Length == 2);
 
             _instance = instance;
-            _p1 = AgentMeta.ParseProperty<P1>(paramStrs[0]);
-            _p2 = AgentMeta.ParseProperty<P2>(paramStrs[1]);
+            _p1 = AgentMeta.ParseProperty<P1>(paramStrs[0], Workspace);
+            _p2 = AgentMeta.ParseProperty<P2>(paramStrs[1], Workspace);
         }
 
-        public override void Run(Agent self)
+        public override async Task Run(Agent self)
         {
-            Debug.Check(_p1 != null);
-            Debug.Check(_p2 != null);
+            Debugs.Check(_p1 != null);
+            Debugs.Check(_p2 != null);
 
             Agent agent = Utils.GetParentAgent(self, _instance);
 
-            _returnValue.value = _fp(agent,
-                                     ((CInstanceMember<P1>)_p1).GetValue(self),
-                                     ((CInstanceMember<P2>)_p2).GetValue(self));
+            _returnValue.value = await _fp(agent,
+                                   await ((CInstanceMember<P1>)_p1).GetValue(self),
+                                    await ((CInstanceMember<P2>)_p2).GetValue(self));
         }
 
         public override void SetTaskParams(Agent self, BehaviorTreeTask treeTask)
         {
-            string paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 0);
+            string paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 0);
             treeTask.SetVariable(paramName, ((CInstanceMember<P1>)_p1).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 1);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 1);
             treeTask.SetVariable(paramName, ((CInstanceMember<P2>)_p2).GetValue(self));
         }
     }
 
     public class CAgentMethod<T, P1, P2, P3> : CAgentMethodBase<T>
     {
-        public delegate T FunctionPointer(Agent a, P1 p1, P2 p2, P3 p3);
+        public delegate Task<T> FunctionPointer(Agent a, P1 p1, P2 p2, P3 p3);
 
         FunctionPointer _fp;
         IInstanceMember _p1;
         IInstanceMember _p2;
         IInstanceMember _p3;
 
-        public CAgentMethod(FunctionPointer f)
+        public CAgentMethod(FunctionPointer f, Workspace workspace) : base(workspace)
         {
             _fp = f;
         }
 
-        public CAgentMethod(CAgentMethod<T, P1, P2, P3> rhs)
-        : base(rhs)
+        public CAgentMethod(CAgentMethod<T, P1, P2, P3> rhs, Workspace workspace)
+        : base(rhs, workspace)
         {
             _fp = rhs._fp;
             _p1 = rhs._p1;
@@ -1221,49 +1240,49 @@ namespace behaviac
 
         public override IMethod Clone()
         {
-            return new CAgentMethod<T, P1, P2, P3>(this);
+            return new CAgentMethod<T, P1, P2, P3>(this, Workspace);
         }
 
         public override void Load(string instance, string[] paramStrs)
         {
-            Debug.Check(paramStrs.Length == 3);
+            Debugs.Check(paramStrs.Length == 3);
 
             _instance = instance;
-            _p1 = AgentMeta.ParseProperty<P1>(paramStrs[0]);
-            _p2 = AgentMeta.ParseProperty<P2>(paramStrs[1]);
-            _p3 = AgentMeta.ParseProperty<P3>(paramStrs[2]);
+            _p1 = AgentMeta.ParseProperty<P1>(paramStrs[0], Workspace);
+            _p2 = AgentMeta.ParseProperty<P2>(paramStrs[1], Workspace);
+            _p3 = AgentMeta.ParseProperty<P3>(paramStrs[2], Workspace);
         }
 
-        public override void Run(Agent self)
+        public override async Task Run(Agent self)
         {
-            Debug.Check(_p1 != null);
-            Debug.Check(_p2 != null);
-            Debug.Check(_p3 != null);
+            Debugs.Check(_p1 != null);
+            Debugs.Check(_p2 != null);
+            Debugs.Check(_p3 != null);
 
             Agent agent = Utils.GetParentAgent(self, _instance);
 
-            _returnValue.value = _fp(agent,
-                                     ((CInstanceMember<P1>)_p1).GetValue(self),
-                                     ((CInstanceMember<P2>)_p2).GetValue(self),
-                                     ((CInstanceMember<P3>)_p3).GetValue(self));
+            _returnValue.value = await _fp(agent,
+                                await ((CInstanceMember<P1>)_p1).GetValue(self),
+                                 await ((CInstanceMember<P2>)_p2).GetValue(self),
+                                 await ((CInstanceMember<P3>)_p3).GetValue(self));
         }
 
         public override void SetTaskParams(Agent self, BehaviorTreeTask treeTask)
         {
-            string paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 0);
+            string paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 0);
             treeTask.SetVariable(paramName, ((CInstanceMember<P1>)_p1).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 1);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 1);
             treeTask.SetVariable(paramName, ((CInstanceMember<P2>)_p2).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 2);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 2);
             treeTask.SetVariable(paramName, ((CInstanceMember<P3>)_p3).GetValue(self));
         }
     }
 
     public class CAgentMethod<T, P1, P2, P3, P4> : CAgentMethodBase<T>
     {
-        public delegate T FunctionPointer(Agent a, P1 p1, P2 p2, P3 p3, P4 p4);
+        public delegate Task<T> FunctionPointer(Agent a, P1 p1, P2 p2, P3 p3, P4 p4);
 
         FunctionPointer _fp;
         IInstanceMember _p1;
@@ -1271,13 +1290,13 @@ namespace behaviac
         IInstanceMember _p3;
         IInstanceMember _p4;
 
-        public CAgentMethod(FunctionPointer f)
+        public CAgentMethod(FunctionPointer f, Workspace workspace) : base(workspace)
         {
             _fp = f;
         }
 
-        public CAgentMethod(CAgentMethod<T, P1, P2, P3, P4> rhs)
-        : base(rhs)
+        public CAgentMethod(CAgentMethod<T, P1, P2, P3, P4> rhs, Workspace workspace)
+        : base(rhs, workspace)
         {
             _fp = rhs._fp;
             _p1 = rhs._p1;
@@ -1288,55 +1307,55 @@ namespace behaviac
 
         public override IMethod Clone()
         {
-            return new CAgentMethod<T, P1, P2, P3, P4>(this);
+            return new CAgentMethod<T, P1, P2, P3, P4>(this, Workspace);
         }
 
         public override void Load(string instance, string[] paramStrs)
         {
-            Debug.Check(paramStrs.Length == 4);
+            Debugs.Check(paramStrs.Length == 4);
 
             _instance = instance;
-            _p1 = AgentMeta.ParseProperty<P1>(paramStrs[0]);
-            _p2 = AgentMeta.ParseProperty<P2>(paramStrs[1]);
-            _p3 = AgentMeta.ParseProperty<P3>(paramStrs[2]);
-            _p4 = AgentMeta.ParseProperty<P4>(paramStrs[3]);
+            _p1 = AgentMeta.ParseProperty<P1>(paramStrs[0], Workspace);
+            _p2 = AgentMeta.ParseProperty<P2>(paramStrs[1], Workspace);
+            _p3 = AgentMeta.ParseProperty<P3>(paramStrs[2], Workspace);
+            _p4 = AgentMeta.ParseProperty<P4>(paramStrs[3], Workspace);
         }
 
-        public override void Run(Agent self)
+        public override async Task Run(Agent self)
         {
-            Debug.Check(_p1 != null);
-            Debug.Check(_p2 != null);
-            Debug.Check(_p3 != null);
-            Debug.Check(_p4 != null);
+            Debugs.Check(_p1 != null);
+            Debugs.Check(_p2 != null);
+            Debugs.Check(_p3 != null);
+            Debugs.Check(_p4 != null);
 
             Agent agent = Utils.GetParentAgent(self, _instance);
 
-            _returnValue.value = _fp(agent,
-                                     ((CInstanceMember<P1>)_p1).GetValue(self),
-                                     ((CInstanceMember<P2>)_p2).GetValue(self),
-                                     ((CInstanceMember<P3>)_p3).GetValue(self),
-                                     ((CInstanceMember<P4>)_p4).GetValue(self));
+            _returnValue.value = await _fp(agent,
+                                   await ((CInstanceMember<P1>)_p1).GetValue(self),
+                                   await ((CInstanceMember<P2>)_p2).GetValue(self),
+                                  await ((CInstanceMember<P3>)_p3).GetValue(self),
+                                 await ((CInstanceMember<P4>)_p4).GetValue(self));
         }
 
         public override void SetTaskParams(Agent self, BehaviorTreeTask treeTask)
         {
-            string paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 0);
+            string paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 0);
             treeTask.SetVariable(paramName, ((CInstanceMember<P1>)_p1).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 1);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 1);
             treeTask.SetVariable(paramName, ((CInstanceMember<P2>)_p2).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 2);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 2);
             treeTask.SetVariable(paramName, ((CInstanceMember<P3>)_p3).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 3);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 3);
             treeTask.SetVariable(paramName, ((CInstanceMember<P4>)_p4).GetValue(self));
         }
     }
 
     public class CAgentMethod<T, P1, P2, P3, P4, P5> : CAgentMethodBase<T>
     {
-        public delegate T FunctionPointer(Agent a, P1 p1, P2 p2, P3 p3, P4 p4, P5 p5);
+        public delegate Task<T> FunctionPointer(Agent a, P1 p1, P2 p2, P3 p3, P4 p4, P5 p5);
 
         FunctionPointer _fp;
         IInstanceMember _p1;
@@ -1345,13 +1364,13 @@ namespace behaviac
         IInstanceMember _p4;
         IInstanceMember _p5;
 
-        public CAgentMethod(FunctionPointer f)
+        public CAgentMethod(FunctionPointer f, Workspace workspace) : base(workspace)
         {
             _fp = f;
         }
 
-        public CAgentMethod(CAgentMethod<T, P1, P2, P3, P4, P5> rhs)
-        : base(rhs)
+        public CAgentMethod(CAgentMethod<T, P1, P2, P3, P4, P5> rhs, Workspace workspace)
+        : base(rhs, workspace)
         {
             _fp = rhs._fp;
             _p1 = rhs._p1;
@@ -1363,61 +1382,61 @@ namespace behaviac
 
         public override IMethod Clone()
         {
-            return new CAgentMethod<T, P1, P2, P3, P4, P5>(this);
+            return new CAgentMethod<T, P1, P2, P3, P4, P5>(this, Workspace);
         }
 
         public override void Load(string instance, string[] paramStrs)
         {
-            Debug.Check(paramStrs.Length == 5);
+            Debugs.Check(paramStrs.Length == 5);
 
             _instance = instance;
-            _p1 = AgentMeta.ParseProperty<P1>(paramStrs[0]);
-            _p2 = AgentMeta.ParseProperty<P2>(paramStrs[1]);
-            _p3 = AgentMeta.ParseProperty<P3>(paramStrs[2]);
-            _p4 = AgentMeta.ParseProperty<P4>(paramStrs[3]);
-            _p5 = AgentMeta.ParseProperty<P5>(paramStrs[4]);
+            _p1 = AgentMeta.ParseProperty<P1>(paramStrs[0], Workspace);
+            _p2 = AgentMeta.ParseProperty<P2>(paramStrs[1], Workspace);
+            _p3 = AgentMeta.ParseProperty<P3>(paramStrs[2], Workspace);
+            _p4 = AgentMeta.ParseProperty<P4>(paramStrs[3], Workspace);
+            _p5 = AgentMeta.ParseProperty<P5>(paramStrs[4], Workspace);
         }
 
-        public override void Run(Agent self)
+        public override async Task Run(Agent self)
         {
-            Debug.Check(_p1 != null);
-            Debug.Check(_p2 != null);
-            Debug.Check(_p3 != null);
-            Debug.Check(_p4 != null);
-            Debug.Check(_p5 != null);
+            Debugs.Check(_p1 != null);
+            Debugs.Check(_p2 != null);
+            Debugs.Check(_p3 != null);
+            Debugs.Check(_p4 != null);
+            Debugs.Check(_p5 != null);
 
             Agent agent = Utils.GetParentAgent(self, _instance);
 
-            _returnValue.value = _fp(agent,
-                                     ((CInstanceMember<P1>)_p1).GetValue(self),
-                                     ((CInstanceMember<P2>)_p2).GetValue(self),
-                                     ((CInstanceMember<P3>)_p3).GetValue(self),
-                                     ((CInstanceMember<P4>)_p4).GetValue(self),
-                                     ((CInstanceMember<P5>)_p5).GetValue(self));
+            _returnValue.value = await _fp(agent,
+                                   await ((CInstanceMember<P1>)_p1).GetValue(self),
+                                   await ((CInstanceMember<P2>)_p2).GetValue(self),
+                                   await ((CInstanceMember<P3>)_p3).GetValue(self),
+                                   await ((CInstanceMember<P4>)_p4).GetValue(self),
+                                   await ((CInstanceMember<P5>)_p5).GetValue(self));
         }
 
         public override void SetTaskParams(Agent self, BehaviorTreeTask treeTask)
         {
-            string paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 0);
+            string paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 0);
             treeTask.SetVariable(paramName, ((CInstanceMember<P1>)_p1).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 1);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 1);
             treeTask.SetVariable(paramName, ((CInstanceMember<P2>)_p2).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 2);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 2);
             treeTask.SetVariable(paramName, ((CInstanceMember<P3>)_p3).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 3);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 3);
             treeTask.SetVariable(paramName, ((CInstanceMember<P4>)_p4).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 4);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 4);
             treeTask.SetVariable(paramName, ((CInstanceMember<P5>)_p5).GetValue(self));
         }
     }
 
     public class CAgentMethod<T, P1, P2, P3, P4, P5, P6> : CAgentMethodBase<T>
     {
-        public delegate T FunctionPointer(Agent a, P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6);
+        public delegate Task<T> FunctionPointer(Agent a, P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6);
 
         FunctionPointer _fp;
         IInstanceMember _p1;
@@ -1427,13 +1446,13 @@ namespace behaviac
         IInstanceMember _p5;
         IInstanceMember _p6;
 
-        public CAgentMethod(FunctionPointer f)
+        public CAgentMethod(FunctionPointer f, Workspace workspace) : base(workspace)
         {
             _fp = f;
         }
 
-        public CAgentMethod(CAgentMethod<T, P1, P2, P3, P4, P5, P6> rhs)
-        : base(rhs)
+        public CAgentMethod(CAgentMethod<T, P1, P2, P3, P4, P5, P6> rhs, Workspace workspace)
+        : base(rhs, workspace)
         {
             _fp = rhs._fp;
             _p1 = rhs._p1;
@@ -1446,67 +1465,67 @@ namespace behaviac
 
         public override IMethod Clone()
         {
-            return new CAgentMethod<T, P1, P2, P3, P4, P5, P6>(this);
+            return new CAgentMethod<T, P1, P2, P3, P4, P5, P6>(this, Workspace);
         }
 
         public override void Load(string instance, string[] paramStrs)
         {
-            Debug.Check(paramStrs.Length == 6);
+            Debugs.Check(paramStrs.Length == 6);
 
             _instance = instance;
-            _p1 = AgentMeta.ParseProperty<P1>(paramStrs[0]);
-            _p2 = AgentMeta.ParseProperty<P2>(paramStrs[1]);
-            _p3 = AgentMeta.ParseProperty<P3>(paramStrs[2]);
-            _p4 = AgentMeta.ParseProperty<P4>(paramStrs[3]);
-            _p5 = AgentMeta.ParseProperty<P5>(paramStrs[4]);
-            _p6 = AgentMeta.ParseProperty<P6>(paramStrs[5]);
+            _p1 = AgentMeta.ParseProperty<P1>(paramStrs[0], Workspace);
+            _p2 = AgentMeta.ParseProperty<P2>(paramStrs[1], Workspace);
+            _p3 = AgentMeta.ParseProperty<P3>(paramStrs[2], Workspace);
+            _p4 = AgentMeta.ParseProperty<P4>(paramStrs[3], Workspace);
+            _p5 = AgentMeta.ParseProperty<P5>(paramStrs[4], Workspace);
+            _p6 = AgentMeta.ParseProperty<P6>(paramStrs[5], Workspace);
         }
 
-        public override void Run(Agent self)
+        public override async Task Run(Agent self)
         {
-            Debug.Check(_p1 != null);
-            Debug.Check(_p2 != null);
-            Debug.Check(_p3 != null);
-            Debug.Check(_p4 != null);
-            Debug.Check(_p5 != null);
-            Debug.Check(_p6 != null);
+            Debugs.Check(_p1 != null);
+            Debugs.Check(_p2 != null);
+            Debugs.Check(_p3 != null);
+            Debugs.Check(_p4 != null);
+            Debugs.Check(_p5 != null);
+            Debugs.Check(_p6 != null);
 
             Agent agent = Utils.GetParentAgent(self, _instance);
 
-            _returnValue.value = _fp(agent,
-                                     ((CInstanceMember<P1>)_p1).GetValue(self),
-                                     ((CInstanceMember<P2>)_p2).GetValue(self),
-                                     ((CInstanceMember<P3>)_p3).GetValue(self),
-                                     ((CInstanceMember<P4>)_p4).GetValue(self),
-                                     ((CInstanceMember<P5>)_p5).GetValue(self),
-                                     ((CInstanceMember<P6>)_p6).GetValue(self));
+            _returnValue.value = await _fp(agent,
+                                   await ((CInstanceMember<P1>)_p1).GetValue(self),
+                                   await ((CInstanceMember<P2>)_p2).GetValue(self),
+                                   await ((CInstanceMember<P3>)_p3).GetValue(self),
+                                   await ((CInstanceMember<P4>)_p4).GetValue(self),
+                                   await ((CInstanceMember<P5>)_p5).GetValue(self),
+                                   await ((CInstanceMember<P6>)_p6).GetValue(self));
         }
 
         public override void SetTaskParams(Agent self, BehaviorTreeTask treeTask)
         {
-            string paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 0);
+            string paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 0);
             treeTask.SetVariable(paramName, ((CInstanceMember<P1>)_p1).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 1);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 1);
             treeTask.SetVariable(paramName, ((CInstanceMember<P2>)_p2).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 2);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 2);
             treeTask.SetVariable(paramName, ((CInstanceMember<P3>)_p3).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 3);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 3);
             treeTask.SetVariable(paramName, ((CInstanceMember<P4>)_p4).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 4);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 4);
             treeTask.SetVariable(paramName, ((CInstanceMember<P5>)_p5).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 5);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 5);
             treeTask.SetVariable(paramName, ((CInstanceMember<P6>)_p6).GetValue(self));
         }
     }
 
     public class CAgentMethod<T, P1, P2, P3, P4, P5, P6, P7> : CAgentMethodBase<T>
     {
-        public delegate T FunctionPointer(Agent a, P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6, P7 p7);
+        public delegate Task<T> FunctionPointer(Agent a, P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6, P7 p7);
 
         FunctionPointer _fp;
         IInstanceMember _p1;
@@ -1517,13 +1536,13 @@ namespace behaviac
         IInstanceMember _p6;
         IInstanceMember _p7;
 
-        public CAgentMethod(FunctionPointer f)
+        public CAgentMethod(FunctionPointer f, Workspace workspace) : base(workspace)
         {
             _fp = f;
         }
 
-        public CAgentMethod(CAgentMethod<T, P1, P2, P3, P4, P5, P6, P7> rhs)
-        : base(rhs)
+        public CAgentMethod(CAgentMethod<T, P1, P2, P3, P4, P5, P6, P7> rhs, Workspace workspace)
+        : base(rhs, workspace)
         {
             _fp = rhs._fp;
             _p1 = rhs._p1;
@@ -1537,73 +1556,73 @@ namespace behaviac
 
         public override IMethod Clone()
         {
-            return new CAgentMethod<T, P1, P2, P3, P4, P5, P6, P7>(this);
+            return new CAgentMethod<T, P1, P2, P3, P4, P5, P6, P7>(this, Workspace);
         }
 
         public override void Load(string instance, string[] paramStrs)
         {
-            Debug.Check(paramStrs.Length == 7);
+            Debugs.Check(paramStrs.Length == 7);
 
             _instance = instance;
-            _p1 = AgentMeta.ParseProperty<P1>(paramStrs[0]);
-            _p2 = AgentMeta.ParseProperty<P2>(paramStrs[1]);
-            _p3 = AgentMeta.ParseProperty<P3>(paramStrs[2]);
-            _p4 = AgentMeta.ParseProperty<P4>(paramStrs[3]);
-            _p5 = AgentMeta.ParseProperty<P5>(paramStrs[4]);
-            _p6 = AgentMeta.ParseProperty<P6>(paramStrs[5]);
-            _p7 = AgentMeta.ParseProperty<P7>(paramStrs[6]);
+            _p1 = AgentMeta.ParseProperty<P1>(paramStrs[0], Workspace);
+            _p2 = AgentMeta.ParseProperty<P2>(paramStrs[1], Workspace);
+            _p3 = AgentMeta.ParseProperty<P3>(paramStrs[2], Workspace);
+            _p4 = AgentMeta.ParseProperty<P4>(paramStrs[3], Workspace);
+            _p5 = AgentMeta.ParseProperty<P5>(paramStrs[4], Workspace);
+            _p6 = AgentMeta.ParseProperty<P6>(paramStrs[5], Workspace);
+            _p7 = AgentMeta.ParseProperty<P7>(paramStrs[6], Workspace);
         }
 
-        public override void Run(Agent self)
+        public override async Task Run(Agent self)
         {
-            Debug.Check(_p1 != null);
-            Debug.Check(_p2 != null);
-            Debug.Check(_p3 != null);
-            Debug.Check(_p4 != null);
-            Debug.Check(_p5 != null);
-            Debug.Check(_p6 != null);
-            Debug.Check(_p7 != null);
+            Debugs.Check(_p1 != null);
+            Debugs.Check(_p2 != null);
+            Debugs.Check(_p3 != null);
+            Debugs.Check(_p4 != null);
+            Debugs.Check(_p5 != null);
+            Debugs.Check(_p6 != null);
+            Debugs.Check(_p7 != null);
 
             Agent agent = Utils.GetParentAgent(self, _instance);
 
-            _returnValue.value = _fp(agent,
-                                     ((CInstanceMember<P1>)_p1).GetValue(self),
-                                     ((CInstanceMember<P2>)_p2).GetValue(self),
-                                     ((CInstanceMember<P3>)_p3).GetValue(self),
-                                     ((CInstanceMember<P4>)_p4).GetValue(self),
-                                     ((CInstanceMember<P5>)_p5).GetValue(self),
-                                     ((CInstanceMember<P6>)_p6).GetValue(self),
-                                     ((CInstanceMember<P7>)_p7).GetValue(self));
+            _returnValue.value = await _fp(agent,
+                                   await ((CInstanceMember<P1>)_p1).GetValue(self),
+                                   await ((CInstanceMember<P2>)_p2).GetValue(self),
+                                   await ((CInstanceMember<P3>)_p3).GetValue(self),
+                                   await ((CInstanceMember<P4>)_p4).GetValue(self),
+                                   await ((CInstanceMember<P5>)_p5).GetValue(self),
+                                   await ((CInstanceMember<P6>)_p6).GetValue(self),
+                                   await ((CInstanceMember<P7>)_p7).GetValue(self));
         }
 
         public override void SetTaskParams(Agent self, BehaviorTreeTask treeTask)
         {
-            string paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 0);
+            string paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 0);
             treeTask.SetVariable(paramName, ((CInstanceMember<P1>)_p1).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 1);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 1);
             treeTask.SetVariable(paramName, ((CInstanceMember<P2>)_p2).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 2);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 2);
             treeTask.SetVariable(paramName, ((CInstanceMember<P3>)_p3).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 3);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 3);
             treeTask.SetVariable(paramName, ((CInstanceMember<P4>)_p4).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 4);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 4);
             treeTask.SetVariable(paramName, ((CInstanceMember<P5>)_p5).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 5);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 5);
             treeTask.SetVariable(paramName, ((CInstanceMember<P6>)_p6).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 6);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 6);
             treeTask.SetVariable(paramName, ((CInstanceMember<P7>)_p7).GetValue(self));
         }
     }
 
     public class CAgentMethod<T, P1, P2, P3, P4, P5, P6, P7, P8> : CAgentMethodBase<T>
     {
-        public delegate T FunctionPointer(Agent a, P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6, P7 p7, P8 p8);
+        public delegate Task<T> FunctionPointer(Agent a, P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6, P7 p7, P8 p8);
 
         FunctionPointer _fp;
         IInstanceMember _p1;
@@ -1615,13 +1634,13 @@ namespace behaviac
         IInstanceMember _p7;
         IInstanceMember _p8;
 
-        public CAgentMethod(FunctionPointer f)
+        public CAgentMethod(FunctionPointer f, Workspace workspace) : base(workspace)
         {
             _fp = f;
         }
 
-        public CAgentMethod(CAgentMethod<T, P1, P2, P3, P4, P5, P6, P7, P8> rhs)
-        : base(rhs)
+        public CAgentMethod(CAgentMethod<T, P1, P2, P3, P4, P5, P6, P7, P8> rhs, Workspace workspace)
+        : base(rhs, workspace)
         {
             _fp = rhs._fp;
             _p1 = rhs._p1;
@@ -1636,79 +1655,79 @@ namespace behaviac
 
         public override IMethod Clone()
         {
-            return new CAgentMethod<T, P1, P2, P3, P4, P5, P6, P7, P8>(this);
+            return new CAgentMethod<T, P1, P2, P3, P4, P5, P6, P7, P8>(this, Workspace);
         }
 
         public override void Load(string instance, string[] paramStrs)
         {
-            Debug.Check(paramStrs.Length == 8);
+            Debugs.Check(paramStrs.Length == 8);
 
             _instance = instance;
-            _p1 = AgentMeta.ParseProperty<P1>(paramStrs[0]);
-            _p2 = AgentMeta.ParseProperty<P2>(paramStrs[1]);
-            _p3 = AgentMeta.ParseProperty<P3>(paramStrs[2]);
-            _p4 = AgentMeta.ParseProperty<P4>(paramStrs[3]);
-            _p5 = AgentMeta.ParseProperty<P5>(paramStrs[4]);
-            _p6 = AgentMeta.ParseProperty<P6>(paramStrs[5]);
-            _p7 = AgentMeta.ParseProperty<P7>(paramStrs[6]);
-            _p8 = AgentMeta.ParseProperty<P8>(paramStrs[7]);
+            _p1 = AgentMeta.ParseProperty<P1>(paramStrs[0], Workspace);
+            _p2 = AgentMeta.ParseProperty<P2>(paramStrs[1], Workspace);
+            _p3 = AgentMeta.ParseProperty<P3>(paramStrs[2], Workspace);
+            _p4 = AgentMeta.ParseProperty<P4>(paramStrs[3], Workspace);
+            _p5 = AgentMeta.ParseProperty<P5>(paramStrs[4], Workspace);
+            _p6 = AgentMeta.ParseProperty<P6>(paramStrs[5], Workspace);
+            _p7 = AgentMeta.ParseProperty<P7>(paramStrs[6], Workspace);
+            _p8 = AgentMeta.ParseProperty<P8>(paramStrs[7], Workspace);
         }
 
-        public override void Run(Agent self)
+        public override async Task Run(Agent self)
         {
-            Debug.Check(_p1 != null);
-            Debug.Check(_p2 != null);
-            Debug.Check(_p3 != null);
-            Debug.Check(_p4 != null);
-            Debug.Check(_p5 != null);
-            Debug.Check(_p6 != null);
-            Debug.Check(_p7 != null);
-            Debug.Check(_p8 != null);
+            Debugs.Check(_p1 != null);
+            Debugs.Check(_p2 != null);
+            Debugs.Check(_p3 != null);
+            Debugs.Check(_p4 != null);
+            Debugs.Check(_p5 != null);
+            Debugs.Check(_p6 != null);
+            Debugs.Check(_p7 != null);
+            Debugs.Check(_p8 != null);
 
             Agent agent = Utils.GetParentAgent(self, _instance);
 
-            _returnValue.value = _fp(agent,
-                                     ((CInstanceMember<P1>)_p1).GetValue(self),
-                                     ((CInstanceMember<P2>)_p2).GetValue(self),
-                                     ((CInstanceMember<P3>)_p3).GetValue(self),
-                                     ((CInstanceMember<P4>)_p4).GetValue(self),
-                                     ((CInstanceMember<P5>)_p5).GetValue(self),
-                                     ((CInstanceMember<P6>)_p6).GetValue(self),
-                                     ((CInstanceMember<P7>)_p7).GetValue(self),
-                                     ((CInstanceMember<P8>)_p8).GetValue(self));
+            _returnValue.value = await _fp(agent,
+                                    await ((CInstanceMember<P1>)_p1).GetValue(self),
+                                    await ((CInstanceMember<P2>)_p2).GetValue(self),
+                                    await ((CInstanceMember<P3>)_p3).GetValue(self),
+                                    await ((CInstanceMember<P4>)_p4).GetValue(self),
+                                    await ((CInstanceMember<P5>)_p5).GetValue(self),
+                                    await ((CInstanceMember<P6>)_p6).GetValue(self),
+                                    await ((CInstanceMember<P7>)_p7).GetValue(self),
+                                    await ((CInstanceMember<P8>)_p8).GetValue(self));
         }
 
         public override void SetTaskParams(Agent self, BehaviorTreeTask treeTask)
         {
-            string paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 0);
+            string paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 0);
             treeTask.SetVariable(paramName, ((CInstanceMember<P1>)_p1).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 1);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 1);
             treeTask.SetVariable(paramName, ((CInstanceMember<P2>)_p2).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 2);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 2);
             treeTask.SetVariable(paramName, ((CInstanceMember<P3>)_p3).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 3);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 3);
             treeTask.SetVariable(paramName, ((CInstanceMember<P4>)_p4).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 4);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 4);
             treeTask.SetVariable(paramName, ((CInstanceMember<P5>)_p5).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 5);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 5);
             treeTask.SetVariable(paramName, ((CInstanceMember<P6>)_p6).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 6);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 6);
             treeTask.SetVariable(paramName, ((CInstanceMember<P7>)_p7).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 7);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 7);
             treeTask.SetVariable(paramName, ((CInstanceMember<P8>)_p8).GetValue(self));
         }
     }
 
     public class CAgentMethod<T, P1, P2, P3, P4, P5, P6, P7, P8, P9> : CAgentMethodBase<T>
     {
-        public delegate T FunctionPointer(Agent a, P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6, P7 p7, P8 p8, P9 p9);
+        public delegate Task<T> FunctionPointer(Agent a, P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6, P7 p7, P8 p8, P9 p9);
 
         FunctionPointer _fp;
         IInstanceMember _p1;
@@ -1721,13 +1740,13 @@ namespace behaviac
         IInstanceMember _p8;
         IInstanceMember _p9;
 
-        public CAgentMethod(FunctionPointer f)
+        public CAgentMethod(FunctionPointer f, Workspace workspace) : base(workspace)
         {
             _fp = f;
         }
 
-        public CAgentMethod(CAgentMethod<T, P1, P2, P3, P4, P5, P6, P7, P8, P9> rhs)
-        : base(rhs)
+        public CAgentMethod(CAgentMethod<T, P1, P2, P3, P4, P5, P6, P7, P8, P9> rhs, Workspace workspace)
+        : base(rhs, workspace)
         {
             _fp = rhs._fp;
             _p1 = rhs._p1;
@@ -1743,85 +1762,85 @@ namespace behaviac
 
         public override IMethod Clone()
         {
-            return new CAgentMethod<T, P1, P2, P3, P4, P5, P6, P7, P8, P9>(this);
+            return new CAgentMethod<T, P1, P2, P3, P4, P5, P6, P7, P8, P9>(this, Workspace);
         }
 
         public override void Load(string instance, string[] paramStrs)
         {
-            Debug.Check(paramStrs.Length == 9);
+            Debugs.Check(paramStrs.Length == 9);
 
             _instance = instance;
-            _p1 = AgentMeta.ParseProperty<P1>(paramStrs[0]);
-            _p2 = AgentMeta.ParseProperty<P2>(paramStrs[1]);
-            _p3 = AgentMeta.ParseProperty<P3>(paramStrs[2]);
-            _p4 = AgentMeta.ParseProperty<P4>(paramStrs[3]);
-            _p5 = AgentMeta.ParseProperty<P5>(paramStrs[4]);
-            _p6 = AgentMeta.ParseProperty<P6>(paramStrs[5]);
-            _p7 = AgentMeta.ParseProperty<P7>(paramStrs[6]);
-            _p8 = AgentMeta.ParseProperty<P8>(paramStrs[7]);
-            _p9 = AgentMeta.ParseProperty<P9>(paramStrs[8]);
+            _p1 = AgentMeta.ParseProperty<P1>(paramStrs[0], Workspace);
+            _p2 = AgentMeta.ParseProperty<P2>(paramStrs[1], Workspace);
+            _p3 = AgentMeta.ParseProperty<P3>(paramStrs[2], Workspace);
+            _p4 = AgentMeta.ParseProperty<P4>(paramStrs[3], Workspace);
+            _p5 = AgentMeta.ParseProperty<P5>(paramStrs[4], Workspace);
+            _p6 = AgentMeta.ParseProperty<P6>(paramStrs[5], Workspace);
+            _p7 = AgentMeta.ParseProperty<P7>(paramStrs[6], Workspace);
+            _p8 = AgentMeta.ParseProperty<P8>(paramStrs[7], Workspace);
+            _p9 = AgentMeta.ParseProperty<P9>(paramStrs[8], Workspace);
         }
 
-        public override void Run(Agent self)
+        public override async Task Run(Agent self)
         {
-            Debug.Check(_p1 != null);
-            Debug.Check(_p2 != null);
-            Debug.Check(_p3 != null);
-            Debug.Check(_p4 != null);
-            Debug.Check(_p5 != null);
-            Debug.Check(_p6 != null);
-            Debug.Check(_p7 != null);
-            Debug.Check(_p8 != null);
-            Debug.Check(_p9 != null);
+            Debugs.Check(_p1 != null);
+            Debugs.Check(_p2 != null);
+            Debugs.Check(_p3 != null);
+            Debugs.Check(_p4 != null);
+            Debugs.Check(_p5 != null);
+            Debugs.Check(_p6 != null);
+            Debugs.Check(_p7 != null);
+            Debugs.Check(_p8 != null);
+            Debugs.Check(_p9 != null);
 
             Agent agent = Utils.GetParentAgent(self, _instance);
 
-            _returnValue.value = _fp(agent,
-                                     ((CInstanceMember<P1>)_p1).GetValue(self),
-                                     ((CInstanceMember<P2>)_p2).GetValue(self),
-                                     ((CInstanceMember<P3>)_p3).GetValue(self),
-                                     ((CInstanceMember<P4>)_p4).GetValue(self),
-                                     ((CInstanceMember<P5>)_p5).GetValue(self),
-                                     ((CInstanceMember<P6>)_p6).GetValue(self),
-                                     ((CInstanceMember<P7>)_p7).GetValue(self),
-                                     ((CInstanceMember<P8>)_p8).GetValue(self),
-                                     ((CInstanceMember<P9>)_p9).GetValue(self));
+            _returnValue.value = await _fp(agent,
+                                    await ((CInstanceMember<P1>)_p1).GetValue(self),
+                                    await ((CInstanceMember<P2>)_p2).GetValue(self),
+                                    await ((CInstanceMember<P3>)_p3).GetValue(self),
+                                    await ((CInstanceMember<P4>)_p4).GetValue(self),
+                                    await ((CInstanceMember<P5>)_p5).GetValue(self),
+                                    await ((CInstanceMember<P6>)_p6).GetValue(self),
+                                    await ((CInstanceMember<P7>)_p7).GetValue(self),
+                                    await ((CInstanceMember<P8>)_p8).GetValue(self),
+                                    await ((CInstanceMember<P9>)_p9).GetValue(self));
         }
 
         public override void SetTaskParams(Agent self, BehaviorTreeTask treeTask)
         {
-            string paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 0);
+            string paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 0);
             treeTask.SetVariable(paramName, ((CInstanceMember<P1>)_p1).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 1);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 1);
             treeTask.SetVariable(paramName, ((CInstanceMember<P2>)_p2).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 2);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 2);
             treeTask.SetVariable(paramName, ((CInstanceMember<P3>)_p3).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 3);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 3);
             treeTask.SetVariable(paramName, ((CInstanceMember<P4>)_p4).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 4);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 4);
             treeTask.SetVariable(paramName, ((CInstanceMember<P5>)_p5).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 5);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 5);
             treeTask.SetVariable(paramName, ((CInstanceMember<P6>)_p6).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 6);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 6);
             treeTask.SetVariable(paramName, ((CInstanceMember<P7>)_p7).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 7);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 7);
             treeTask.SetVariable(paramName, ((CInstanceMember<P8>)_p8).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 8);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 8);
             treeTask.SetVariable(paramName, ((CInstanceMember<P9>)_p9).GetValue(self));
         }
     }
 
     public class CAgentMethod<T, P1, P2, P3, P4, P5, P6, P7, P8, P9, P10> : CAgentMethodBase<T>
     {
-        public delegate T FunctionPointer(Agent a, P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6, P7 p7, P8 p8, P9 p9, P10 p10);
+        public delegate Task<T> FunctionPointer(Agent a, P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6, P7 p7, P8 p8, P9 p9, P10 p10);
 
         FunctionPointer _fp;
         IInstanceMember _p1;
@@ -1835,13 +1854,13 @@ namespace behaviac
         IInstanceMember _p9;
         IInstanceMember _p10;
 
-        public CAgentMethod(FunctionPointer f)
+        public CAgentMethod(FunctionPointer f, Workspace workspace) : base(workspace)
         {
             _fp = f;
         }
 
-        public CAgentMethod(CAgentMethod<T, P1, P2, P3, P4, P5, P6, P7, P8, P9, P10> rhs)
-        : base(rhs)
+        public CAgentMethod(CAgentMethod<T, P1, P2, P3, P4, P5, P6, P7, P8, P9, P10> rhs, Workspace workspace)
+        : base(rhs, workspace)
         {
             _fp = rhs._fp;
             _p1 = rhs._p1;
@@ -1858,91 +1877,91 @@ namespace behaviac
 
         public override IMethod Clone()
         {
-            return new CAgentMethod<T, P1, P2, P3, P4, P5, P6, P7, P8, P9, P10>(this);
+            return new CAgentMethod<T, P1, P2, P3, P4, P5, P6, P7, P8, P9, P10>(this, Workspace);
         }
 
         public override void Load(string instance, string[] paramStrs)
         {
-            Debug.Check(paramStrs.Length == 10);
+            Debugs.Check(paramStrs.Length == 10);
 
             _instance = instance;
-            _p1 = AgentMeta.ParseProperty<P1>(paramStrs[0]);
-            _p2 = AgentMeta.ParseProperty<P2>(paramStrs[1]);
-            _p3 = AgentMeta.ParseProperty<P3>(paramStrs[2]);
-            _p4 = AgentMeta.ParseProperty<P4>(paramStrs[3]);
-            _p5 = AgentMeta.ParseProperty<P5>(paramStrs[4]);
-            _p6 = AgentMeta.ParseProperty<P6>(paramStrs[5]);
-            _p7 = AgentMeta.ParseProperty<P7>(paramStrs[6]);
-            _p8 = AgentMeta.ParseProperty<P8>(paramStrs[7]);
-            _p9 = AgentMeta.ParseProperty<P9>(paramStrs[8]);
-            _p10 = AgentMeta.ParseProperty<P10>(paramStrs[9]);
+            _p1 = AgentMeta.ParseProperty<P1>(paramStrs[0], Workspace);
+            _p2 = AgentMeta.ParseProperty<P2>(paramStrs[1], Workspace);
+            _p3 = AgentMeta.ParseProperty<P3>(paramStrs[2], Workspace);
+            _p4 = AgentMeta.ParseProperty<P4>(paramStrs[3], Workspace);
+            _p5 = AgentMeta.ParseProperty<P5>(paramStrs[4], Workspace);
+            _p6 = AgentMeta.ParseProperty<P6>(paramStrs[5], Workspace);
+            _p7 = AgentMeta.ParseProperty<P7>(paramStrs[6], Workspace);
+            _p8 = AgentMeta.ParseProperty<P8>(paramStrs[7], Workspace);
+            _p9 = AgentMeta.ParseProperty<P9>(paramStrs[8], Workspace);
+            _p10 = AgentMeta.ParseProperty<P10>(paramStrs[9], Workspace);
         }
 
-        public override void Run(Agent self)
+        public override async Task Run(Agent self)
         {
-            Debug.Check(_p1 != null);
-            Debug.Check(_p2 != null);
-            Debug.Check(_p3 != null);
-            Debug.Check(_p4 != null);
-            Debug.Check(_p5 != null);
-            Debug.Check(_p6 != null);
-            Debug.Check(_p7 != null);
-            Debug.Check(_p8 != null);
-            Debug.Check(_p9 != null);
-            Debug.Check(_p10 != null);
+            Debugs.Check(_p1 != null);
+            Debugs.Check(_p2 != null);
+            Debugs.Check(_p3 != null);
+            Debugs.Check(_p4 != null);
+            Debugs.Check(_p5 != null);
+            Debugs.Check(_p6 != null);
+            Debugs.Check(_p7 != null);
+            Debugs.Check(_p8 != null);
+            Debugs.Check(_p9 != null);
+            Debugs.Check(_p10 != null);
 
             Agent agent = Utils.GetParentAgent(self, _instance);
 
-            _returnValue.value = _fp(agent,
-                                     ((CInstanceMember<P1>)_p1).GetValue(self),
-                                     ((CInstanceMember<P2>)_p2).GetValue(self),
-                                     ((CInstanceMember<P3>)_p3).GetValue(self),
-                                     ((CInstanceMember<P4>)_p4).GetValue(self),
-                                     ((CInstanceMember<P5>)_p5).GetValue(self),
-                                     ((CInstanceMember<P6>)_p6).GetValue(self),
-                                     ((CInstanceMember<P7>)_p7).GetValue(self),
-                                     ((CInstanceMember<P8>)_p8).GetValue(self),
-                                     ((CInstanceMember<P9>)_p9).GetValue(self),
-                                     ((CInstanceMember<P10>)_p10).GetValue(self));
+            _returnValue.value = await _fp(agent,
+                                   await ((CInstanceMember<P1>)_p1).GetValue(self),
+                                   await ((CInstanceMember<P2>)_p2).GetValue(self),
+                                   await ((CInstanceMember<P3>)_p3).GetValue(self),
+                                   await ((CInstanceMember<P4>)_p4).GetValue(self),
+                                   await ((CInstanceMember<P5>)_p5).GetValue(self),
+                                   await ((CInstanceMember<P6>)_p6).GetValue(self),
+                                   await ((CInstanceMember<P7>)_p7).GetValue(self),
+                                   await ((CInstanceMember<P8>)_p8).GetValue(self),
+                                   await ((CInstanceMember<P9>)_p9).GetValue(self),
+                                   await ((CInstanceMember<P10>)_p10).GetValue(self));
         }
 
         public override void SetTaskParams(Agent self, BehaviorTreeTask treeTask)
         {
-            string paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 0);
+            string paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 0);
             treeTask.SetVariable(paramName, ((CInstanceMember<P1>)_p1).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 1);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 1);
             treeTask.SetVariable(paramName, ((CInstanceMember<P2>)_p2).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 2);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 2);
             treeTask.SetVariable(paramName, ((CInstanceMember<P3>)_p3).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 3);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 3);
             treeTask.SetVariable(paramName, ((CInstanceMember<P4>)_p4).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 4);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 4);
             treeTask.SetVariable(paramName, ((CInstanceMember<P5>)_p5).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 5);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 5);
             treeTask.SetVariable(paramName, ((CInstanceMember<P6>)_p6).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 6);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 6);
             treeTask.SetVariable(paramName, ((CInstanceMember<P7>)_p7).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 7);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 7);
             treeTask.SetVariable(paramName, ((CInstanceMember<P8>)_p8).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 8);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 8);
             treeTask.SetVariable(paramName, ((CInstanceMember<P9>)_p9).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 9);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 9);
             treeTask.SetVariable(paramName, ((CInstanceMember<P10>)_p10).GetValue(self));
         }
     }
 
     public class CAgentMethod<T, P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11> : CAgentMethodBase<T>
     {
-        public delegate T FunctionPointer(Agent a, P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6, P7 p7, P8 p8, P9 p9, P10 p10, P11 p11);
+        public delegate Task<T> FunctionPointer(Agent a, P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6, P7 p7, P8 p8, P9 p9, P10 p10, P11 p11);
 
         FunctionPointer _fp;
         IInstanceMember _p1;
@@ -1957,13 +1976,13 @@ namespace behaviac
         IInstanceMember _p10;
         IInstanceMember _p11;
 
-        public CAgentMethod(FunctionPointer f)
+        public CAgentMethod(FunctionPointer f, Workspace workspace) : base(workspace)
         {
             _fp = f;
         }
 
-        public CAgentMethod(CAgentMethod<T, P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11> rhs)
-        : base(rhs)
+        public CAgentMethod(CAgentMethod<T, P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11> rhs, Workspace workspace)
+        : base(rhs, workspace)
         {
             _fp = rhs._fp;
             _p1 = rhs._p1;
@@ -1981,97 +2000,97 @@ namespace behaviac
 
         public override IMethod Clone()
         {
-            return new CAgentMethod<T, P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11>(this);
+            return new CAgentMethod<T, P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11>(this, Workspace);
         }
 
         public override void Load(string instance, string[] paramStrs)
         {
-            Debug.Check(paramStrs.Length == 11);
+            Debugs.Check(paramStrs.Length == 11);
 
             _instance = instance;
-            _p1 = AgentMeta.ParseProperty<P1>(paramStrs[0]);
-            _p2 = AgentMeta.ParseProperty<P2>(paramStrs[1]);
-            _p3 = AgentMeta.ParseProperty<P3>(paramStrs[2]);
-            _p4 = AgentMeta.ParseProperty<P4>(paramStrs[3]);
-            _p5 = AgentMeta.ParseProperty<P5>(paramStrs[4]);
-            _p6 = AgentMeta.ParseProperty<P6>(paramStrs[5]);
-            _p7 = AgentMeta.ParseProperty<P7>(paramStrs[6]);
-            _p8 = AgentMeta.ParseProperty<P8>(paramStrs[7]);
-            _p9 = AgentMeta.ParseProperty<P9>(paramStrs[8]);
-            _p10 = AgentMeta.ParseProperty<P10>(paramStrs[9]);
-            _p11 = AgentMeta.ParseProperty<P11>(paramStrs[10]);
+            _p1 = AgentMeta.ParseProperty<P1>(paramStrs[0], Workspace);
+            _p2 = AgentMeta.ParseProperty<P2>(paramStrs[1], Workspace);
+            _p3 = AgentMeta.ParseProperty<P3>(paramStrs[2], Workspace);
+            _p4 = AgentMeta.ParseProperty<P4>(paramStrs[3], Workspace);
+            _p5 = AgentMeta.ParseProperty<P5>(paramStrs[4], Workspace);
+            _p6 = AgentMeta.ParseProperty<P6>(paramStrs[5], Workspace);
+            _p7 = AgentMeta.ParseProperty<P7>(paramStrs[6], Workspace);
+            _p8 = AgentMeta.ParseProperty<P8>(paramStrs[7], Workspace);
+            _p9 = AgentMeta.ParseProperty<P9>(paramStrs[8], Workspace);
+            _p10 = AgentMeta.ParseProperty<P10>(paramStrs[9], Workspace);
+            _p11 = AgentMeta.ParseProperty<P11>(paramStrs[10], Workspace);
         }
 
-        public override void Run(Agent self)
+        public override async Task Run(Agent self)
         {
-            Debug.Check(_p1 != null);
-            Debug.Check(_p2 != null);
-            Debug.Check(_p3 != null);
-            Debug.Check(_p4 != null);
-            Debug.Check(_p5 != null);
-            Debug.Check(_p6 != null);
-            Debug.Check(_p7 != null);
-            Debug.Check(_p8 != null);
-            Debug.Check(_p9 != null);
-            Debug.Check(_p10 != null);
-            Debug.Check(_p11 != null);
+            Debugs.Check(_p1 != null);
+            Debugs.Check(_p2 != null);
+            Debugs.Check(_p3 != null);
+            Debugs.Check(_p4 != null);
+            Debugs.Check(_p5 != null);
+            Debugs.Check(_p6 != null);
+            Debugs.Check(_p7 != null);
+            Debugs.Check(_p8 != null);
+            Debugs.Check(_p9 != null);
+            Debugs.Check(_p10 != null);
+            Debugs.Check(_p11 != null);
 
             Agent agent = Utils.GetParentAgent(self, _instance);
 
-            _returnValue.value = _fp(agent,
-                                     ((CInstanceMember<P1>)_p1).GetValue(self),
-                                     ((CInstanceMember<P2>)_p2).GetValue(self),
-                                     ((CInstanceMember<P3>)_p3).GetValue(self),
-                                     ((CInstanceMember<P4>)_p4).GetValue(self),
-                                     ((CInstanceMember<P5>)_p5).GetValue(self),
-                                     ((CInstanceMember<P6>)_p6).GetValue(self),
-                                     ((CInstanceMember<P7>)_p7).GetValue(self),
-                                     ((CInstanceMember<P8>)_p8).GetValue(self),
-                                     ((CInstanceMember<P9>)_p9).GetValue(self),
-                                     ((CInstanceMember<P10>)_p10).GetValue(self),
-                                     ((CInstanceMember<P11>)_p11).GetValue(self));
+            _returnValue.value = await _fp(agent,
+                                   await ((CInstanceMember<P1>)_p1).GetValue(self),
+                                   await ((CInstanceMember<P2>)_p2).GetValue(self),
+                                   await ((CInstanceMember<P3>)_p3).GetValue(self),
+                                   await ((CInstanceMember<P4>)_p4).GetValue(self),
+                                   await ((CInstanceMember<P5>)_p5).GetValue(self),
+                                   await ((CInstanceMember<P6>)_p6).GetValue(self),
+                                   await ((CInstanceMember<P7>)_p7).GetValue(self),
+                                   await ((CInstanceMember<P8>)_p8).GetValue(self),
+                                   await ((CInstanceMember<P9>)_p9).GetValue(self),
+                                   await ((CInstanceMember<P10>)_p10).GetValue(self),
+                                   await ((CInstanceMember<P11>)_p11).GetValue(self));
         }
 
         public override void SetTaskParams(Agent self, BehaviorTreeTask treeTask)
         {
-            string paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 0);
+            string paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 0);
             treeTask.SetVariable(paramName, ((CInstanceMember<P1>)_p1).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 1);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 1);
             treeTask.SetVariable(paramName, ((CInstanceMember<P2>)_p2).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 2);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 2);
             treeTask.SetVariable(paramName, ((CInstanceMember<P3>)_p3).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 3);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 3);
             treeTask.SetVariable(paramName, ((CInstanceMember<P4>)_p4).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 4);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 4);
             treeTask.SetVariable(paramName, ((CInstanceMember<P5>)_p5).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 5);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 5);
             treeTask.SetVariable(paramName, ((CInstanceMember<P6>)_p6).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 6);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 6);
             treeTask.SetVariable(paramName, ((CInstanceMember<P7>)_p7).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 7);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 7);
             treeTask.SetVariable(paramName, ((CInstanceMember<P8>)_p8).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 8);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 8);
             treeTask.SetVariable(paramName, ((CInstanceMember<P9>)_p9).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 9);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 9);
             treeTask.SetVariable(paramName, ((CInstanceMember<P10>)_p10).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 10);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 10);
             treeTask.SetVariable(paramName, ((CInstanceMember<P11>)_p11).GetValue(self));
         }
     }
 
     public class CAgentMethod<T, P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12> : CAgentMethodBase<T>
     {
-        public delegate T FunctionPointer(Agent a, P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6, P7 p7, P8 p8, P9 p9, P10 p10, P11 p11, P12 p12);
+        public delegate Task<T> FunctionPointer(Agent a, P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6, P7 p7, P8 p8, P9 p9, P10 p10, P11 p11, P12 p12);
 
         FunctionPointer _fp;
         IInstanceMember _p1;
@@ -2087,13 +2106,13 @@ namespace behaviac
         IInstanceMember _p11;
         IInstanceMember _p12;
 
-        public CAgentMethod(FunctionPointer f)
+        public CAgentMethod(FunctionPointer f, Workspace workspace) : base(workspace)
         {
             _fp = f;
         }
 
-        public CAgentMethod(CAgentMethod<T, P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12> rhs)
-        : base(rhs)
+        public CAgentMethod(CAgentMethod<T, P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12> rhs, Workspace workspace)
+        : base(rhs, workspace)
         {
             _fp = rhs._fp;
             _p1 = rhs._p1;
@@ -2112,103 +2131,103 @@ namespace behaviac
 
         public override IMethod Clone()
         {
-            return new CAgentMethod<T, P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12>(this);
+            return new CAgentMethod<T, P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12>(this, Workspace);
         }
 
         public override void Load(string instance, string[] paramStrs)
         {
-            Debug.Check(paramStrs.Length == 12);
+            Debugs.Check(paramStrs.Length == 12);
 
             _instance = instance;
-            _p1 = AgentMeta.ParseProperty<P1>(paramStrs[0]);
-            _p2 = AgentMeta.ParseProperty<P2>(paramStrs[1]);
-            _p3 = AgentMeta.ParseProperty<P3>(paramStrs[2]);
-            _p4 = AgentMeta.ParseProperty<P4>(paramStrs[3]);
-            _p5 = AgentMeta.ParseProperty<P5>(paramStrs[4]);
-            _p6 = AgentMeta.ParseProperty<P6>(paramStrs[5]);
-            _p7 = AgentMeta.ParseProperty<P7>(paramStrs[6]);
-            _p8 = AgentMeta.ParseProperty<P8>(paramStrs[7]);
-            _p9 = AgentMeta.ParseProperty<P9>(paramStrs[8]);
-            _p10 = AgentMeta.ParseProperty<P10>(paramStrs[9]);
-            _p11 = AgentMeta.ParseProperty<P11>(paramStrs[10]);
-            _p12 = AgentMeta.ParseProperty<P12>(paramStrs[11]);
+            _p1 = AgentMeta.ParseProperty<P1>(paramStrs[0], Workspace);
+            _p2 = AgentMeta.ParseProperty<P2>(paramStrs[1], Workspace);
+            _p3 = AgentMeta.ParseProperty<P3>(paramStrs[2], Workspace);
+            _p4 = AgentMeta.ParseProperty<P4>(paramStrs[3], Workspace);
+            _p5 = AgentMeta.ParseProperty<P5>(paramStrs[4], Workspace);
+            _p6 = AgentMeta.ParseProperty<P6>(paramStrs[5], Workspace);
+            _p7 = AgentMeta.ParseProperty<P7>(paramStrs[6], Workspace);
+            _p8 = AgentMeta.ParseProperty<P8>(paramStrs[7], Workspace);
+            _p9 = AgentMeta.ParseProperty<P9>(paramStrs[8], Workspace);
+            _p10 = AgentMeta.ParseProperty<P10>(paramStrs[9], Workspace);
+            _p11 = AgentMeta.ParseProperty<P11>(paramStrs[10], Workspace);
+            _p12 = AgentMeta.ParseProperty<P12>(paramStrs[11], Workspace);
         }
 
-        public override void Run(Agent self)
+        public override async Task Run(Agent self)
         {
-            Debug.Check(_p1 != null);
-            Debug.Check(_p2 != null);
-            Debug.Check(_p3 != null);
-            Debug.Check(_p4 != null);
-            Debug.Check(_p5 != null);
-            Debug.Check(_p6 != null);
-            Debug.Check(_p7 != null);
-            Debug.Check(_p8 != null);
-            Debug.Check(_p9 != null);
-            Debug.Check(_p10 != null);
-            Debug.Check(_p11 != null);
-            Debug.Check(_p12 != null);
+            Debugs.Check(_p1 != null);
+            Debugs.Check(_p2 != null);
+            Debugs.Check(_p3 != null);
+            Debugs.Check(_p4 != null);
+            Debugs.Check(_p5 != null);
+            Debugs.Check(_p6 != null);
+            Debugs.Check(_p7 != null);
+            Debugs.Check(_p8 != null);
+            Debugs.Check(_p9 != null);
+            Debugs.Check(_p10 != null);
+            Debugs.Check(_p11 != null);
+            Debugs.Check(_p12 != null);
 
             Agent agent = Utils.GetParentAgent(self, _instance);
 
-            _returnValue.value = _fp(agent,
-                                     ((CInstanceMember<P1>)_p1).GetValue(self),
-                                     ((CInstanceMember<P2>)_p2).GetValue(self),
-                                     ((CInstanceMember<P3>)_p3).GetValue(self),
-                                     ((CInstanceMember<P4>)_p4).GetValue(self),
-                                     ((CInstanceMember<P5>)_p5).GetValue(self),
-                                     ((CInstanceMember<P6>)_p6).GetValue(self),
-                                     ((CInstanceMember<P7>)_p7).GetValue(self),
-                                     ((CInstanceMember<P8>)_p8).GetValue(self),
-                                     ((CInstanceMember<P9>)_p9).GetValue(self),
-                                     ((CInstanceMember<P10>)_p10).GetValue(self),
-                                     ((CInstanceMember<P11>)_p11).GetValue(self),
-                                     ((CInstanceMember<P12>)_p12).GetValue(self));
+            _returnValue.value = await _fp(agent,
+                                  await ((CInstanceMember<P1>)_p1).GetValue(self),
+                                  await ((CInstanceMember<P2>)_p2).GetValue(self),
+                                  await ((CInstanceMember<P3>)_p3).GetValue(self),
+                                  await ((CInstanceMember<P4>)_p4).GetValue(self),
+                                  await ((CInstanceMember<P5>)_p5).GetValue(self),
+                                  await ((CInstanceMember<P6>)_p6).GetValue(self),
+                                  await ((CInstanceMember<P7>)_p7).GetValue(self),
+                                  await ((CInstanceMember<P8>)_p8).GetValue(self),
+                                  await ((CInstanceMember<P9>)_p9).GetValue(self),
+                                  await ((CInstanceMember<P10>)_p10).GetValue(self),
+                                  await ((CInstanceMember<P11>)_p11).GetValue(self),
+                                  await ((CInstanceMember<P12>)_p12).GetValue(self));
         }
 
         public override void SetTaskParams(Agent self, BehaviorTreeTask treeTask)
         {
-            string paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 0);
+            string paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 0);
             treeTask.SetVariable(paramName, ((CInstanceMember<P1>)_p1).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 1);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 1);
             treeTask.SetVariable(paramName, ((CInstanceMember<P2>)_p2).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 2);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 2);
             treeTask.SetVariable(paramName, ((CInstanceMember<P3>)_p3).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 3);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 3);
             treeTask.SetVariable(paramName, ((CInstanceMember<P4>)_p4).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 4);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 4);
             treeTask.SetVariable(paramName, ((CInstanceMember<P5>)_p5).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 5);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 5);
             treeTask.SetVariable(paramName, ((CInstanceMember<P6>)_p6).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 6);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 6);
             treeTask.SetVariable(paramName, ((CInstanceMember<P7>)_p7).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 7);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 7);
             treeTask.SetVariable(paramName, ((CInstanceMember<P8>)_p8).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 8);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 8);
             treeTask.SetVariable(paramName, ((CInstanceMember<P9>)_p9).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 9);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 9);
             treeTask.SetVariable(paramName, ((CInstanceMember<P10>)_p10).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 10);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 10);
             treeTask.SetVariable(paramName, ((CInstanceMember<P11>)_p11).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 11);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 11);
             treeTask.SetVariable(paramName, ((CInstanceMember<P12>)_p12).GetValue(self));
         }
     }
 
     public class CAgentMethod<T, P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12, P13> : CAgentMethodBase<T>
     {
-        public delegate T FunctionPointer(Agent a, P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6, P7 p7, P8 p8, P9 p9, P10 p10, P11 p11, P12 p12, P13 p13);
+        public delegate Task<T> FunctionPointer(Agent a, P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6, P7 p7, P8 p8, P9 p9, P10 p10, P11 p11, P12 p12, P13 p13);
 
         FunctionPointer _fp;
         IInstanceMember _p1;
@@ -2225,13 +2244,13 @@ namespace behaviac
         IInstanceMember _p12;
         IInstanceMember _p13;
 
-        public CAgentMethod(FunctionPointer f)
+        public CAgentMethod(FunctionPointer f, Workspace workspace) : base(workspace)
         {
             _fp = f;
         }
 
-        public CAgentMethod(CAgentMethod<T, P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12, P13> rhs)
-        : base(rhs)
+        public CAgentMethod(CAgentMethod<T, P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12, P13> rhs, Workspace workspace)
+        : base(rhs, workspace)
         {
             _fp = rhs._fp;
             _p1 = rhs._p1;
@@ -2251,109 +2270,109 @@ namespace behaviac
 
         public override IMethod Clone()
         {
-            return new CAgentMethod<T, P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12, P13>(this);
+            return new CAgentMethod<T, P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12, P13>(this, Workspace);
         }
 
         public override void Load(string instance, string[] paramStrs)
         {
-            Debug.Check(paramStrs.Length == 13);
+            Debugs.Check(paramStrs.Length == 13);
 
             _instance = instance;
-            _p1 = AgentMeta.ParseProperty<P1>(paramStrs[0]);
-            _p2 = AgentMeta.ParseProperty<P2>(paramStrs[1]);
-            _p3 = AgentMeta.ParseProperty<P3>(paramStrs[2]);
-            _p4 = AgentMeta.ParseProperty<P4>(paramStrs[3]);
-            _p5 = AgentMeta.ParseProperty<P5>(paramStrs[4]);
-            _p6 = AgentMeta.ParseProperty<P6>(paramStrs[5]);
-            _p7 = AgentMeta.ParseProperty<P7>(paramStrs[6]);
-            _p8 = AgentMeta.ParseProperty<P8>(paramStrs[7]);
-            _p9 = AgentMeta.ParseProperty<P9>(paramStrs[8]);
-            _p10 = AgentMeta.ParseProperty<P10>(paramStrs[9]);
-            _p11 = AgentMeta.ParseProperty<P11>(paramStrs[10]);
-            _p12 = AgentMeta.ParseProperty<P12>(paramStrs[11]);
-            _p13 = AgentMeta.ParseProperty<P13>(paramStrs[12]);
+            _p1 = AgentMeta.ParseProperty<P1>(paramStrs[0], Workspace);
+            _p2 = AgentMeta.ParseProperty<P2>(paramStrs[1], Workspace);
+            _p3 = AgentMeta.ParseProperty<P3>(paramStrs[2], Workspace);
+            _p4 = AgentMeta.ParseProperty<P4>(paramStrs[3], Workspace);
+            _p5 = AgentMeta.ParseProperty<P5>(paramStrs[4], Workspace);
+            _p6 = AgentMeta.ParseProperty<P6>(paramStrs[5], Workspace);
+            _p7 = AgentMeta.ParseProperty<P7>(paramStrs[6], Workspace);
+            _p8 = AgentMeta.ParseProperty<P8>(paramStrs[7], Workspace);
+            _p9 = AgentMeta.ParseProperty<P9>(paramStrs[8], Workspace);
+            _p10 = AgentMeta.ParseProperty<P10>(paramStrs[9], Workspace);
+            _p11 = AgentMeta.ParseProperty<P11>(paramStrs[10], Workspace);
+            _p12 = AgentMeta.ParseProperty<P12>(paramStrs[11], Workspace);
+            _p13 = AgentMeta.ParseProperty<P13>(paramStrs[12], Workspace);
         }
 
-        public override void Run(Agent self)
+        public override async Task Run(Agent self)
         {
-            Debug.Check(_p1 != null);
-            Debug.Check(_p2 != null);
-            Debug.Check(_p3 != null);
-            Debug.Check(_p4 != null);
-            Debug.Check(_p5 != null);
-            Debug.Check(_p6 != null);
-            Debug.Check(_p7 != null);
-            Debug.Check(_p8 != null);
-            Debug.Check(_p9 != null);
-            Debug.Check(_p10 != null);
-            Debug.Check(_p11 != null);
-            Debug.Check(_p12 != null);
-            Debug.Check(_p13 != null);
+            Debugs.Check(_p1 != null);
+            Debugs.Check(_p2 != null);
+            Debugs.Check(_p3 != null);
+            Debugs.Check(_p4 != null);
+            Debugs.Check(_p5 != null);
+            Debugs.Check(_p6 != null);
+            Debugs.Check(_p7 != null);
+            Debugs.Check(_p8 != null);
+            Debugs.Check(_p9 != null);
+            Debugs.Check(_p10 != null);
+            Debugs.Check(_p11 != null);
+            Debugs.Check(_p12 != null);
+            Debugs.Check(_p13 != null);
 
             Agent agent = Utils.GetParentAgent(self, _instance);
 
-            _returnValue.value = _fp(agent,
-                                     ((CInstanceMember<P1>)_p1).GetValue(self),
-                                     ((CInstanceMember<P2>)_p2).GetValue(self),
-                                     ((CInstanceMember<P3>)_p3).GetValue(self),
-                                     ((CInstanceMember<P4>)_p4).GetValue(self),
-                                     ((CInstanceMember<P5>)_p5).GetValue(self),
-                                     ((CInstanceMember<P6>)_p6).GetValue(self),
-                                     ((CInstanceMember<P7>)_p7).GetValue(self),
-                                     ((CInstanceMember<P8>)_p8).GetValue(self),
-                                     ((CInstanceMember<P9>)_p9).GetValue(self),
-                                     ((CInstanceMember<P10>)_p10).GetValue(self),
-                                     ((CInstanceMember<P11>)_p11).GetValue(self),
-                                     ((CInstanceMember<P12>)_p12).GetValue(self),
-                                     ((CInstanceMember<P13>)_p13).GetValue(self));
+            _returnValue.value = await _fp(agent,
+                                    await ((CInstanceMember<P1>)_p1).GetValue(self),
+                                    await ((CInstanceMember<P2>)_p2).GetValue(self),
+                                    await ((CInstanceMember<P3>)_p3).GetValue(self),
+                                    await ((CInstanceMember<P4>)_p4).GetValue(self),
+                                    await ((CInstanceMember<P5>)_p5).GetValue(self),
+                                    await ((CInstanceMember<P6>)_p6).GetValue(self),
+                                    await ((CInstanceMember<P7>)_p7).GetValue(self),
+                                    await ((CInstanceMember<P8>)_p8).GetValue(self),
+                                    await ((CInstanceMember<P9>)_p9).GetValue(self),
+                                    await ((CInstanceMember<P10>)_p10).GetValue(self),
+                                    await ((CInstanceMember<P11>)_p11).GetValue(self),
+                                    await ((CInstanceMember<P12>)_p12).GetValue(self),
+                                   await ((CInstanceMember<P13>)_p13).GetValue(self));
         }
 
         public override void SetTaskParams(Agent self, BehaviorTreeTask treeTask)
         {
-            string paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 0);
+            string paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 0);
             treeTask.SetVariable(paramName, ((CInstanceMember<P1>)_p1).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 1);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 1);
             treeTask.SetVariable(paramName, ((CInstanceMember<P2>)_p2).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 2);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 2);
             treeTask.SetVariable(paramName, ((CInstanceMember<P3>)_p3).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 3);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 3);
             treeTask.SetVariable(paramName, ((CInstanceMember<P4>)_p4).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 4);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 4);
             treeTask.SetVariable(paramName, ((CInstanceMember<P5>)_p5).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 5);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 5);
             treeTask.SetVariable(paramName, ((CInstanceMember<P6>)_p6).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 6);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 6);
             treeTask.SetVariable(paramName, ((CInstanceMember<P7>)_p7).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 7);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 7);
             treeTask.SetVariable(paramName, ((CInstanceMember<P8>)_p8).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 8);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 8);
             treeTask.SetVariable(paramName, ((CInstanceMember<P9>)_p9).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 9);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 9);
             treeTask.SetVariable(paramName, ((CInstanceMember<P10>)_p10).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 10);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 10);
             treeTask.SetVariable(paramName, ((CInstanceMember<P11>)_p11).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 11);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 11);
             treeTask.SetVariable(paramName, ((CInstanceMember<P12>)_p12).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 12);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 12);
             treeTask.SetVariable(paramName, ((CInstanceMember<P13>)_p13).GetValue(self));
         }
     }
 
     public class CAgentMethod<T, P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12, P13, P14> : CAgentMethodBase<T>
     {
-        public delegate T FunctionPointer(Agent a, P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6, P7 p7, P8 p8, P9 p9, P10 p10, P11 p11, P12 p12, P13 p13, P14 p14);
+        public delegate Task<T> FunctionPointer(Agent a, P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6, P7 p7, P8 p8, P9 p9, P10 p10, P11 p11, P12 p12, P13 p13, P14 p14);
 
         FunctionPointer _fp;
         IInstanceMember _p1;
@@ -2371,13 +2390,13 @@ namespace behaviac
         IInstanceMember _p13;
         IInstanceMember _p14;
 
-        public CAgentMethod(FunctionPointer f)
+        public CAgentMethod(FunctionPointer f, Workspace workspace) : base(workspace)
         {
             _fp = f;
         }
 
-        public CAgentMethod(CAgentMethod<T, P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12, P13, P14> rhs)
-        : base(rhs)
+        public CAgentMethod(CAgentMethod<T, P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12, P13, P14> rhs, Workspace workspace)
+        : base(rhs, workspace)
         {
             _fp = rhs._fp;
             _p1 = rhs._p1;
@@ -2398,144 +2417,144 @@ namespace behaviac
 
         public override IMethod Clone()
         {
-            return new CAgentMethod<T, P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12, P13, P14>(this);
+            return new CAgentMethod<T, P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12, P13, P14>(this, Workspace);
         }
 
         public override void Load(string instance, string[] paramStrs)
         {
-            Debug.Check(paramStrs.Length == 14);
+            Debugs.Check(paramStrs.Length == 14);
 
             _instance = instance;
-            _p1 = AgentMeta.ParseProperty<P1>(paramStrs[0]);
-            _p2 = AgentMeta.ParseProperty<P2>(paramStrs[1]);
-            _p3 = AgentMeta.ParseProperty<P3>(paramStrs[2]);
-            _p4 = AgentMeta.ParseProperty<P4>(paramStrs[3]);
-            _p5 = AgentMeta.ParseProperty<P5>(paramStrs[4]);
-            _p6 = AgentMeta.ParseProperty<P6>(paramStrs[5]);
-            _p7 = AgentMeta.ParseProperty<P7>(paramStrs[6]);
-            _p8 = AgentMeta.ParseProperty<P8>(paramStrs[7]);
-            _p9 = AgentMeta.ParseProperty<P9>(paramStrs[8]);
-            _p10 = AgentMeta.ParseProperty<P10>(paramStrs[9]);
-            _p11 = AgentMeta.ParseProperty<P11>(paramStrs[10]);
-            _p12 = AgentMeta.ParseProperty<P12>(paramStrs[11]);
-            _p13 = AgentMeta.ParseProperty<P13>(paramStrs[12]);
-            _p14 = AgentMeta.ParseProperty<P14>(paramStrs[13]);
+            _p1 = AgentMeta.ParseProperty<P1>(paramStrs[0], Workspace);
+            _p2 = AgentMeta.ParseProperty<P2>(paramStrs[1], Workspace);
+            _p3 = AgentMeta.ParseProperty<P3>(paramStrs[2], Workspace);
+            _p4 = AgentMeta.ParseProperty<P4>(paramStrs[3], Workspace);
+            _p5 = AgentMeta.ParseProperty<P5>(paramStrs[4], Workspace);
+            _p6 = AgentMeta.ParseProperty<P6>(paramStrs[5], Workspace);
+            _p7 = AgentMeta.ParseProperty<P7>(paramStrs[6], Workspace);
+            _p8 = AgentMeta.ParseProperty<P8>(paramStrs[7], Workspace);
+            _p9 = AgentMeta.ParseProperty<P9>(paramStrs[8], Workspace);
+            _p10 = AgentMeta.ParseProperty<P10>(paramStrs[9], Workspace);
+            _p11 = AgentMeta.ParseProperty<P11>(paramStrs[10], Workspace);
+            _p12 = AgentMeta.ParseProperty<P12>(paramStrs[11], Workspace);
+            _p13 = AgentMeta.ParseProperty<P13>(paramStrs[12], Workspace);
+            _p14 = AgentMeta.ParseProperty<P14>(paramStrs[13], Workspace);
         }
 
-        public override void Run(Agent self)
+        public override async Task Run(Agent self)
         {
-            Debug.Check(_p1 != null);
-            Debug.Check(_p2 != null);
-            Debug.Check(_p3 != null);
-            Debug.Check(_p4 != null);
-            Debug.Check(_p5 != null);
-            Debug.Check(_p6 != null);
-            Debug.Check(_p7 != null);
-            Debug.Check(_p8 != null);
-            Debug.Check(_p9 != null);
-            Debug.Check(_p10 != null);
-            Debug.Check(_p11 != null);
-            Debug.Check(_p12 != null);
-            Debug.Check(_p13 != null);
-            Debug.Check(_p14 != null);
+            Debugs.Check(_p1 != null);
+            Debugs.Check(_p2 != null);
+            Debugs.Check(_p3 != null);
+            Debugs.Check(_p4 != null);
+            Debugs.Check(_p5 != null);
+            Debugs.Check(_p6 != null);
+            Debugs.Check(_p7 != null);
+            Debugs.Check(_p8 != null);
+            Debugs.Check(_p9 != null);
+            Debugs.Check(_p10 != null);
+            Debugs.Check(_p11 != null);
+            Debugs.Check(_p12 != null);
+            Debugs.Check(_p13 != null);
+            Debugs.Check(_p14 != null);
 
             Agent agent = Utils.GetParentAgent(self, _instance);
 
-            _returnValue.value = _fp(agent,
-                                     ((CInstanceMember<P1>)_p1).GetValue(self),
-                                     ((CInstanceMember<P2>)_p2).GetValue(self),
-                                     ((CInstanceMember<P3>)_p3).GetValue(self),
-                                     ((CInstanceMember<P4>)_p4).GetValue(self),
-                                     ((CInstanceMember<P5>)_p5).GetValue(self),
-                                     ((CInstanceMember<P6>)_p6).GetValue(self),
-                                     ((CInstanceMember<P7>)_p7).GetValue(self),
-                                     ((CInstanceMember<P8>)_p8).GetValue(self),
-                                     ((CInstanceMember<P9>)_p9).GetValue(self),
-                                     ((CInstanceMember<P10>)_p10).GetValue(self),
-                                     ((CInstanceMember<P11>)_p11).GetValue(self),
-                                     ((CInstanceMember<P12>)_p12).GetValue(self),
-                                     ((CInstanceMember<P13>)_p13).GetValue(self),
-                                     ((CInstanceMember<P14>)_p14).GetValue(self));
+            _returnValue.value = await _fp(agent,
+                                   await ((CInstanceMember<P1>)_p1).GetValue(self),
+                                   await ((CInstanceMember<P2>)_p2).GetValue(self),
+                                   await ((CInstanceMember<P3>)_p3).GetValue(self),
+                                   await ((CInstanceMember<P4>)_p4).GetValue(self),
+                                   await ((CInstanceMember<P5>)_p5).GetValue(self),
+                                   await ((CInstanceMember<P6>)_p6).GetValue(self),
+                                   await ((CInstanceMember<P7>)_p7).GetValue(self),
+                                   await ((CInstanceMember<P8>)_p8).GetValue(self),
+                                   await ((CInstanceMember<P9>)_p9).GetValue(self),
+                                   await ((CInstanceMember<P10>)_p10).GetValue(self),
+                                   await ((CInstanceMember<P11>)_p11).GetValue(self),
+                                   await ((CInstanceMember<P12>)_p12).GetValue(self),
+                                   await ((CInstanceMember<P13>)_p13).GetValue(self),
+                                   await ((CInstanceMember<P14>)_p14).GetValue(self));
         }
 
         public override void SetTaskParams(Agent self, BehaviorTreeTask treeTask)
         {
-            string paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 0);
+            string paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 0);
             treeTask.SetVariable(paramName, ((CInstanceMember<P1>)_p1).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 1);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 1);
             treeTask.SetVariable(paramName, ((CInstanceMember<P2>)_p2).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 2);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 2);
             treeTask.SetVariable(paramName, ((CInstanceMember<P3>)_p3).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 3);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 3);
             treeTask.SetVariable(paramName, ((CInstanceMember<P4>)_p4).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 4);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 4);
             treeTask.SetVariable(paramName, ((CInstanceMember<P5>)_p5).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 5);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 5);
             treeTask.SetVariable(paramName, ((CInstanceMember<P6>)_p6).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 6);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 6);
             treeTask.SetVariable(paramName, ((CInstanceMember<P7>)_p7).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 7);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 7);
             treeTask.SetVariable(paramName, ((CInstanceMember<P8>)_p8).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 8);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 8);
             treeTask.SetVariable(paramName, ((CInstanceMember<P9>)_p9).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 9);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 9);
             treeTask.SetVariable(paramName, ((CInstanceMember<P10>)_p10).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 10);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 10);
             treeTask.SetVariable(paramName, ((CInstanceMember<P11>)_p11).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 11);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 11);
             treeTask.SetVariable(paramName, ((CInstanceMember<P12>)_p12).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 12);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 12);
             treeTask.SetVariable(paramName, ((CInstanceMember<P13>)_p13).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 13);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 13);
             treeTask.SetVariable(paramName, ((CInstanceMember<P14>)_p14).GetValue(self));
         }
     }
 
     public class CAgentStaticMethod<T> : CAgentMethodBase<T>
     {
-        public delegate T FunctionPointer();
+        public delegate Task<T> FunctionPointer();
 
         FunctionPointer _fp;
 
-        public CAgentStaticMethod(FunctionPointer f)
+        public CAgentStaticMethod(FunctionPointer f, Workspace workspace) : base(workspace)
         {
             _fp = f;
         }
 
-        public CAgentStaticMethod(CAgentStaticMethod<T> rhs)
-        : base(rhs)
+        public CAgentStaticMethod(CAgentStaticMethod<T> rhs, Workspace workspace)
+        : base(rhs, workspace)
         {
             _fp = rhs._fp;
         }
 
         public override IMethod Clone()
         {
-            return new CAgentStaticMethod<T>(this);
+            return new CAgentStaticMethod<T>(this, Workspace);
         }
 
         public override void Load(string instance, string[] paramStrs)
         {
-            Debug.Check(paramStrs.Length == 0);
+            Debugs.Check(paramStrs.Length == 0);
 
             _instance = instance;
         }
 
-        public override void Run(Agent self)
+        public override async Task Run(Agent self)
         {
-            _returnValue.value = _fp();
+            _returnValue.value = await _fp();
         }
 
         public override void SetTaskParams(Agent self, BehaviorTreeTask treeTask)
@@ -2545,18 +2564,18 @@ namespace behaviac
 
     public class CAgentStaticMethod<T, P1> : CAgentMethodBase<T>
     {
-        public delegate T FunctionPointer(P1 p1);
+        public delegate Task<T> FunctionPointer(P1 p1);
 
         FunctionPointer _fp;
         IInstanceMember _p1;
 
-        public CAgentStaticMethod(FunctionPointer f)
+        public CAgentStaticMethod(FunctionPointer f, Workspace workspace) : base(workspace)
         {
             _fp = f;
         }
 
-        public CAgentStaticMethod(CAgentStaticMethod<T, P1> rhs)
-        : base(rhs)
+        public CAgentStaticMethod(CAgentStaticMethod<T, P1> rhs, Workspace workspace)
+        : base(rhs, workspace)
         {
             _fp = rhs._fp;
             _p1 = rhs._p1;
@@ -2564,55 +2583,55 @@ namespace behaviac
 
         public override IMethod Clone()
         {
-            return new CAgentStaticMethod<T, P1>(this);
+            return new CAgentStaticMethod<T, P1>(this, Workspace);
         }
 
         public override void Load(string instance, string[] paramStrs)
         {
-            Debug.Check(paramStrs.Length == 1);
+            Debugs.Check(paramStrs.Length == 1);
 
             _instance = instance;
-            _p1 = AgentMeta.ParseProperty<P1>(paramStrs[0]);
+            _p1 = AgentMeta.ParseProperty<P1>(paramStrs[0], Workspace);
         }
 
-        public override void Run(Agent self)
+        public override async Task Run(Agent self)
         {
-            Debug.Check(_p1 != null);
+            Debugs.Check(_p1 != null);
 
-            _returnValue.value = _fp(((CInstanceMember<P1>)_p1).GetValue(self));
+            _returnValue.value = await _fp(await ((CInstanceMember<P1>)_p1).GetValue(self));
         }
 
-        public override IValue GetIValue(Agent self, IInstanceMember firstParam)
+        public override async Task<IValue> GetIValue(Agent self, IInstanceMember firstParam)
         {
-            Debug.Check(_p1 != null);
+            Debugs.Check(_p1 != null);
 
-            _returnValue.value = _fp(((CInstanceMember<P1>)firstParam).GetValue(self));
+            _returnValue.value = await _fp(await ((CInstanceMember<P1>)firstParam).GetValue(self));
 
             return _returnValue;
         }
 
         public override void SetTaskParams(Agent self, BehaviorTreeTask treeTask)
         {
-            string paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 0);
+            string paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 0);
             treeTask.SetVariable(paramName, ((CInstanceMember<P1>)_p1).GetValue(self));
         }
     }
 
     public class CAgentStaticMethod<T, P1, P2> : CAgentMethodBase<T>
     {
-        public delegate T FunctionPointer(P1 p1, P2 p2);
+        public delegate Task<T> FunctionPointer(P1 p1, P2 p2);
 
         FunctionPointer _fp;
         IInstanceMember _p1;
         IInstanceMember _p2;
 
-        public CAgentStaticMethod(FunctionPointer f)
+        public CAgentStaticMethod(FunctionPointer f, Workspace workspace) : base(workspace)
         {
             _fp = f;
         }
 
-        public CAgentStaticMethod(CAgentStaticMethod<T, P1, P2> rhs)
-        : base(rhs)
+        public CAgentStaticMethod(CAgentStaticMethod<T, P1, P2> rhs, Workspace workspace)
+        : base(rhs, workspace)
         {
             _fp = rhs._fp;
             _p1 = rhs._p1;
@@ -2621,52 +2640,52 @@ namespace behaviac
 
         public override IMethod Clone()
         {
-            return new CAgentStaticMethod<T, P1, P2>(this);
+            return new CAgentStaticMethod<T, P1, P2>(this, Workspace);
         }
 
         public override void Load(string instance, string[] paramStrs)
         {
-            Debug.Check(paramStrs.Length == 2);
+            Debugs.Check(paramStrs.Length == 2);
 
             _instance = instance;
-            _p1 = AgentMeta.ParseProperty<P1>(paramStrs[0]);
-            _p2 = AgentMeta.ParseProperty<P2>(paramStrs[1]);
+            _p1 = AgentMeta.ParseProperty<P1>(paramStrs[0], Workspace);
+            _p2 = AgentMeta.ParseProperty<P2>(paramStrs[1], Workspace);
         }
 
-        public override void Run(Agent self)
+        public override async Task Run(Agent self)
         {
-            Debug.Check(_p1 != null);
-            Debug.Check(_p2 != null);
+            Debugs.Check(_p1 != null);
+            Debugs.Check(_p2 != null);
 
-            _returnValue.value = _fp(((CInstanceMember<P1>)_p1).GetValue(self), ((CInstanceMember<P2>)_p2).GetValue(self));
+            _returnValue.value = await _fp(await ((CInstanceMember<P1>)_p1).GetValue(self), await ((CInstanceMember<P2>)_p2).GetValue(self));
         }
 
         public override void SetTaskParams(Agent self, BehaviorTreeTask treeTask)
         {
-            string paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 0);
+            string paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 0);
             treeTask.SetVariable(paramName, ((CInstanceMember<P1>)_p1).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 1);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 1);
             treeTask.SetVariable(paramName, ((CInstanceMember<P2>)_p2).GetValue(self));
         }
     }
 
     public class CAgentStaticMethod<T, P1, P2, P3> : CAgentMethodBase<T>
     {
-        public delegate T FunctionPointer(P1 p1, P2 p2, P3 p3);
+        public delegate Task<T> FunctionPointer(P1 p1, P2 p2, P3 p3);
 
         FunctionPointer _fp;
         IInstanceMember _p1;
         IInstanceMember _p2;
         IInstanceMember _p3;
 
-        public CAgentStaticMethod(FunctionPointer f)
+        public CAgentStaticMethod(FunctionPointer f, Workspace workspace) : base(workspace)
         {
             _fp = f;
         }
 
-        public CAgentStaticMethod(CAgentStaticMethod<T, P1, P2, P3> rhs)
-        : base(rhs)
+        public CAgentStaticMethod(CAgentStaticMethod<T, P1, P2, P3> rhs, Workspace workspace)
+        : base(rhs, workspace)
         {
             _fp = rhs._fp;
             _p1 = rhs._p1;
@@ -2676,47 +2695,47 @@ namespace behaviac
 
         public override IMethod Clone()
         {
-            return new CAgentStaticMethod<T, P1, P2, P3>(this);
+            return new CAgentStaticMethod<T, P1, P2, P3>(this, Workspace);
         }
 
         public override void Load(string instance, string[] paramStrs)
         {
-            Debug.Check(paramStrs.Length == 3);
+            Debugs.Check(paramStrs.Length == 3);
 
             _instance = instance;
-            _p1 = AgentMeta.ParseProperty<P1>(paramStrs[0]);
-            _p2 = AgentMeta.ParseProperty<P2>(paramStrs[1]);
-            _p3 = AgentMeta.ParseProperty<P3>(paramStrs[2]);
+            _p1 = AgentMeta.ParseProperty<P1>(paramStrs[0], Workspace);
+            _p2 = AgentMeta.ParseProperty<P2>(paramStrs[1], Workspace);
+            _p3 = AgentMeta.ParseProperty<P3>(paramStrs[2], Workspace);
         }
 
-        public override void Run(Agent self)
+        public override async Task Run(Agent self)
         {
-            Debug.Check(_p1 != null);
-            Debug.Check(_p2 != null);
-            Debug.Check(_p3 != null);
+            Debugs.Check(_p1 != null);
+            Debugs.Check(_p2 != null);
+            Debugs.Check(_p3 != null);
 
-            _returnValue.value = _fp(
-                                     ((CInstanceMember<P1>)_p1).GetValue(self),
-                                     ((CInstanceMember<P2>)_p2).GetValue(self),
-                                     ((CInstanceMember<P3>)_p3).GetValue(self));
+            _returnValue.value = await _fp(
+                                    await ((CInstanceMember<P1>)_p1).GetValue(self),
+                                   await ((CInstanceMember<P2>)_p2).GetValue(self),
+                                  await ((CInstanceMember<P3>)_p3).GetValue(self));
         }
 
         public override void SetTaskParams(Agent self, BehaviorTreeTask treeTask)
         {
-            string paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 0);
+            string paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 0);
             treeTask.SetVariable(paramName, ((CInstanceMember<P1>)_p1).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 1);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 1);
             treeTask.SetVariable(paramName, ((CInstanceMember<P2>)_p2).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 2);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 2);
             treeTask.SetVariable(paramName, ((CInstanceMember<P3>)_p3).GetValue(self));
         }
     }
 
     public class CAgentStaticMethod<T, P1, P2, P3, P4> : CAgentMethodBase<T>
     {
-        public delegate T FunctionPointer(P1 p1, P2 p2, P3 p3, P4 p4);
+        public delegate Task<T> FunctionPointer(P1 p1, P2 p2, P3 p3, P4 p4);
 
         FunctionPointer _fp;
         IInstanceMember _p1;
@@ -2724,13 +2743,13 @@ namespace behaviac
         IInstanceMember _p3;
         IInstanceMember _p4;
 
-        public CAgentStaticMethod(FunctionPointer f)
+        public CAgentStaticMethod(FunctionPointer f, Workspace workspace) : base(workspace)
         {
             _fp = f;
         }
 
-        public CAgentStaticMethod(CAgentStaticMethod<T, P1, P2, P3, P4> rhs)
-        : base(rhs)
+        public CAgentStaticMethod(CAgentStaticMethod<T, P1, P2, P3, P4> rhs, Workspace workspace)
+        : base(rhs, workspace)
         {
             _fp = rhs._fp;
             _p1 = rhs._p1;
@@ -2741,53 +2760,53 @@ namespace behaviac
 
         public override IMethod Clone()
         {
-            return new CAgentStaticMethod<T, P1, P2, P3, P4>(this);
+            return new CAgentStaticMethod<T, P1, P2, P3, P4>(this, Workspace);
         }
 
         public override void Load(string instance, string[] paramStrs)
         {
-            Debug.Check(paramStrs.Length == 4);
+            Debugs.Check(paramStrs.Length == 4);
 
             _instance = instance;
-            _p1 = AgentMeta.ParseProperty<P1>(paramStrs[0]);
-            _p2 = AgentMeta.ParseProperty<P2>(paramStrs[1]);
-            _p3 = AgentMeta.ParseProperty<P3>(paramStrs[2]);
-            _p4 = AgentMeta.ParseProperty<P4>(paramStrs[3]);
+            _p1 = AgentMeta.ParseProperty<P1>(paramStrs[0], Workspace);
+            _p2 = AgentMeta.ParseProperty<P2>(paramStrs[1], Workspace);
+            _p3 = AgentMeta.ParseProperty<P3>(paramStrs[2], Workspace);
+            _p4 = AgentMeta.ParseProperty<P4>(paramStrs[3], Workspace);
         }
 
-        public override void Run(Agent self)
+        public override async Task Run(Agent self)
         {
-            Debug.Check(_p1 != null);
-            Debug.Check(_p2 != null);
-            Debug.Check(_p3 != null);
-            Debug.Check(_p4 != null);
+            Debugs.Check(_p1 != null);
+            Debugs.Check(_p2 != null);
+            Debugs.Check(_p3 != null);
+            Debugs.Check(_p4 != null);
 
-            _returnValue.value = _fp(
-                                     ((CInstanceMember<P1>)_p1).GetValue(self),
-                                     ((CInstanceMember<P2>)_p2).GetValue(self),
-                                     ((CInstanceMember<P3>)_p3).GetValue(self),
-                                     ((CInstanceMember<P4>)_p4).GetValue(self));
+            _returnValue.value = await _fp(
+                                await ((CInstanceMember<P1>)_p1).GetValue(self),
+                                await ((CInstanceMember<P2>)_p2).GetValue(self),
+                                await ((CInstanceMember<P3>)_p3).GetValue(self),
+                                await ((CInstanceMember<P4>)_p4).GetValue(self));
         }
 
         public override void SetTaskParams(Agent self, BehaviorTreeTask treeTask)
         {
-            string paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 0);
+            string paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 0);
             treeTask.SetVariable(paramName, ((CInstanceMember<P1>)_p1).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 1);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 1);
             treeTask.SetVariable(paramName, ((CInstanceMember<P2>)_p2).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 2);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 2);
             treeTask.SetVariable(paramName, ((CInstanceMember<P3>)_p3).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 3);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 3);
             treeTask.SetVariable(paramName, ((CInstanceMember<P4>)_p4).GetValue(self));
         }
     }
 
     public class CAgentStaticMethod<T, P1, P2, P3, P4, P5> : CAgentMethodBase<T>
     {
-        public delegate T FunctionPointer(P1 p1, P2 p2, P3 p3, P4 p4, P5 p5);
+        public delegate Task<T> FunctionPointer(P1 p1, P2 p2, P3 p3, P4 p4, P5 p5);
 
         FunctionPointer _fp;
         IInstanceMember _p1;
@@ -2796,13 +2815,13 @@ namespace behaviac
         IInstanceMember _p4;
         IInstanceMember _p5;
 
-        public CAgentStaticMethod(FunctionPointer f)
+        public CAgentStaticMethod(FunctionPointer f, Workspace workspace) : base(workspace)
         {
             _fp = f;
         }
 
-        public CAgentStaticMethod(CAgentStaticMethod<T, P1, P2, P3, P4, P5> rhs)
-        : base(rhs)
+        public CAgentStaticMethod(CAgentStaticMethod<T, P1, P2, P3, P4, P5> rhs, Workspace workspace)
+        : base(rhs, workspace)
         {
             _fp = rhs._fp;
             _p1 = rhs._p1;
@@ -2814,59 +2833,59 @@ namespace behaviac
 
         public override IMethod Clone()
         {
-            return new CAgentStaticMethod<T, P1, P2, P3, P4, P5>(this);
+            return new CAgentStaticMethod<T, P1, P2, P3, P4, P5>(this, Workspace);
         }
 
         public override void Load(string instance, string[] paramStrs)
         {
-            Debug.Check(paramStrs.Length == 5);
+            Debugs.Check(paramStrs.Length == 5);
 
             _instance = instance;
-            _p1 = AgentMeta.ParseProperty<P1>(paramStrs[0]);
-            _p2 = AgentMeta.ParseProperty<P2>(paramStrs[1]);
-            _p3 = AgentMeta.ParseProperty<P3>(paramStrs[2]);
-            _p4 = AgentMeta.ParseProperty<P4>(paramStrs[3]);
-            _p5 = AgentMeta.ParseProperty<P5>(paramStrs[4]);
+            _p1 = AgentMeta.ParseProperty<P1>(paramStrs[0], Workspace);
+            _p2 = AgentMeta.ParseProperty<P2>(paramStrs[1], Workspace);
+            _p3 = AgentMeta.ParseProperty<P3>(paramStrs[2], Workspace);
+            _p4 = AgentMeta.ParseProperty<P4>(paramStrs[3], Workspace);
+            _p5 = AgentMeta.ParseProperty<P5>(paramStrs[4], Workspace);
         }
 
-        public override void Run(Agent self)
+        public override async Task Run(Agent self)
         {
-            Debug.Check(_p1 != null);
-            Debug.Check(_p2 != null);
-            Debug.Check(_p3 != null);
-            Debug.Check(_p4 != null);
-            Debug.Check(_p5 != null);
+            Debugs.Check(_p1 != null);
+            Debugs.Check(_p2 != null);
+            Debugs.Check(_p3 != null);
+            Debugs.Check(_p4 != null);
+            Debugs.Check(_p5 != null);
 
-            _returnValue.value = _fp(
-                                     ((CInstanceMember<P1>)_p1).GetValue(self),
-                                     ((CInstanceMember<P2>)_p2).GetValue(self),
-                                     ((CInstanceMember<P3>)_p3).GetValue(self),
-                                     ((CInstanceMember<P4>)_p4).GetValue(self),
-                                     ((CInstanceMember<P5>)_p5).GetValue(self));
+            _returnValue.value = await _fp(
+                                    await ((CInstanceMember<P1>)_p1).GetValue(self),
+                                    await ((CInstanceMember<P2>)_p2).GetValue(self),
+                                    await ((CInstanceMember<P3>)_p3).GetValue(self),
+                                    await ((CInstanceMember<P4>)_p4).GetValue(self),
+                                    await ((CInstanceMember<P5>)_p5).GetValue(self));
         }
 
         public override void SetTaskParams(Agent self, BehaviorTreeTask treeTask)
         {
-            string paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 0);
+            string paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 0);
             treeTask.SetVariable(paramName, ((CInstanceMember<P1>)_p1).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 1);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 1);
             treeTask.SetVariable(paramName, ((CInstanceMember<P2>)_p2).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 2);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 2);
             treeTask.SetVariable(paramName, ((CInstanceMember<P3>)_p3).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 3);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 3);
             treeTask.SetVariable(paramName, ((CInstanceMember<P4>)_p4).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 4);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 4);
             treeTask.SetVariable(paramName, ((CInstanceMember<P5>)_p5).GetValue(self));
         }
     }
 
     public class CAgentStaticMethod<T, P1, P2, P3, P4, P5, P6> : CAgentMethodBase<T>
     {
-        public delegate T FunctionPointer(P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6);
+        public delegate Task<T> FunctionPointer(P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6);
 
         FunctionPointer _fp;
         IInstanceMember _p1;
@@ -2876,13 +2895,13 @@ namespace behaviac
         IInstanceMember _p5;
         IInstanceMember _p6;
 
-        public CAgentStaticMethod(FunctionPointer f)
+        public CAgentStaticMethod(FunctionPointer f, Workspace workspace) : base(workspace)
         {
             _fp = f;
         }
 
-        public CAgentStaticMethod(CAgentStaticMethod<T, P1, P2, P3, P4, P5, P6> rhs)
-        : base(rhs)
+        public CAgentStaticMethod(CAgentStaticMethod<T, P1, P2, P3, P4, P5, P6> rhs, Workspace workspace)
+        : base(rhs, workspace)
         {
             _fp = rhs._fp;
             _p1 = rhs._p1;
@@ -2895,65 +2914,65 @@ namespace behaviac
 
         public override IMethod Clone()
         {
-            return new CAgentStaticMethod<T, P1, P2, P3, P4, P5, P6>(this);
+            return new CAgentStaticMethod<T, P1, P2, P3, P4, P5, P6>(this, Workspace);
         }
 
         public override void Load(string instance, string[] paramStrs)
         {
-            Debug.Check(paramStrs.Length == 6);
+            Debugs.Check(paramStrs.Length == 6);
 
             _instance = instance;
-            _p1 = AgentMeta.ParseProperty<P1>(paramStrs[0]);
-            _p2 = AgentMeta.ParseProperty<P2>(paramStrs[1]);
-            _p3 = AgentMeta.ParseProperty<P3>(paramStrs[2]);
-            _p4 = AgentMeta.ParseProperty<P4>(paramStrs[3]);
-            _p5 = AgentMeta.ParseProperty<P5>(paramStrs[4]);
-            _p6 = AgentMeta.ParseProperty<P6>(paramStrs[5]);
+            _p1 = AgentMeta.ParseProperty<P1>(paramStrs[0], Workspace);
+            _p2 = AgentMeta.ParseProperty<P2>(paramStrs[1], Workspace);
+            _p3 = AgentMeta.ParseProperty<P3>(paramStrs[2], Workspace);
+            _p4 = AgentMeta.ParseProperty<P4>(paramStrs[3], Workspace);
+            _p5 = AgentMeta.ParseProperty<P5>(paramStrs[4], Workspace);
+            _p6 = AgentMeta.ParseProperty<P6>(paramStrs[5], Workspace);
         }
 
-        public override void Run(Agent self)
+        public override async Task Run(Agent self)
         {
-            Debug.Check(_p1 != null);
-            Debug.Check(_p2 != null);
-            Debug.Check(_p3 != null);
-            Debug.Check(_p4 != null);
-            Debug.Check(_p5 != null);
-            Debug.Check(_p6 != null);
+            Debugs.Check(_p1 != null);
+            Debugs.Check(_p2 != null);
+            Debugs.Check(_p3 != null);
+            Debugs.Check(_p4 != null);
+            Debugs.Check(_p5 != null);
+            Debugs.Check(_p6 != null);
 
-            _returnValue.value = _fp(
-                                     ((CInstanceMember<P1>)_p1).GetValue(self),
-                                     ((CInstanceMember<P2>)_p2).GetValue(self),
-                                     ((CInstanceMember<P3>)_p3).GetValue(self),
-                                     ((CInstanceMember<P4>)_p4).GetValue(self),
-                                     ((CInstanceMember<P5>)_p5).GetValue(self),
-                                     ((CInstanceMember<P6>)_p6).GetValue(self));
+            _returnValue.value = await _fp(
+                                    await ((CInstanceMember<P1>)_p1).GetValue(self),
+                                    await ((CInstanceMember<P2>)_p2).GetValue(self),
+                                    await ((CInstanceMember<P3>)_p3).GetValue(self),
+                                    await ((CInstanceMember<P4>)_p4).GetValue(self),
+                                    await ((CInstanceMember<P5>)_p5).GetValue(self),
+                                    await ((CInstanceMember<P6>)_p6).GetValue(self));
         }
 
         public override void SetTaskParams(Agent self, BehaviorTreeTask treeTask)
         {
-            string paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 0);
+            string paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 0);
             treeTask.SetVariable(paramName, ((CInstanceMember<P1>)_p1).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 1);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 1);
             treeTask.SetVariable(paramName, ((CInstanceMember<P2>)_p2).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 2);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 2);
             treeTask.SetVariable(paramName, ((CInstanceMember<P3>)_p3).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 3);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 3);
             treeTask.SetVariable(paramName, ((CInstanceMember<P4>)_p4).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 4);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 4);
             treeTask.SetVariable(paramName, ((CInstanceMember<P5>)_p5).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 5);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 5);
             treeTask.SetVariable(paramName, ((CInstanceMember<P6>)_p6).GetValue(self));
         }
     }
 
     public class CAgentStaticMethod<T, P1, P2, P3, P4, P5, P6, P7> : CAgentMethodBase<T>
     {
-        public delegate T FunctionPointer(P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6, P7 p7);
+        public delegate Task<T> FunctionPointer(P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6, P7 p7);
 
         FunctionPointer _fp;
         IInstanceMember _p1;
@@ -2964,13 +2983,13 @@ namespace behaviac
         IInstanceMember _p6;
         IInstanceMember _p7;
 
-        public CAgentStaticMethod(FunctionPointer f)
+        public CAgentStaticMethod(FunctionPointer f, Workspace workspace) : base(workspace)
         {
             _fp = f;
         }
 
-        public CAgentStaticMethod(CAgentStaticMethod<T, P1, P2, P3, P4, P5, P6, P7> rhs)
-        : base(rhs)
+        public CAgentStaticMethod(CAgentStaticMethod<T, P1, P2, P3, P4, P5, P6, P7> rhs, Workspace workspace)
+        : base(rhs, workspace)
         {
             _fp = rhs._fp;
             _p1 = rhs._p1;
@@ -2984,71 +3003,71 @@ namespace behaviac
 
         public override IMethod Clone()
         {
-            return new CAgentStaticMethod<T, P1, P2, P3, P4, P5, P6, P7>(this);
+            return new CAgentStaticMethod<T, P1, P2, P3, P4, P5, P6, P7>(this, Workspace);
         }
 
         public override void Load(string instance, string[] paramStrs)
         {
-            Debug.Check(paramStrs.Length == 7);
+            Debugs.Check(paramStrs.Length == 7);
 
             _instance = instance;
-            _p1 = AgentMeta.ParseProperty<P1>(paramStrs[0]);
-            _p2 = AgentMeta.ParseProperty<P2>(paramStrs[1]);
-            _p3 = AgentMeta.ParseProperty<P3>(paramStrs[2]);
-            _p4 = AgentMeta.ParseProperty<P4>(paramStrs[3]);
-            _p5 = AgentMeta.ParseProperty<P5>(paramStrs[4]);
-            _p6 = AgentMeta.ParseProperty<P6>(paramStrs[5]);
-            _p7 = AgentMeta.ParseProperty<P7>(paramStrs[6]);
+            _p1 = AgentMeta.ParseProperty<P1>(paramStrs[0], Workspace);
+            _p2 = AgentMeta.ParseProperty<P2>(paramStrs[1], Workspace);
+            _p3 = AgentMeta.ParseProperty<P3>(paramStrs[2], Workspace);
+            _p4 = AgentMeta.ParseProperty<P4>(paramStrs[3], Workspace);
+            _p5 = AgentMeta.ParseProperty<P5>(paramStrs[4], Workspace);
+            _p6 = AgentMeta.ParseProperty<P6>(paramStrs[5], Workspace);
+            _p7 = AgentMeta.ParseProperty<P7>(paramStrs[6], Workspace);
         }
 
-        public override void Run(Agent self)
+        public override async Task Run(Agent self)
         {
-            Debug.Check(_p1 != null);
-            Debug.Check(_p2 != null);
-            Debug.Check(_p3 != null);
-            Debug.Check(_p4 != null);
-            Debug.Check(_p5 != null);
-            Debug.Check(_p6 != null);
-            Debug.Check(_p7 != null);
+            Debugs.Check(_p1 != null);
+            Debugs.Check(_p2 != null);
+            Debugs.Check(_p3 != null);
+            Debugs.Check(_p4 != null);
+            Debugs.Check(_p5 != null);
+            Debugs.Check(_p6 != null);
+            Debugs.Check(_p7 != null);
 
-            _returnValue.value = _fp(
-                                     ((CInstanceMember<P1>)_p1).GetValue(self),
-                                     ((CInstanceMember<P2>)_p2).GetValue(self),
-                                     ((CInstanceMember<P3>)_p3).GetValue(self),
-                                     ((CInstanceMember<P4>)_p4).GetValue(self),
-                                     ((CInstanceMember<P5>)_p5).GetValue(self),
-                                     ((CInstanceMember<P6>)_p6).GetValue(self),
-                                     ((CInstanceMember<P7>)_p7).GetValue(self));
+            _returnValue.value = await _fp(
+                                    await ((CInstanceMember<P1>)_p1).GetValue(self),
+                                    await ((CInstanceMember<P2>)_p2).GetValue(self),
+                                    await ((CInstanceMember<P3>)_p3).GetValue(self),
+                                    await ((CInstanceMember<P4>)_p4).GetValue(self),
+                                    await ((CInstanceMember<P5>)_p5).GetValue(self),
+                                    await ((CInstanceMember<P6>)_p6).GetValue(self),
+                                    await ((CInstanceMember<P7>)_p7).GetValue(self));
         }
 
         public override void SetTaskParams(Agent self, BehaviorTreeTask treeTask)
         {
-            string paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 0);
+            string paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 0);
             treeTask.SetVariable(paramName, ((CInstanceMember<P1>)_p1).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 1);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 1);
             treeTask.SetVariable(paramName, ((CInstanceMember<P2>)_p2).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 2);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 2);
             treeTask.SetVariable(paramName, ((CInstanceMember<P3>)_p3).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 3);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 3);
             treeTask.SetVariable(paramName, ((CInstanceMember<P4>)_p4).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 4);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 4);
             treeTask.SetVariable(paramName, ((CInstanceMember<P5>)_p5).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 5);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 5);
             treeTask.SetVariable(paramName, ((CInstanceMember<P6>)_p6).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 6);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 6);
             treeTask.SetVariable(paramName, ((CInstanceMember<P7>)_p7).GetValue(self));
         }
     }
 
     public class CAgentStaticMethod<T, P1, P2, P3, P4, P5, P6, P7, P8> : CAgentMethodBase<T>
     {
-        public delegate T FunctionPointer(P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6, P7 p7, P8 p8);
+        public delegate Task<T> FunctionPointer(P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6, P7 p7, P8 p8);
 
         FunctionPointer _fp;
         IInstanceMember _p1;
@@ -3060,13 +3079,13 @@ namespace behaviac
         IInstanceMember _p7;
         IInstanceMember _p8;
 
-        public CAgentStaticMethod(FunctionPointer f)
+        public CAgentStaticMethod(FunctionPointer f, Workspace workspace) : base(workspace)
         {
             _fp = f;
         }
 
-        public CAgentStaticMethod(CAgentStaticMethod<T, P1, P2, P3, P4, P5, P6, P7, P8> rhs)
-        : base(rhs)
+        public CAgentStaticMethod(CAgentStaticMethod<T, P1, P2, P3, P4, P5, P6, P7, P8> rhs, Workspace workspace)
+        : base(rhs, workspace)
         {
             _fp = rhs._fp;
             _p1 = rhs._p1;
@@ -3081,77 +3100,77 @@ namespace behaviac
 
         public override IMethod Clone()
         {
-            return new CAgentStaticMethod<T, P1, P2, P3, P4, P5, P6, P7, P8>(this);
+            return new CAgentStaticMethod<T, P1, P2, P3, P4, P5, P6, P7, P8>(this, Workspace);
         }
 
         public override void Load(string instance, string[] paramStrs)
         {
-            Debug.Check(paramStrs.Length == 8);
+            Debugs.Check(paramStrs.Length == 8);
 
             _instance = instance;
-            _p1 = AgentMeta.ParseProperty<P1>(paramStrs[0]);
-            _p2 = AgentMeta.ParseProperty<P2>(paramStrs[1]);
-            _p3 = AgentMeta.ParseProperty<P3>(paramStrs[2]);
-            _p4 = AgentMeta.ParseProperty<P4>(paramStrs[3]);
-            _p5 = AgentMeta.ParseProperty<P5>(paramStrs[4]);
-            _p6 = AgentMeta.ParseProperty<P6>(paramStrs[5]);
-            _p7 = AgentMeta.ParseProperty<P7>(paramStrs[6]);
-            _p8 = AgentMeta.ParseProperty<P8>(paramStrs[7]);
+            _p1 = AgentMeta.ParseProperty<P1>(paramStrs[0], Workspace);
+            _p2 = AgentMeta.ParseProperty<P2>(paramStrs[1], Workspace);
+            _p3 = AgentMeta.ParseProperty<P3>(paramStrs[2], Workspace);
+            _p4 = AgentMeta.ParseProperty<P4>(paramStrs[3], Workspace);
+            _p5 = AgentMeta.ParseProperty<P5>(paramStrs[4], Workspace);
+            _p6 = AgentMeta.ParseProperty<P6>(paramStrs[5], Workspace);
+            _p7 = AgentMeta.ParseProperty<P7>(paramStrs[6], Workspace);
+            _p8 = AgentMeta.ParseProperty<P8>(paramStrs[7], Workspace);
         }
 
-        public override void Run(Agent self)
+        public override async Task Run(Agent self)
         {
-            Debug.Check(_p1 != null);
-            Debug.Check(_p2 != null);
-            Debug.Check(_p3 != null);
-            Debug.Check(_p4 != null);
-            Debug.Check(_p5 != null);
-            Debug.Check(_p6 != null);
-            Debug.Check(_p7 != null);
-            Debug.Check(_p8 != null);
+            Debugs.Check(_p1 != null);
+            Debugs.Check(_p2 != null);
+            Debugs.Check(_p3 != null);
+            Debugs.Check(_p4 != null);
+            Debugs.Check(_p5 != null);
+            Debugs.Check(_p6 != null);
+            Debugs.Check(_p7 != null);
+            Debugs.Check(_p8 != null);
 
-            _returnValue.value = _fp(
-                                     ((CInstanceMember<P1>)_p1).GetValue(self),
-                                     ((CInstanceMember<P2>)_p2).GetValue(self),
-                                     ((CInstanceMember<P3>)_p3).GetValue(self),
-                                     ((CInstanceMember<P4>)_p4).GetValue(self),
-                                     ((CInstanceMember<P5>)_p5).GetValue(self),
-                                     ((CInstanceMember<P6>)_p6).GetValue(self),
-                                     ((CInstanceMember<P7>)_p7).GetValue(self),
-                                     ((CInstanceMember<P8>)_p8).GetValue(self));
+            _returnValue.value = await _fp(
+                                   await ((CInstanceMember<P1>)_p1).GetValue(self),
+                                   await ((CInstanceMember<P2>)_p2).GetValue(self),
+                                   await ((CInstanceMember<P3>)_p3).GetValue(self),
+                                   await ((CInstanceMember<P4>)_p4).GetValue(self),
+                                   await ((CInstanceMember<P5>)_p5).GetValue(self),
+                                   await ((CInstanceMember<P6>)_p6).GetValue(self),
+                                   await ((CInstanceMember<P7>)_p7).GetValue(self),
+                                   await ((CInstanceMember<P8>)_p8).GetValue(self));
         }
 
         public override void SetTaskParams(Agent self, BehaviorTreeTask treeTask)
         {
-            string paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 0);
+            string paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 0);
             treeTask.SetVariable(paramName, ((CInstanceMember<P1>)_p1).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 1);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 1);
             treeTask.SetVariable(paramName, ((CInstanceMember<P2>)_p2).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 2);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 2);
             treeTask.SetVariable(paramName, ((CInstanceMember<P3>)_p3).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 3);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 3);
             treeTask.SetVariable(paramName, ((CInstanceMember<P4>)_p4).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 4);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 4);
             treeTask.SetVariable(paramName, ((CInstanceMember<P5>)_p5).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 5);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 5);
             treeTask.SetVariable(paramName, ((CInstanceMember<P6>)_p6).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 6);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 6);
             treeTask.SetVariable(paramName, ((CInstanceMember<P7>)_p7).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 7);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 7);
             treeTask.SetVariable(paramName, ((CInstanceMember<P8>)_p8).GetValue(self));
         }
     }
 
     public class CAgentStaticMethod<T, P1, P2, P3, P4, P5, P6, P7, P8, P9> : CAgentMethodBase<T>
     {
-        public delegate T FunctionPointer(P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6, P7 p7, P8 p8, P9 p9);
+        public delegate Task<T> FunctionPointer(P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6, P7 p7, P8 p8, P9 p9);
 
         FunctionPointer _fp;
         IInstanceMember _p1;
@@ -3164,13 +3183,13 @@ namespace behaviac
         IInstanceMember _p8;
         IInstanceMember _p9;
 
-        public CAgentStaticMethod(FunctionPointer f)
+        public CAgentStaticMethod(FunctionPointer f, Workspace workspace) : base(workspace)
         {
             _fp = f;
         }
 
-        public CAgentStaticMethod(CAgentStaticMethod<T, P1, P2, P3, P4, P5, P6, P7, P8, P9> rhs)
-        : base(rhs)
+        public CAgentStaticMethod(CAgentStaticMethod<T, P1, P2, P3, P4, P5, P6, P7, P8, P9> rhs, Workspace workspace)
+        : base(rhs, workspace)
         {
             _fp = rhs._fp;
             _p1 = rhs._p1;
@@ -3186,83 +3205,83 @@ namespace behaviac
 
         public override IMethod Clone()
         {
-            return new CAgentStaticMethod<T, P1, P2, P3, P4, P5, P6, P7, P8, P9>(this);
+            return new CAgentStaticMethod<T, P1, P2, P3, P4, P5, P6, P7, P8, P9>(this, Workspace);
         }
 
         public override void Load(string instance, string[] paramStrs)
         {
-            Debug.Check(paramStrs.Length == 9);
+            Debugs.Check(paramStrs.Length == 9);
 
             _instance = instance;
-            _p1 = AgentMeta.ParseProperty<P1>(paramStrs[0]);
-            _p2 = AgentMeta.ParseProperty<P2>(paramStrs[1]);
-            _p3 = AgentMeta.ParseProperty<P3>(paramStrs[2]);
-            _p4 = AgentMeta.ParseProperty<P4>(paramStrs[3]);
-            _p5 = AgentMeta.ParseProperty<P5>(paramStrs[4]);
-            _p6 = AgentMeta.ParseProperty<P6>(paramStrs[5]);
-            _p7 = AgentMeta.ParseProperty<P7>(paramStrs[6]);
-            _p8 = AgentMeta.ParseProperty<P8>(paramStrs[7]);
-            _p9 = AgentMeta.ParseProperty<P9>(paramStrs[8]);
+            _p1 = AgentMeta.ParseProperty<P1>(paramStrs[0], Workspace);
+            _p2 = AgentMeta.ParseProperty<P2>(paramStrs[1], Workspace);
+            _p3 = AgentMeta.ParseProperty<P3>(paramStrs[2], Workspace);
+            _p4 = AgentMeta.ParseProperty<P4>(paramStrs[3], Workspace);
+            _p5 = AgentMeta.ParseProperty<P5>(paramStrs[4], Workspace);
+            _p6 = AgentMeta.ParseProperty<P6>(paramStrs[5], Workspace);
+            _p7 = AgentMeta.ParseProperty<P7>(paramStrs[6], Workspace);
+            _p8 = AgentMeta.ParseProperty<P8>(paramStrs[7], Workspace);
+            _p9 = AgentMeta.ParseProperty<P9>(paramStrs[8], Workspace);
         }
 
-        public override void Run(Agent self)
+        public override async Task Run(Agent self)
         {
-            Debug.Check(_p1 != null);
-            Debug.Check(_p2 != null);
-            Debug.Check(_p3 != null);
-            Debug.Check(_p4 != null);
-            Debug.Check(_p5 != null);
-            Debug.Check(_p6 != null);
-            Debug.Check(_p7 != null);
-            Debug.Check(_p8 != null);
-            Debug.Check(_p9 != null);
+            Debugs.Check(_p1 != null);
+            Debugs.Check(_p2 != null);
+            Debugs.Check(_p3 != null);
+            Debugs.Check(_p4 != null);
+            Debugs.Check(_p5 != null);
+            Debugs.Check(_p6 != null);
+            Debugs.Check(_p7 != null);
+            Debugs.Check(_p8 != null);
+            Debugs.Check(_p9 != null);
 
-            _returnValue.value = _fp(
-                                     ((CInstanceMember<P1>)_p1).GetValue(self),
-                                     ((CInstanceMember<P2>)_p2).GetValue(self),
-                                     ((CInstanceMember<P3>)_p3).GetValue(self),
-                                     ((CInstanceMember<P4>)_p4).GetValue(self),
-                                     ((CInstanceMember<P5>)_p5).GetValue(self),
-                                     ((CInstanceMember<P6>)_p6).GetValue(self),
-                                     ((CInstanceMember<P7>)_p7).GetValue(self),
-                                     ((CInstanceMember<P8>)_p8).GetValue(self),
-                                     ((CInstanceMember<P9>)_p9).GetValue(self));
+            _returnValue.value = await _fp(
+                                   await ((CInstanceMember<P1>)_p1).GetValue(self),
+                                   await ((CInstanceMember<P2>)_p2).GetValue(self),
+                                   await ((CInstanceMember<P3>)_p3).GetValue(self),
+                                   await ((CInstanceMember<P4>)_p4).GetValue(self),
+                                   await ((CInstanceMember<P5>)_p5).GetValue(self),
+                                   await ((CInstanceMember<P6>)_p6).GetValue(self),
+                                   await ((CInstanceMember<P7>)_p7).GetValue(self),
+                                   await ((CInstanceMember<P8>)_p8).GetValue(self),
+                                   await ((CInstanceMember<P9>)_p9).GetValue(self));
         }
 
         public override void SetTaskParams(Agent self, BehaviorTreeTask treeTask)
         {
-            string paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 0);
+            string paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 0);
             treeTask.SetVariable(paramName, ((CInstanceMember<P1>)_p1).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 1);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 1);
             treeTask.SetVariable(paramName, ((CInstanceMember<P2>)_p2).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 2);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 2);
             treeTask.SetVariable(paramName, ((CInstanceMember<P3>)_p3).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 3);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 3);
             treeTask.SetVariable(paramName, ((CInstanceMember<P4>)_p4).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 4);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 4);
             treeTask.SetVariable(paramName, ((CInstanceMember<P5>)_p5).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 5);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 5);
             treeTask.SetVariable(paramName, ((CInstanceMember<P6>)_p6).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 6);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 6);
             treeTask.SetVariable(paramName, ((CInstanceMember<P7>)_p7).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 7);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 7);
             treeTask.SetVariable(paramName, ((CInstanceMember<P8>)_p8).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 8);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 8);
             treeTask.SetVariable(paramName, ((CInstanceMember<P9>)_p9).GetValue(self));
         }
     }
 
     public class CAgentStaticMethod<T, P1, P2, P3, P4, P5, P6, P7, P8, P9, P10> : CAgentMethodBase<T>
     {
-        public delegate T FunctionPointer(P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6, P7 p7, P8 p8, P9 p9, P10 p10);
+        public delegate Task<T> FunctionPointer(P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6, P7 p7, P8 p8, P9 p9, P10 p10);
 
         FunctionPointer _fp;
         IInstanceMember _p1;
@@ -3276,13 +3295,13 @@ namespace behaviac
         IInstanceMember _p9;
         IInstanceMember _p10;
 
-        public CAgentStaticMethod(FunctionPointer f)
+        public CAgentStaticMethod(FunctionPointer f, Workspace workspace) : base(workspace)
         {
             _fp = f;
         }
 
-        public CAgentStaticMethod(CAgentStaticMethod<T, P1, P2, P3, P4, P5, P6, P7, P8, P9, P10> rhs)
-        : base(rhs)
+        public CAgentStaticMethod(CAgentStaticMethod<T, P1, P2, P3, P4, P5, P6, P7, P8, P9, P10> rhs, Workspace workspace)
+        : base(rhs, workspace)
         {
             _fp = rhs._fp;
             _p1 = rhs._p1;
@@ -3299,89 +3318,89 @@ namespace behaviac
 
         public override IMethod Clone()
         {
-            return new CAgentStaticMethod<T, P1, P2, P3, P4, P5, P6, P7, P8, P9, P10>(this);
+            return new CAgentStaticMethod<T, P1, P2, P3, P4, P5, P6, P7, P8, P9, P10>(this, Workspace);
         }
 
         public override void Load(string instance, string[] paramStrs)
         {
-            Debug.Check(paramStrs.Length == 10);
+            Debugs.Check(paramStrs.Length == 10);
 
             _instance = instance;
-            _p1 = AgentMeta.ParseProperty<P1>(paramStrs[0]);
-            _p2 = AgentMeta.ParseProperty<P2>(paramStrs[1]);
-            _p3 = AgentMeta.ParseProperty<P3>(paramStrs[2]);
-            _p4 = AgentMeta.ParseProperty<P4>(paramStrs[3]);
-            _p5 = AgentMeta.ParseProperty<P5>(paramStrs[4]);
-            _p6 = AgentMeta.ParseProperty<P6>(paramStrs[5]);
-            _p7 = AgentMeta.ParseProperty<P7>(paramStrs[6]);
-            _p8 = AgentMeta.ParseProperty<P8>(paramStrs[7]);
-            _p9 = AgentMeta.ParseProperty<P9>(paramStrs[8]);
-            _p10 = AgentMeta.ParseProperty<P10>(paramStrs[9]);
+            _p1 = AgentMeta.ParseProperty<P1>(paramStrs[0], Workspace);
+            _p2 = AgentMeta.ParseProperty<P2>(paramStrs[1], Workspace);
+            _p3 = AgentMeta.ParseProperty<P3>(paramStrs[2], Workspace);
+            _p4 = AgentMeta.ParseProperty<P4>(paramStrs[3], Workspace);
+            _p5 = AgentMeta.ParseProperty<P5>(paramStrs[4], Workspace);
+            _p6 = AgentMeta.ParseProperty<P6>(paramStrs[5], Workspace);
+            _p7 = AgentMeta.ParseProperty<P7>(paramStrs[6], Workspace);
+            _p8 = AgentMeta.ParseProperty<P8>(paramStrs[7], Workspace);
+            _p9 = AgentMeta.ParseProperty<P9>(paramStrs[8], Workspace);
+            _p10 = AgentMeta.ParseProperty<P10>(paramStrs[9], Workspace);
         }
 
-        public override void Run(Agent self)
+        public override async Task Run(Agent self)
         {
-            Debug.Check(_p1 != null);
-            Debug.Check(_p2 != null);
-            Debug.Check(_p3 != null);
-            Debug.Check(_p4 != null);
-            Debug.Check(_p5 != null);
-            Debug.Check(_p6 != null);
-            Debug.Check(_p7 != null);
-            Debug.Check(_p8 != null);
-            Debug.Check(_p9 != null);
-            Debug.Check(_p10 != null);
+            Debugs.Check(_p1 != null);
+            Debugs.Check(_p2 != null);
+            Debugs.Check(_p3 != null);
+            Debugs.Check(_p4 != null);
+            Debugs.Check(_p5 != null);
+            Debugs.Check(_p6 != null);
+            Debugs.Check(_p7 != null);
+            Debugs.Check(_p8 != null);
+            Debugs.Check(_p9 != null);
+            Debugs.Check(_p10 != null);
 
-            _returnValue.value = _fp(
-                                     ((CInstanceMember<P1>)_p1).GetValue(self),
-                                     ((CInstanceMember<P2>)_p2).GetValue(self),
-                                     ((CInstanceMember<P3>)_p3).GetValue(self),
-                                     ((CInstanceMember<P4>)_p4).GetValue(self),
-                                     ((CInstanceMember<P5>)_p5).GetValue(self),
-                                     ((CInstanceMember<P6>)_p6).GetValue(self),
-                                     ((CInstanceMember<P7>)_p7).GetValue(self),
-                                     ((CInstanceMember<P8>)_p8).GetValue(self),
-                                     ((CInstanceMember<P9>)_p9).GetValue(self),
-                                     ((CInstanceMember<P10>)_p10).GetValue(self));
+            _returnValue.value = await _fp(
+                                  await ((CInstanceMember<P1>)_p1).GetValue(self),
+                                  await ((CInstanceMember<P2>)_p2).GetValue(self),
+                                  await ((CInstanceMember<P3>)_p3).GetValue(self),
+                                  await ((CInstanceMember<P4>)_p4).GetValue(self),
+                                  await ((CInstanceMember<P5>)_p5).GetValue(self),
+                                  await ((CInstanceMember<P6>)_p6).GetValue(self),
+                                  await ((CInstanceMember<P7>)_p7).GetValue(self),
+                                  await ((CInstanceMember<P8>)_p8).GetValue(self),
+                                  await ((CInstanceMember<P9>)_p9).GetValue(self),
+                                  await ((CInstanceMember<P10>)_p10).GetValue(self));
         }
 
         public override void SetTaskParams(Agent self, BehaviorTreeTask treeTask)
         {
-            string paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 0);
+            string paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 0);
             treeTask.SetVariable(paramName, ((CInstanceMember<P1>)_p1).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 1);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 1);
             treeTask.SetVariable(paramName, ((CInstanceMember<P2>)_p2).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 2);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 2);
             treeTask.SetVariable(paramName, ((CInstanceMember<P3>)_p3).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 3);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 3);
             treeTask.SetVariable(paramName, ((CInstanceMember<P4>)_p4).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 4);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 4);
             treeTask.SetVariable(paramName, ((CInstanceMember<P5>)_p5).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 5);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 5);
             treeTask.SetVariable(paramName, ((CInstanceMember<P6>)_p6).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 6);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 6);
             treeTask.SetVariable(paramName, ((CInstanceMember<P7>)_p7).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 7);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 7);
             treeTask.SetVariable(paramName, ((CInstanceMember<P8>)_p8).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 8);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 8);
             treeTask.SetVariable(paramName, ((CInstanceMember<P9>)_p9).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 9);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 9);
             treeTask.SetVariable(paramName, ((CInstanceMember<P10>)_p10).GetValue(self));
         }
     }
 
     public class CAgentStaticMethod<T, P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11> : CAgentMethodBase<T>
     {
-        public delegate T FunctionPointer(P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6, P7 p7, P8 p8, P9 p9, P10 p10, P11 p11);
+        public delegate Task<T> FunctionPointer(P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6, P7 p7, P8 p8, P9 p9, P10 p10, P11 p11);
 
         FunctionPointer _fp;
         IInstanceMember _p1;
@@ -3396,13 +3415,13 @@ namespace behaviac
         IInstanceMember _p10;
         IInstanceMember _p11;
 
-        public CAgentStaticMethod(FunctionPointer f)
+        public CAgentStaticMethod(FunctionPointer f, Workspace workspace) : base(workspace)
         {
             _fp = f;
         }
 
-        public CAgentStaticMethod(CAgentStaticMethod<T, P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11> rhs)
-        : base(rhs)
+        public CAgentStaticMethod(CAgentStaticMethod<T, P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11> rhs, Workspace workspace)
+        : base(rhs, workspace)
         {
             _fp = rhs._fp;
             _p1 = rhs._p1;
@@ -3420,95 +3439,95 @@ namespace behaviac
 
         public override IMethod Clone()
         {
-            return new CAgentStaticMethod<T, P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11>(this);
+            return new CAgentStaticMethod<T, P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11>(this, Workspace);
         }
 
         public override void Load(string instance, string[] paramStrs)
         {
-            Debug.Check(paramStrs.Length == 11);
+            Debugs.Check(paramStrs.Length == 11);
 
             _instance = instance;
-            _p1 = AgentMeta.ParseProperty<P1>(paramStrs[0]);
-            _p2 = AgentMeta.ParseProperty<P2>(paramStrs[1]);
-            _p3 = AgentMeta.ParseProperty<P3>(paramStrs[2]);
-            _p4 = AgentMeta.ParseProperty<P4>(paramStrs[3]);
-            _p5 = AgentMeta.ParseProperty<P5>(paramStrs[4]);
-            _p6 = AgentMeta.ParseProperty<P6>(paramStrs[5]);
-            _p7 = AgentMeta.ParseProperty<P7>(paramStrs[6]);
-            _p8 = AgentMeta.ParseProperty<P8>(paramStrs[7]);
-            _p9 = AgentMeta.ParseProperty<P9>(paramStrs[8]);
-            _p10 = AgentMeta.ParseProperty<P10>(paramStrs[9]);
-            _p11 = AgentMeta.ParseProperty<P11>(paramStrs[10]);
+            _p1 = AgentMeta.ParseProperty<P1>(paramStrs[0], Workspace);
+            _p2 = AgentMeta.ParseProperty<P2>(paramStrs[1], Workspace);
+            _p3 = AgentMeta.ParseProperty<P3>(paramStrs[2], Workspace);
+            _p4 = AgentMeta.ParseProperty<P4>(paramStrs[3], Workspace);
+            _p5 = AgentMeta.ParseProperty<P5>(paramStrs[4], Workspace);
+            _p6 = AgentMeta.ParseProperty<P6>(paramStrs[5], Workspace);
+            _p7 = AgentMeta.ParseProperty<P7>(paramStrs[6], Workspace);
+            _p8 = AgentMeta.ParseProperty<P8>(paramStrs[7], Workspace);
+            _p9 = AgentMeta.ParseProperty<P9>(paramStrs[8], Workspace);
+            _p10 = AgentMeta.ParseProperty<P10>(paramStrs[9], Workspace);
+            _p11 = AgentMeta.ParseProperty<P11>(paramStrs[10], Workspace);
         }
 
-        public override void Run(Agent self)
+        public override async Task Run(Agent self)
         {
-            Debug.Check(_p1 != null);
-            Debug.Check(_p2 != null);
-            Debug.Check(_p3 != null);
-            Debug.Check(_p4 != null);
-            Debug.Check(_p5 != null);
-            Debug.Check(_p6 != null);
-            Debug.Check(_p7 != null);
-            Debug.Check(_p8 != null);
-            Debug.Check(_p9 != null);
-            Debug.Check(_p10 != null);
-            Debug.Check(_p11 != null);
+            Debugs.Check(_p1 != null);
+            Debugs.Check(_p2 != null);
+            Debugs.Check(_p3 != null);
+            Debugs.Check(_p4 != null);
+            Debugs.Check(_p5 != null);
+            Debugs.Check(_p6 != null);
+            Debugs.Check(_p7 != null);
+            Debugs.Check(_p8 != null);
+            Debugs.Check(_p9 != null);
+            Debugs.Check(_p10 != null);
+            Debugs.Check(_p11 != null);
 
-            _returnValue.value = _fp(
-                                     ((CInstanceMember<P1>)_p1).GetValue(self),
-                                     ((CInstanceMember<P2>)_p2).GetValue(self),
-                                     ((CInstanceMember<P3>)_p3).GetValue(self),
-                                     ((CInstanceMember<P4>)_p4).GetValue(self),
-                                     ((CInstanceMember<P5>)_p5).GetValue(self),
-                                     ((CInstanceMember<P6>)_p6).GetValue(self),
-                                     ((CInstanceMember<P7>)_p7).GetValue(self),
-                                     ((CInstanceMember<P8>)_p8).GetValue(self),
-                                     ((CInstanceMember<P9>)_p9).GetValue(self),
-                                     ((CInstanceMember<P10>)_p10).GetValue(self),
-                                     ((CInstanceMember<P11>)_p11).GetValue(self));
+            _returnValue.value = await _fp(
+                                await ((CInstanceMember<P1>)_p1).GetValue(self),
+                                await ((CInstanceMember<P2>)_p2).GetValue(self),
+                                await ((CInstanceMember<P3>)_p3).GetValue(self),
+                                await ((CInstanceMember<P4>)_p4).GetValue(self),
+                                await ((CInstanceMember<P5>)_p5).GetValue(self),
+                                await ((CInstanceMember<P6>)_p6).GetValue(self),
+                                await ((CInstanceMember<P7>)_p7).GetValue(self),
+                                await ((CInstanceMember<P8>)_p8).GetValue(self),
+                                await ((CInstanceMember<P9>)_p9).GetValue(self),
+                                await ((CInstanceMember<P10>)_p10).GetValue(self),
+                                await ((CInstanceMember<P11>)_p11).GetValue(self));
         }
 
         public override void SetTaskParams(Agent self, BehaviorTreeTask treeTask)
         {
-            string paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 0);
+            string paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 0);
             treeTask.SetVariable(paramName, ((CInstanceMember<P1>)_p1).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 1);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 1);
             treeTask.SetVariable(paramName, ((CInstanceMember<P2>)_p2).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 2);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 2);
             treeTask.SetVariable(paramName, ((CInstanceMember<P3>)_p3).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 3);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 3);
             treeTask.SetVariable(paramName, ((CInstanceMember<P4>)_p4).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 4);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 4);
             treeTask.SetVariable(paramName, ((CInstanceMember<P5>)_p5).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 5);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 5);
             treeTask.SetVariable(paramName, ((CInstanceMember<P6>)_p6).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 6);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 6);
             treeTask.SetVariable(paramName, ((CInstanceMember<P7>)_p7).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 7);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 7);
             treeTask.SetVariable(paramName, ((CInstanceMember<P8>)_p8).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 8);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 8);
             treeTask.SetVariable(paramName, ((CInstanceMember<P9>)_p9).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 9);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 9);
             treeTask.SetVariable(paramName, ((CInstanceMember<P10>)_p10).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 10);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 10);
             treeTask.SetVariable(paramName, ((CInstanceMember<P11>)_p11).GetValue(self));
         }
     }
 
     public class CAgentStaticMethod<T, P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12> : CAgentMethodBase<T>
     {
-        public delegate T FunctionPointer(P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6, P7 p7, P8 p8, P9 p9, P10 p10, P11 p11, P12 p12);
+        public delegate Task<T> FunctionPointer(P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6, P7 p7, P8 p8, P9 p9, P10 p10, P11 p11, P12 p12);
 
         FunctionPointer _fp;
         IInstanceMember _p1;
@@ -3524,13 +3543,13 @@ namespace behaviac
         IInstanceMember _p11;
         IInstanceMember _p12;
 
-        public CAgentStaticMethod(FunctionPointer f)
+        public CAgentStaticMethod(FunctionPointer f, Workspace workspace) : base(workspace)
         {
             _fp = f;
         }
 
-        public CAgentStaticMethod(CAgentStaticMethod<T, P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12> rhs)
-        : base(rhs)
+        public CAgentStaticMethod(CAgentStaticMethod<T, P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12> rhs, Workspace workspace)
+        : base(rhs, workspace)
         {
             _fp = rhs._fp;
             _p1 = rhs._p1;
@@ -3549,101 +3568,101 @@ namespace behaviac
 
         public override IMethod Clone()
         {
-            return new CAgentStaticMethod<T, P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12>(this);
+            return new CAgentStaticMethod<T, P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12>(this, Workspace);
         }
 
         public override void Load(string instance, string[] paramStrs)
         {
-            Debug.Check(paramStrs.Length == 12);
+            Debugs.Check(paramStrs.Length == 12);
 
             _instance = instance;
-            _p1 = AgentMeta.ParseProperty<P1>(paramStrs[0]);
-            _p2 = AgentMeta.ParseProperty<P2>(paramStrs[1]);
-            _p3 = AgentMeta.ParseProperty<P3>(paramStrs[2]);
-            _p4 = AgentMeta.ParseProperty<P4>(paramStrs[3]);
-            _p5 = AgentMeta.ParseProperty<P5>(paramStrs[4]);
-            _p6 = AgentMeta.ParseProperty<P6>(paramStrs[5]);
-            _p7 = AgentMeta.ParseProperty<P7>(paramStrs[6]);
-            _p8 = AgentMeta.ParseProperty<P8>(paramStrs[7]);
-            _p9 = AgentMeta.ParseProperty<P9>(paramStrs[8]);
-            _p10 = AgentMeta.ParseProperty<P10>(paramStrs[9]);
-            _p11 = AgentMeta.ParseProperty<P11>(paramStrs[10]);
-            _p12 = AgentMeta.ParseProperty<P12>(paramStrs[11]);
+            _p1 = AgentMeta.ParseProperty<P1>(paramStrs[0], Workspace);
+            _p2 = AgentMeta.ParseProperty<P2>(paramStrs[1], Workspace);
+            _p3 = AgentMeta.ParseProperty<P3>(paramStrs[2], Workspace);
+            _p4 = AgentMeta.ParseProperty<P4>(paramStrs[3], Workspace);
+            _p5 = AgentMeta.ParseProperty<P5>(paramStrs[4], Workspace);
+            _p6 = AgentMeta.ParseProperty<P6>(paramStrs[5], Workspace);
+            _p7 = AgentMeta.ParseProperty<P7>(paramStrs[6], Workspace);
+            _p8 = AgentMeta.ParseProperty<P8>(paramStrs[7], Workspace);
+            _p9 = AgentMeta.ParseProperty<P9>(paramStrs[8], Workspace);
+            _p10 = AgentMeta.ParseProperty<P10>(paramStrs[9], Workspace);
+            _p11 = AgentMeta.ParseProperty<P11>(paramStrs[10], Workspace);
+            _p12 = AgentMeta.ParseProperty<P12>(paramStrs[11], Workspace);
         }
 
-        public override void Run(Agent self)
+        public override async Task Run(Agent self)
         {
-            Debug.Check(_p1 != null);
-            Debug.Check(_p2 != null);
-            Debug.Check(_p3 != null);
-            Debug.Check(_p4 != null);
-            Debug.Check(_p5 != null);
-            Debug.Check(_p6 != null);
-            Debug.Check(_p7 != null);
-            Debug.Check(_p8 != null);
-            Debug.Check(_p9 != null);
-            Debug.Check(_p10 != null);
-            Debug.Check(_p11 != null);
-            Debug.Check(_p12 != null);
+            Debugs.Check(_p1 != null);
+            Debugs.Check(_p2 != null);
+            Debugs.Check(_p3 != null);
+            Debugs.Check(_p4 != null);
+            Debugs.Check(_p5 != null);
+            Debugs.Check(_p6 != null);
+            Debugs.Check(_p7 != null);
+            Debugs.Check(_p8 != null);
+            Debugs.Check(_p9 != null);
+            Debugs.Check(_p10 != null);
+            Debugs.Check(_p11 != null);
+            Debugs.Check(_p12 != null);
 
-            _returnValue.value = _fp(
-                                     ((CInstanceMember<P1>)_p1).GetValue(self),
-                                     ((CInstanceMember<P2>)_p2).GetValue(self),
-                                     ((CInstanceMember<P3>)_p3).GetValue(self),
-                                     ((CInstanceMember<P4>)_p4).GetValue(self),
-                                     ((CInstanceMember<P5>)_p5).GetValue(self),
-                                     ((CInstanceMember<P6>)_p6).GetValue(self),
-                                     ((CInstanceMember<P7>)_p7).GetValue(self),
-                                     ((CInstanceMember<P8>)_p8).GetValue(self),
-                                     ((CInstanceMember<P9>)_p9).GetValue(self),
-                                     ((CInstanceMember<P10>)_p10).GetValue(self),
-                                     ((CInstanceMember<P11>)_p11).GetValue(self),
-                                     ((CInstanceMember<P12>)_p12).GetValue(self));
+            _returnValue.value = await _fp(
+                                   await ((CInstanceMember<P1>)_p1).GetValue(self),
+                                   await ((CInstanceMember<P2>)_p2).GetValue(self),
+                                   await ((CInstanceMember<P3>)_p3).GetValue(self),
+                                   await ((CInstanceMember<P4>)_p4).GetValue(self),
+                                   await ((CInstanceMember<P5>)_p5).GetValue(self),
+                                   await ((CInstanceMember<P6>)_p6).GetValue(self),
+                                   await ((CInstanceMember<P7>)_p7).GetValue(self),
+                                   await ((CInstanceMember<P8>)_p8).GetValue(self),
+                                   await ((CInstanceMember<P9>)_p9).GetValue(self),
+                                   await ((CInstanceMember<P10>)_p10).GetValue(self),
+                                   await ((CInstanceMember<P11>)_p11).GetValue(self),
+                                   await ((CInstanceMember<P12>)_p12).GetValue(self));
         }
 
         public override void SetTaskParams(Agent self, BehaviorTreeTask treeTask)
         {
-            string paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 0);
+            string paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 0);
             treeTask.SetVariable(paramName, ((CInstanceMember<P1>)_p1).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 1);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 1);
             treeTask.SetVariable(paramName, ((CInstanceMember<P2>)_p2).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 2);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 2);
             treeTask.SetVariable(paramName, ((CInstanceMember<P3>)_p3).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 3);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 3);
             treeTask.SetVariable(paramName, ((CInstanceMember<P4>)_p4).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 4);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 4);
             treeTask.SetVariable(paramName, ((CInstanceMember<P5>)_p5).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 5);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 5);
             treeTask.SetVariable(paramName, ((CInstanceMember<P6>)_p6).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 6);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 6);
             treeTask.SetVariable(paramName, ((CInstanceMember<P7>)_p7).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 7);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 7);
             treeTask.SetVariable(paramName, ((CInstanceMember<P8>)_p8).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 8);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 8);
             treeTask.SetVariable(paramName, ((CInstanceMember<P9>)_p9).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 9);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 9);
             treeTask.SetVariable(paramName, ((CInstanceMember<P10>)_p10).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 10);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 10);
             treeTask.SetVariable(paramName, ((CInstanceMember<P11>)_p11).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 11);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 11);
             treeTask.SetVariable(paramName, ((CInstanceMember<P12>)_p12).GetValue(self));
         }
     }
 
     public class CAgentStaticMethod<T, P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12, P13> : CAgentMethodBase<T>
     {
-        public delegate T FunctionPointer(P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6, P7 p7, P8 p8, P9 p9, P10 p10, P11 p11, P12 p12, P13 p13);
+        public delegate Task<T> FunctionPointer(P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6, P7 p7, P8 p8, P9 p9, P10 p10, P11 p11, P12 p12, P13 p13);
 
         FunctionPointer _fp;
         IInstanceMember _p1;
@@ -3660,13 +3679,13 @@ namespace behaviac
         IInstanceMember _p12;
         IInstanceMember _p13;
 
-        public CAgentStaticMethod(FunctionPointer f)
+        public CAgentStaticMethod(FunctionPointer f, Workspace workspace) : base(workspace)
         {
             _fp = f;
         }
 
-        public CAgentStaticMethod(CAgentStaticMethod<T, P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12, P13> rhs)
-        : base(rhs)
+        public CAgentStaticMethod(CAgentStaticMethod<T, P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12, P13> rhs, Workspace workspace)
+        : base(rhs, workspace)
         {
             _fp = rhs._fp;
             _p1 = rhs._p1;
@@ -3686,107 +3705,107 @@ namespace behaviac
 
         public override IMethod Clone()
         {
-            return new CAgentStaticMethod<T, P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12, P13>(this);
+            return new CAgentStaticMethod<T, P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12, P13>(this, Workspace);
         }
 
         public override void Load(string instance, string[] paramStrs)
         {
-            Debug.Check(paramStrs.Length == 13);
+            Debugs.Check(paramStrs.Length == 13);
 
             _instance = instance;
-            _p1 = AgentMeta.ParseProperty<P1>(paramStrs[0]);
-            _p2 = AgentMeta.ParseProperty<P2>(paramStrs[1]);
-            _p3 = AgentMeta.ParseProperty<P3>(paramStrs[2]);
-            _p4 = AgentMeta.ParseProperty<P4>(paramStrs[3]);
-            _p5 = AgentMeta.ParseProperty<P5>(paramStrs[4]);
-            _p6 = AgentMeta.ParseProperty<P6>(paramStrs[5]);
-            _p7 = AgentMeta.ParseProperty<P7>(paramStrs[6]);
-            _p8 = AgentMeta.ParseProperty<P8>(paramStrs[7]);
-            _p9 = AgentMeta.ParseProperty<P9>(paramStrs[8]);
-            _p10 = AgentMeta.ParseProperty<P10>(paramStrs[9]);
-            _p11 = AgentMeta.ParseProperty<P11>(paramStrs[10]);
-            _p12 = AgentMeta.ParseProperty<P12>(paramStrs[11]);
-            _p13 = AgentMeta.ParseProperty<P13>(paramStrs[12]);
+            _p1 = AgentMeta.ParseProperty<P1>(paramStrs[0], Workspace);
+            _p2 = AgentMeta.ParseProperty<P2>(paramStrs[1], Workspace);
+            _p3 = AgentMeta.ParseProperty<P3>(paramStrs[2], Workspace);
+            _p4 = AgentMeta.ParseProperty<P4>(paramStrs[3], Workspace);
+            _p5 = AgentMeta.ParseProperty<P5>(paramStrs[4], Workspace);
+            _p6 = AgentMeta.ParseProperty<P6>(paramStrs[5], Workspace);
+            _p7 = AgentMeta.ParseProperty<P7>(paramStrs[6], Workspace);
+            _p8 = AgentMeta.ParseProperty<P8>(paramStrs[7], Workspace);
+            _p9 = AgentMeta.ParseProperty<P9>(paramStrs[8], Workspace);
+            _p10 = AgentMeta.ParseProperty<P10>(paramStrs[9], Workspace);
+            _p11 = AgentMeta.ParseProperty<P11>(paramStrs[10], Workspace);
+            _p12 = AgentMeta.ParseProperty<P12>(paramStrs[11], Workspace);
+            _p13 = AgentMeta.ParseProperty<P13>(paramStrs[12], Workspace);
         }
 
-        public override void Run(Agent self)
+        public override async Task Run(Agent self)
         {
-            Debug.Check(_p1 != null);
-            Debug.Check(_p2 != null);
-            Debug.Check(_p3 != null);
-            Debug.Check(_p4 != null);
-            Debug.Check(_p5 != null);
-            Debug.Check(_p6 != null);
-            Debug.Check(_p7 != null);
-            Debug.Check(_p8 != null);
-            Debug.Check(_p9 != null);
-            Debug.Check(_p10 != null);
-            Debug.Check(_p11 != null);
-            Debug.Check(_p12 != null);
-            Debug.Check(_p13 != null);
+            Debugs.Check(_p1 != null);
+            Debugs.Check(_p2 != null);
+            Debugs.Check(_p3 != null);
+            Debugs.Check(_p4 != null);
+            Debugs.Check(_p5 != null);
+            Debugs.Check(_p6 != null);
+            Debugs.Check(_p7 != null);
+            Debugs.Check(_p8 != null);
+            Debugs.Check(_p9 != null);
+            Debugs.Check(_p10 != null);
+            Debugs.Check(_p11 != null);
+            Debugs.Check(_p12 != null);
+            Debugs.Check(_p13 != null);
 
-            _returnValue.value = _fp(
-                                     ((CInstanceMember<P1>)_p1).GetValue(self),
-                                     ((CInstanceMember<P2>)_p2).GetValue(self),
-                                     ((CInstanceMember<P3>)_p3).GetValue(self),
-                                     ((CInstanceMember<P4>)_p4).GetValue(self),
-                                     ((CInstanceMember<P5>)_p5).GetValue(self),
-                                     ((CInstanceMember<P6>)_p6).GetValue(self),
-                                     ((CInstanceMember<P7>)_p7).GetValue(self),
-                                     ((CInstanceMember<P8>)_p8).GetValue(self),
-                                     ((CInstanceMember<P9>)_p9).GetValue(self),
-                                     ((CInstanceMember<P10>)_p10).GetValue(self),
-                                     ((CInstanceMember<P11>)_p11).GetValue(self),
-                                     ((CInstanceMember<P12>)_p12).GetValue(self),
-                                     ((CInstanceMember<P13>)_p13).GetValue(self));
+            _returnValue.value = await _fp(
+                                await ((CInstanceMember<P1>)_p1).GetValue(self),
+                                await ((CInstanceMember<P2>)_p2).GetValue(self),
+                                await ((CInstanceMember<P3>)_p3).GetValue(self),
+                                await ((CInstanceMember<P4>)_p4).GetValue(self),
+                                await ((CInstanceMember<P5>)_p5).GetValue(self),
+                                await ((CInstanceMember<P6>)_p6).GetValue(self),
+                                await ((CInstanceMember<P7>)_p7).GetValue(self),
+                                await ((CInstanceMember<P8>)_p8).GetValue(self),
+                                await ((CInstanceMember<P9>)_p9).GetValue(self),
+                                await ((CInstanceMember<P10>)_p10).GetValue(self),
+                                await ((CInstanceMember<P11>)_p11).GetValue(self),
+                                await ((CInstanceMember<P12>)_p12).GetValue(self),
+                                await ((CInstanceMember<P13>)_p13).GetValue(self));
         }
 
         public override void SetTaskParams(Agent self, BehaviorTreeTask treeTask)
         {
-            string paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 0);
+            string paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 0);
             treeTask.SetVariable(paramName, ((CInstanceMember<P1>)_p1).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 1);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 1);
             treeTask.SetVariable(paramName, ((CInstanceMember<P2>)_p2).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 2);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 2);
             treeTask.SetVariable(paramName, ((CInstanceMember<P3>)_p3).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 3);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 3);
             treeTask.SetVariable(paramName, ((CInstanceMember<P4>)_p4).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 4);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 4);
             treeTask.SetVariable(paramName, ((CInstanceMember<P5>)_p5).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 5);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 5);
             treeTask.SetVariable(paramName, ((CInstanceMember<P6>)_p6).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 6);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 6);
             treeTask.SetVariable(paramName, ((CInstanceMember<P7>)_p7).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 7);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 7);
             treeTask.SetVariable(paramName, ((CInstanceMember<P8>)_p8).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 8);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 8);
             treeTask.SetVariable(paramName, ((CInstanceMember<P9>)_p9).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 9);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 9);
             treeTask.SetVariable(paramName, ((CInstanceMember<P10>)_p10).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 10);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 10);
             treeTask.SetVariable(paramName, ((CInstanceMember<P11>)_p11).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 11);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 11);
             treeTask.SetVariable(paramName, ((CInstanceMember<P12>)_p12).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 12);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 12);
             treeTask.SetVariable(paramName, ((CInstanceMember<P13>)_p13).GetValue(self));
         }
     }
 
     public class CAgentStaticMethod<T, P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12, P13, P14> : CAgentMethodBase<T>
     {
-        public delegate T FunctionPointer(P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6, P7 p7, P8 p8, P9 p9, P10 p10, P11 p11, P12 p12, P13 p13, P14 p14);
+        public delegate Task<T> FunctionPointer(P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6, P7 p7, P8 p8, P9 p9, P10 p10, P11 p11, P12 p12, P13 p13, P14 p14);
 
         FunctionPointer _fp;
         IInstanceMember _p1;
@@ -3804,13 +3823,13 @@ namespace behaviac
         IInstanceMember _p13;
         IInstanceMember _p14;
 
-        public CAgentStaticMethod(FunctionPointer f)
+        public CAgentStaticMethod(FunctionPointer f, Workspace workspace) : base(workspace)
         {
             _fp = f;
         }
 
-        public CAgentStaticMethod(CAgentStaticMethod<T, P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12, P13, P14> rhs)
-        : base(rhs)
+        public CAgentStaticMethod(CAgentStaticMethod<T, P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12, P13, P14> rhs, Workspace workspace)
+        : base(rhs, workspace)
         {
             _fp = rhs._fp;
             _p1 = rhs._p1;
@@ -3831,106 +3850,106 @@ namespace behaviac
 
         public override IMethod Clone()
         {
-            return new CAgentStaticMethod<T, P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12, P13, P14>(this);
+            return new CAgentStaticMethod<T, P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12, P13, P14>(this, Workspace);
         }
 
         public override void Load(string instance, string[] paramStrs)
         {
-            Debug.Check(paramStrs.Length == 14);
+            Debugs.Check(paramStrs.Length == 14);
 
             _instance = instance;
-            _p1 = AgentMeta.ParseProperty<P1>(paramStrs[0]);
-            _p2 = AgentMeta.ParseProperty<P2>(paramStrs[1]);
-            _p3 = AgentMeta.ParseProperty<P3>(paramStrs[2]);
-            _p4 = AgentMeta.ParseProperty<P4>(paramStrs[3]);
-            _p5 = AgentMeta.ParseProperty<P5>(paramStrs[4]);
-            _p6 = AgentMeta.ParseProperty<P6>(paramStrs[5]);
-            _p7 = AgentMeta.ParseProperty<P7>(paramStrs[6]);
-            _p8 = AgentMeta.ParseProperty<P8>(paramStrs[7]);
-            _p9 = AgentMeta.ParseProperty<P9>(paramStrs[8]);
-            _p10 = AgentMeta.ParseProperty<P10>(paramStrs[9]);
-            _p11 = AgentMeta.ParseProperty<P11>(paramStrs[10]);
-            _p12 = AgentMeta.ParseProperty<P12>(paramStrs[11]);
-            _p13 = AgentMeta.ParseProperty<P13>(paramStrs[12]);
-            _p14 = AgentMeta.ParseProperty<P14>(paramStrs[13]);
+            _p1 = AgentMeta.ParseProperty<P1>(paramStrs[0], Workspace);
+            _p2 = AgentMeta.ParseProperty<P2>(paramStrs[1], Workspace);
+            _p3 = AgentMeta.ParseProperty<P3>(paramStrs[2], Workspace);
+            _p4 = AgentMeta.ParseProperty<P4>(paramStrs[3], Workspace);
+            _p5 = AgentMeta.ParseProperty<P5>(paramStrs[4], Workspace);
+            _p6 = AgentMeta.ParseProperty<P6>(paramStrs[5], Workspace);
+            _p7 = AgentMeta.ParseProperty<P7>(paramStrs[6], Workspace);
+            _p8 = AgentMeta.ParseProperty<P8>(paramStrs[7], Workspace);
+            _p9 = AgentMeta.ParseProperty<P9>(paramStrs[8], Workspace);
+            _p10 = AgentMeta.ParseProperty<P10>(paramStrs[9], Workspace);
+            _p11 = AgentMeta.ParseProperty<P11>(paramStrs[10], Workspace);
+            _p12 = AgentMeta.ParseProperty<P12>(paramStrs[11], Workspace);
+            _p13 = AgentMeta.ParseProperty<P13>(paramStrs[12], Workspace);
+            _p14 = AgentMeta.ParseProperty<P14>(paramStrs[13], Workspace);
         }
 
-        public override void Run(Agent self)
+        public override async Task Run(Agent self)
         {
-            Debug.Check(_p1 != null);
-            Debug.Check(_p2 != null);
-            Debug.Check(_p3 != null);
-            Debug.Check(_p4 != null);
-            Debug.Check(_p5 != null);
-            Debug.Check(_p6 != null);
-            Debug.Check(_p7 != null);
-            Debug.Check(_p8 != null);
-            Debug.Check(_p9 != null);
-            Debug.Check(_p10 != null);
-            Debug.Check(_p11 != null);
-            Debug.Check(_p12 != null);
-            Debug.Check(_p13 != null);
-            Debug.Check(_p14 != null);
+            Debugs.Check(_p1 != null);
+            Debugs.Check(_p2 != null);
+            Debugs.Check(_p3 != null);
+            Debugs.Check(_p4 != null);
+            Debugs.Check(_p5 != null);
+            Debugs.Check(_p6 != null);
+            Debugs.Check(_p7 != null);
+            Debugs.Check(_p8 != null);
+            Debugs.Check(_p9 != null);
+            Debugs.Check(_p10 != null);
+            Debugs.Check(_p11 != null);
+            Debugs.Check(_p12 != null);
+            Debugs.Check(_p13 != null);
+            Debugs.Check(_p14 != null);
 
-            _returnValue.value = _fp(
-                                     ((CInstanceMember<P1>)_p1).GetValue(self),
-                                     ((CInstanceMember<P2>)_p2).GetValue(self),
-                                     ((CInstanceMember<P3>)_p3).GetValue(self),
-                                     ((CInstanceMember<P4>)_p4).GetValue(self),
-                                     ((CInstanceMember<P5>)_p5).GetValue(self),
-                                     ((CInstanceMember<P6>)_p6).GetValue(self),
-                                     ((CInstanceMember<P7>)_p7).GetValue(self),
-                                     ((CInstanceMember<P8>)_p8).GetValue(self),
-                                     ((CInstanceMember<P9>)_p9).GetValue(self),
-                                     ((CInstanceMember<P10>)_p10).GetValue(self),
-                                     ((CInstanceMember<P11>)_p11).GetValue(self),
-                                     ((CInstanceMember<P12>)_p12).GetValue(self),
-                                     ((CInstanceMember<P13>)_p13).GetValue(self),
-                                     ((CInstanceMember<P14>)_p14).GetValue(self));
+            _returnValue.value = await _fp(
+                                await ((CInstanceMember<P1>)_p1).GetValue(self),
+                                await ((CInstanceMember<P2>)_p2).GetValue(self),
+                                await ((CInstanceMember<P3>)_p3).GetValue(self),
+                                await ((CInstanceMember<P4>)_p4).GetValue(self),
+                                await ((CInstanceMember<P5>)_p5).GetValue(self),
+                                await ((CInstanceMember<P6>)_p6).GetValue(self),
+                                await ((CInstanceMember<P7>)_p7).GetValue(self),
+                                await ((CInstanceMember<P8>)_p8).GetValue(self),
+                                await ((CInstanceMember<P9>)_p9).GetValue(self),
+                                await ((CInstanceMember<P10>)_p10).GetValue(self),
+                                await ((CInstanceMember<P11>)_p11).GetValue(self),
+                                await ((CInstanceMember<P12>)_p12).GetValue(self),
+                                await ((CInstanceMember<P13>)_p13).GetValue(self),
+                                await ((CInstanceMember<P14>)_p14).GetValue(self));
         }
 
         public override void SetTaskParams(Agent self, BehaviorTreeTask treeTask)
         {
-            string paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 0);
+            string paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 0);
             treeTask.SetVariable(paramName, ((CInstanceMember<P1>)_p1).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 1);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 1);
             treeTask.SetVariable(paramName, ((CInstanceMember<P2>)_p2).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 2);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 2);
             treeTask.SetVariable(paramName, ((CInstanceMember<P3>)_p3).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 3);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 3);
             treeTask.SetVariable(paramName, ((CInstanceMember<P4>)_p4).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 4);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 4);
             treeTask.SetVariable(paramName, ((CInstanceMember<P5>)_p5).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 5);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 5);
             treeTask.SetVariable(paramName, ((CInstanceMember<P6>)_p6).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 6);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 6);
             treeTask.SetVariable(paramName, ((CInstanceMember<P7>)_p7).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 7);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 7);
             treeTask.SetVariable(paramName, ((CInstanceMember<P8>)_p8).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 8);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 8);
             treeTask.SetVariable(paramName, ((CInstanceMember<P9>)_p9).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 9);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 9);
             treeTask.SetVariable(paramName, ((CInstanceMember<P10>)_p10).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 10);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 10);
             treeTask.SetVariable(paramName, ((CInstanceMember<P11>)_p11).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 11);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 11);
             treeTask.SetVariable(paramName, ((CInstanceMember<P12>)_p12).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 12);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 12);
             treeTask.SetVariable(paramName, ((CInstanceMember<P13>)_p13).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 13);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 13);
             treeTask.SetVariable(paramName, ((CInstanceMember<P14>)_p14).GetValue(self));
         }
     }
@@ -3939,57 +3958,63 @@ namespace behaviac
     {
         protected string _instance = "Self";
 
-        public CAgentMethodVoidBase()
-        {
-        }
-
-        public CAgentMethodVoidBase(CAgentMethodVoidBase rhs)
+        public Workspace Workspace { get; private set; }
+        public Config Configs { set; get; }
+        public Debug Debugs { set; get; }
+        public CAgentMethodVoidBase(Workspace workspace, CAgentMethodVoidBase rhs) : this(workspace)
         {
             _instance = rhs._instance;
         }
-
+        public CAgentMethodVoidBase(Workspace workspace)
+        {
+            Workspace = workspace;
+            Configs = workspace.Configs;
+            Debugs = workspace.Debugs;
+        }
         public virtual IMethod Clone()
         {
-            Debug.Check(false);
+            Debugs.Check(false);
             return null;
         }
 
         public virtual void Load(string instance, string[] paramStrs)
         {
-            Debug.Check(false);
+            Debugs.Check(false);
 
             _instance = instance;
         }
 
-        public int GetCount(Agent self)
+        public Task<int> GetCount(Agent self)
         {
-            Debug.Check(false);
-            return 0;
+            Debugs.Check(false);
+            return Task.FromResult(0);
         }
 
-        public void SetValue(Agent self, IInstanceMember right, int index)
+        public Task SetValue(Agent self, IInstanceMember right, int index)
         {
-            Debug.Check(false);
+            Debugs.Check(false);
+            return Task.CompletedTask;
         }
 
-        public virtual void Run(Agent self)
+        public virtual Task Run(Agent self)
         {
-            Debug.Check(false);
+            Debugs.Check(false);
+            return Task.CompletedTask;
         }
 
-        public IValue GetIValue(Agent self)
+        public Task<IValue> GetIValue(Agent self)
         {
-            Debug.Check(false);
-            return null;
+            Debugs.Check(false);
+            return Task.FromResult(default(IValue));
         }
 
-        public object GetValueObject(Agent self)
+        public Task<object> GetValueObject(Agent self)
         {
-            Debug.Check(false);
-            return null;
+            Debugs.Check(false);
+            return Task.FromResult<object>(null);
         }
 
-        public IValue GetIValue(Agent self, IInstanceMember firstParam)
+        public Task<IValue> GetIValue(Agent self, IInstanceMember firstParam)
         {
             //Agent agent = Utils.GetParentAgent(self, _instance);
             //firstParam.Run(agent);
@@ -3997,77 +4022,82 @@ namespace behaviac
             return GetIValue(self);
         }
 
-        public void SetValue(Agent self, IValue value)
+        public Task SetValue(Agent self, IValue value)
         {
-            Debug.Check(false);
+            Debugs.Check(false);
+            return Task.CompletedTask;
         }
 
-        public void SetValue(Agent self, object value)
+        public Task SetValue(Agent self, object value)
         {
-            Debug.Check(false);
+            Debugs.Check(false);
+            return Task.CompletedTask;
         }
 
-        public void SetValueAs(Agent self, IInstanceMember right)
+        public Task SetValueAs(Agent self, IInstanceMember right)
         {
-            Debug.Check(false);
+            Debugs.Check(false);
+            return Task.CompletedTask;
         }
 
-        public void SetValue(Agent self, IInstanceMember right)
+        public Task SetValue(Agent self, IInstanceMember right)
         {
-            Debug.Check(false);
+            Debugs.Check(false);
+            return Task.CompletedTask;
         }
 
-        public bool Compare(Agent self, IInstanceMember right, EOperatorType comparisonType)
+        public Task<bool> Compare(Agent self, IInstanceMember right, EOperatorType comparisonType)
         {
-            Debug.Check(false);
-            return false;
+            Debugs.Check(false);
+            return Task.FromResult(false);
         }
 
-        public void Compute(Agent self, IInstanceMember right1, IInstanceMember right2, EOperatorType computeType)
+        public Task Compute(Agent self, IInstanceMember right1, IInstanceMember right2, EOperatorType computeType)
         {
-            Debug.Check(false);
+            Debugs.Check(false);
+            return Task.CompletedTask;
         }
 
         public virtual void SetTaskParams(Agent self, BehaviorTreeTask treeTask)
         {
-            Debug.Check(false);
+            Debugs.Check(false);
         }
     }
 
     public class CAgentMethodVoid : CAgentMethodVoidBase
     {
-        public delegate void FunctionPointer(Agent a);
+        public delegate Task FunctionPointer(Agent a);
 
         FunctionPointer _fp;
 
-        public CAgentMethodVoid(FunctionPointer f)
+        public CAgentMethodVoid(FunctionPointer f, Workspace workspace) : base(workspace)
         {
             _fp = f;
         }
 
-        public CAgentMethodVoid(CAgentMethodVoid rhs)
-        : base(rhs)
+        public CAgentMethodVoid(CAgentMethodVoid rhs, Workspace workspace)
+        : base(workspace, rhs)
         {
             _fp = rhs._fp;
         }
 
         public override IMethod Clone()
         {
-            return new CAgentMethodVoid(this);
+            return new CAgentMethodVoid(this, Workspace);
         }
 
         public override void Load(string instance, string[] paramStrs)
         {
-            Debug.Check(paramStrs.Length == 0);
+            Debugs.Check(paramStrs.Length == 0);
 
             _instance = instance;
         }
 
-        public override void Run(Agent self)
+        public override async Task Run(Agent self)
         {
             Agent agent = Utils.GetParentAgent(self, _instance);
 
-            _fp(agent);
+            await _fp(agent);
         }
 
         public override void SetTaskParams(Agent self, BehaviorTreeTask treeTask)
@@ -4077,18 +4107,18 @@ namespace behaviac
 
     public class CAgentMethodVoid<P1> : CAgentMethodVoidBase
     {
-        public delegate void FunctionPointer(Agent a, P1 p1);
+        public delegate Task FunctionPointer(Agent a, P1 p1);
 
         FunctionPointer _fp;
         IInstanceMember _p1;
 
-        public CAgentMethodVoid(FunctionPointer f)
+        public CAgentMethodVoid(FunctionPointer f, Workspace workspace) : base(workspace)
         {
             _fp = f;
         }
 
-        public CAgentMethodVoid(CAgentMethodVoid<P1> rhs)
-        : base(rhs)
+        public CAgentMethodVoid(CAgentMethodVoid<P1> rhs, Workspace workspace)
+        : base(workspace, rhs)
         {
             _fp = rhs._fp;
             _p1 = rhs._p1;
@@ -4096,48 +4126,48 @@ namespace behaviac
 
         public override IMethod Clone()
         {
-            return new CAgentMethodVoid<P1>(this);
+            return new CAgentMethodVoid<P1>(this, Workspace);
         }
 
         public override void Load(string instance, string[] paramStrs)
         {
-            Debug.Check(paramStrs.Length == 1);
+            Debugs.Check(paramStrs.Length == 1);
 
             _instance = instance;
-            _p1 = AgentMeta.ParseProperty<P1>(paramStrs[0]);
+            _p1 = AgentMeta.ParseProperty<P1>(paramStrs[0], Workspace);
         }
 
-        public override void Run(Agent self)
+        public override async Task Run(Agent self)
         {
-            Debug.Check(_p1 != null);
+            Debugs.Check(_p1 != null);
 
             Agent agent = Utils.GetParentAgent(self, _instance);
 
-            _fp(agent, ((CInstanceMember<P1>)_p1).GetValue(self));
+            await _fp(agent, await ((CInstanceMember<P1>)_p1).GetValue(self));
         }
 
         public override void SetTaskParams(Agent self, BehaviorTreeTask treeTask)
         {
-            string paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 0);
+            string paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 0);
             treeTask.SetVariable(paramName, ((CInstanceMember<P1>)_p1).GetValue(self));
         }
     }
 
     public class CAgentMethodVoid<P1, P2> : CAgentMethodVoidBase
     {
-        public delegate void FunctionPointer(Agent a, P1 p1, P2 p2);
+        public delegate Task FunctionPointer(Agent a, P1 p1, P2 p2);
 
         FunctionPointer _fp;
         IInstanceMember _p1;
         IInstanceMember _p2;
 
-        public CAgentMethodVoid(FunctionPointer f)
+        public CAgentMethodVoid(FunctionPointer f, Workspace workspace) : base(workspace)
         {
             _fp = f;
         }
 
-        public CAgentMethodVoid(CAgentMethodVoid<P1, P2> rhs)
-        : base(rhs)
+        public CAgentMethodVoid(CAgentMethodVoid<P1, P2> rhs, Workspace workspace)
+        : base(workspace, rhs)
         {
             _fp = rhs._fp;
             _p1 = rhs._p1;
@@ -4146,54 +4176,54 @@ namespace behaviac
 
         public override IMethod Clone()
         {
-            return new CAgentMethodVoid<P1, P2>(this);
+            return new CAgentMethodVoid<P1, P2>(this, Workspace);
         }
 
         public override void Load(string instance, string[] paramStrs)
         {
-            Debug.Check(paramStrs.Length == 2);
+            Debugs.Check(paramStrs.Length == 2);
 
             _instance = instance;
-            _p1 = AgentMeta.ParseProperty<P1>(paramStrs[0]);
-            _p2 = AgentMeta.ParseProperty<P2>(paramStrs[1]);
+            _p1 = AgentMeta.ParseProperty<P1>(paramStrs[0], Workspace);
+            _p2 = AgentMeta.ParseProperty<P2>(paramStrs[1], Workspace);
         }
 
-        public override void Run(Agent self)
+        public override async Task Run(Agent self)
         {
-            Debug.Check(_p1 != null);
-            Debug.Check(_p2 != null);
+            Debugs.Check(_p1 != null);
+            Debugs.Check(_p2 != null);
 
             Agent agent = Utils.GetParentAgent(self, _instance);
 
-            _fp(agent, ((CInstanceMember<P1>)_p1).GetValue(self), ((CInstanceMember<P2>)_p2).GetValue(self));
+            await _fp(agent, await ((CInstanceMember<P1>)_p1).GetValue(self), await ((CInstanceMember<P2>)_p2).GetValue(self));
         }
 
         public override void SetTaskParams(Agent self, BehaviorTreeTask treeTask)
         {
-            string paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 0);
+            string paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 0);
             treeTask.SetVariable(paramName, ((CInstanceMember<P1>)_p1).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 1);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 1);
             treeTask.SetVariable(paramName, ((CInstanceMember<P2>)_p2).GetValue(self));
         }
     }
 
     public class CAgentMethodVoid<P1, P2, P3> : CAgentMethodVoidBase
     {
-        public delegate void FunctionPointer(Agent a, P1 p1, P2 p2, P3 p3);
+        public delegate Task FunctionPointer(Agent a, P1 p1, P2 p2, P3 p3);
 
         FunctionPointer _fp;
         IInstanceMember _p1;
         IInstanceMember _p2;
         IInstanceMember _p3;
 
-        public CAgentMethodVoid(FunctionPointer f)
+        public CAgentMethodVoid(FunctionPointer f, Workspace workspace) : base(workspace)
         {
             _fp = f;
         }
 
-        public CAgentMethodVoid(CAgentMethodVoid<P1, P2, P3> rhs)
-        : base(rhs)
+        public CAgentMethodVoid(CAgentMethodVoid<P1, P2, P3> rhs, Workspace workspace)
+        : base(workspace, rhs)
         {
             _fp = rhs._fp;
             _p1 = rhs._p1;
@@ -4203,49 +4233,49 @@ namespace behaviac
 
         public override IMethod Clone()
         {
-            return new CAgentMethodVoid<P1, P2, P3>(this);
+            return new CAgentMethodVoid<P1, P2, P3>(this, Workspace);
         }
 
         public override void Load(string instance, string[] paramStrs)
         {
-            Debug.Check(paramStrs.Length == 3);
+            Debugs.Check(paramStrs.Length == 3);
 
             _instance = instance;
-            _p1 = AgentMeta.ParseProperty<P1>(paramStrs[0]);
-            _p2 = AgentMeta.ParseProperty<P2>(paramStrs[1]);
-            _p3 = AgentMeta.ParseProperty<P3>(paramStrs[2]);
+            _p1 = AgentMeta.ParseProperty<P1>(paramStrs[0], Workspace);
+            _p2 = AgentMeta.ParseProperty<P2>(paramStrs[1], Workspace);
+            _p3 = AgentMeta.ParseProperty<P3>(paramStrs[2], Workspace);
         }
 
-        public override void Run(Agent self)
+        public override async Task Run(Agent self)
         {
-            Debug.Check(_p1 != null);
-            Debug.Check(_p2 != null);
-            Debug.Check(_p3 != null);
+            Debugs.Check(_p1 != null);
+            Debugs.Check(_p2 != null);
+            Debugs.Check(_p3 != null);
 
             Agent agent = Utils.GetParentAgent(self, _instance);
 
-            _fp(agent,
-                ((CInstanceMember<P1>)_p1).GetValue(self),
-                ((CInstanceMember<P2>)_p2).GetValue(self),
-                ((CInstanceMember<P3>)_p3).GetValue(self));
+            await _fp(agent,
+            await ((CInstanceMember<P1>)_p1).GetValue(self),
+            await ((CInstanceMember<P2>)_p2).GetValue(self),
+            await ((CInstanceMember<P3>)_p3).GetValue(self));
         }
 
         public override void SetTaskParams(Agent self, BehaviorTreeTask treeTask)
         {
-            string paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 0);
+            string paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 0);
             treeTask.SetVariable(paramName, ((CInstanceMember<P1>)_p1).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 1);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 1);
             treeTask.SetVariable(paramName, ((CInstanceMember<P2>)_p2).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 2);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 2);
             treeTask.SetVariable(paramName, ((CInstanceMember<P3>)_p3).GetValue(self));
         }
     }
 
     public class CAgentMethodVoid<P1, P2, P3, P4> : CAgentMethodVoidBase
     {
-        public delegate void FunctionPointer(Agent a, P1 p1, P2 p2, P3 p3, P4 p4);
+        public delegate Task FunctionPointer(Agent a, P1 p1, P2 p2, P3 p3, P4 p4);
 
         FunctionPointer _fp;
         IInstanceMember _p1;
@@ -4253,13 +4283,13 @@ namespace behaviac
         IInstanceMember _p3;
         IInstanceMember _p4;
 
-        public CAgentMethodVoid(FunctionPointer f, IInstanceMember p1, IInstanceMember p2, IInstanceMember p3, IInstanceMember p4)
+        public CAgentMethodVoid(FunctionPointer f, IInstanceMember p1, IInstanceMember p2, IInstanceMember p3, IInstanceMember p4, Workspace workspace) : base(workspace)
         {
             _fp = f;
         }
 
-        public CAgentMethodVoid(CAgentMethodVoid<P1, P2, P3, P4> rhs)
-        : base(rhs)
+        public CAgentMethodVoid(CAgentMethodVoid<P1, P2, P3, P4> rhs, Workspace workspace)
+        : base(workspace, rhs)
         {
             _fp = rhs._fp;
             _p1 = rhs._p1;
@@ -4270,55 +4300,55 @@ namespace behaviac
 
         public override IMethod Clone()
         {
-            return new CAgentMethodVoid<P1, P2, P3, P4>(this);
+            return new CAgentMethodVoid<P1, P2, P3, P4>(this, Workspace);
         }
 
         public override void Load(string instance, string[] paramStrs)
         {
-            Debug.Check(paramStrs.Length == 4);
+            Debugs.Check(paramStrs.Length == 4);
 
             _instance = instance;
-            _p1 = AgentMeta.ParseProperty<P1>(paramStrs[0]);
-            _p2 = AgentMeta.ParseProperty<P2>(paramStrs[1]);
-            _p3 = AgentMeta.ParseProperty<P3>(paramStrs[2]);
-            _p4 = AgentMeta.ParseProperty<P4>(paramStrs[3]);
+            _p1 = AgentMeta.ParseProperty<P1>(paramStrs[0], Workspace);
+            _p2 = AgentMeta.ParseProperty<P2>(paramStrs[1], Workspace);
+            _p3 = AgentMeta.ParseProperty<P3>(paramStrs[2], Workspace);
+            _p4 = AgentMeta.ParseProperty<P4>(paramStrs[3], Workspace);
         }
 
-        public override void Run(Agent self)
+        public override async Task Run(Agent self)
         {
-            Debug.Check(_p1 != null);
-            Debug.Check(_p2 != null);
-            Debug.Check(_p3 != null);
-            Debug.Check(_p4 != null);
+            Debugs.Check(_p1 != null);
+            Debugs.Check(_p2 != null);
+            Debugs.Check(_p3 != null);
+            Debugs.Check(_p4 != null);
 
             Agent agent = Utils.GetParentAgent(self, _instance);
 
-            _fp(agent,
-                ((CInstanceMember<P1>)_p1).GetValue(self),
-                ((CInstanceMember<P2>)_p2).GetValue(self),
-                ((CInstanceMember<P3>)_p3).GetValue(self),
-                ((CInstanceMember<P4>)_p4).GetValue(self));
+            await _fp(agent,
+            await ((CInstanceMember<P1>)_p1).GetValue(self),
+            await ((CInstanceMember<P2>)_p2).GetValue(self),
+            await ((CInstanceMember<P3>)_p3).GetValue(self),
+            await ((CInstanceMember<P4>)_p4).GetValue(self));
         }
 
         public override void SetTaskParams(Agent self, BehaviorTreeTask treeTask)
         {
-            string paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 0);
+            string paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 0);
             treeTask.SetVariable(paramName, ((CInstanceMember<P1>)_p1).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 1);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 1);
             treeTask.SetVariable(paramName, ((CInstanceMember<P2>)_p2).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 2);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 2);
             treeTask.SetVariable(paramName, ((CInstanceMember<P3>)_p3).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 3);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 3);
             treeTask.SetVariable(paramName, ((CInstanceMember<P4>)_p4).GetValue(self));
         }
     }
 
     public class CAgentMethodVoid<P1, P2, P3, P4, P5> : CAgentMethodVoidBase
     {
-        public delegate void FunctionPointer(Agent a, P1 p1, P2 p2, P3 p3, P4 p4, P5 p5);
+        public delegate Task FunctionPointer(Agent a, P1 p1, P2 p2, P3 p3, P4 p4, P5 p5);
 
         FunctionPointer _fp;
         IInstanceMember _p1;
@@ -4327,13 +4357,13 @@ namespace behaviac
         IInstanceMember _p4;
         IInstanceMember _p5;
 
-        public CAgentMethodVoid(FunctionPointer f)
+        public CAgentMethodVoid(FunctionPointer f, Workspace workspace) : base(workspace)
         {
             _fp = f;
         }
 
-        public CAgentMethodVoid(CAgentMethodVoid<P1, P2, P3, P4, P5> rhs)
-        : base(rhs)
+        public CAgentMethodVoid(CAgentMethodVoid<P1, P2, P3, P4, P5> rhs, Workspace workspace)
+        : base(workspace, rhs)
         {
             _fp = rhs._fp;
             _p1 = rhs._p1;
@@ -4345,61 +4375,61 @@ namespace behaviac
 
         public override IMethod Clone()
         {
-            return new CAgentMethodVoid<P1, P2, P3, P4, P5>(this);
+            return new CAgentMethodVoid<P1, P2, P3, P4, P5>(this, Workspace);
         }
 
         public override void Load(string instance, string[] paramStrs)
         {
-            Debug.Check(paramStrs.Length == 5);
+            Debugs.Check(paramStrs.Length == 5);
 
             _instance = instance;
-            _p1 = AgentMeta.ParseProperty<P1>(paramStrs[0]);
-            _p2 = AgentMeta.ParseProperty<P2>(paramStrs[1]);
-            _p3 = AgentMeta.ParseProperty<P3>(paramStrs[2]);
-            _p4 = AgentMeta.ParseProperty<P4>(paramStrs[3]);
-            _p5 = AgentMeta.ParseProperty<P5>(paramStrs[4]);
+            _p1 = AgentMeta.ParseProperty<P1>(paramStrs[0], Workspace);
+            _p2 = AgentMeta.ParseProperty<P2>(paramStrs[1], Workspace);
+            _p3 = AgentMeta.ParseProperty<P3>(paramStrs[2], Workspace);
+            _p4 = AgentMeta.ParseProperty<P4>(paramStrs[3], Workspace);
+            _p5 = AgentMeta.ParseProperty<P5>(paramStrs[4], Workspace);
         }
 
-        public override void Run(Agent self)
+        public override async Task Run(Agent self)
         {
-            Debug.Check(_p1 != null);
-            Debug.Check(_p2 != null);
-            Debug.Check(_p3 != null);
-            Debug.Check(_p4 != null);
-            Debug.Check(_p5 != null);
+            Debugs.Check(_p1 != null);
+            Debugs.Check(_p2 != null);
+            Debugs.Check(_p3 != null);
+            Debugs.Check(_p4 != null);
+            Debugs.Check(_p5 != null);
 
             Agent agent = Utils.GetParentAgent(self, _instance);
 
-            _fp(agent,
-                ((CInstanceMember<P1>)_p1).GetValue(self),
-                ((CInstanceMember<P2>)_p2).GetValue(self),
-                ((CInstanceMember<P3>)_p3).GetValue(self),
-                ((CInstanceMember<P4>)_p4).GetValue(self),
-                ((CInstanceMember<P5>)_p5).GetValue(self));
+            await _fp(agent,
+            await ((CInstanceMember<P1>)_p1).GetValue(self),
+            await ((CInstanceMember<P2>)_p2).GetValue(self),
+            await ((CInstanceMember<P3>)_p3).GetValue(self),
+            await ((CInstanceMember<P4>)_p4).GetValue(self),
+            await ((CInstanceMember<P5>)_p5).GetValue(self));
         }
 
         public override void SetTaskParams(Agent self, BehaviorTreeTask treeTask)
         {
-            string paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 0);
+            string paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 0);
             treeTask.SetVariable(paramName, ((CInstanceMember<P1>)_p1).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 1);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 1);
             treeTask.SetVariable(paramName, ((CInstanceMember<P2>)_p2).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 2);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 2);
             treeTask.SetVariable(paramName, ((CInstanceMember<P3>)_p3).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 3);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 3);
             treeTask.SetVariable(paramName, ((CInstanceMember<P4>)_p4).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 4);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 4);
             treeTask.SetVariable(paramName, ((CInstanceMember<P5>)_p5).GetValue(self));
         }
     }
 
     public class CAgentMethodVoid<P1, P2, P3, P4, P5, P6> : CAgentMethodVoidBase
     {
-        public delegate void FunctionPointer(Agent a, P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6);
+        public delegate Task FunctionPointer(Agent a, P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6);
 
         FunctionPointer _fp;
         IInstanceMember _p1;
@@ -4409,13 +4439,13 @@ namespace behaviac
         IInstanceMember _p5;
         IInstanceMember _p6;
 
-        public CAgentMethodVoid(FunctionPointer f)
+        public CAgentMethodVoid(FunctionPointer f, Workspace workspace) : base(workspace)
         {
             _fp = f;
         }
 
-        public CAgentMethodVoid(CAgentMethodVoid<P1, P2, P3, P4, P5, P6> rhs)
-        : base(rhs)
+        public CAgentMethodVoid(CAgentMethodVoid<P1, P2, P3, P4, P5, P6> rhs, Workspace workspace)
+        : base(workspace, rhs)
         {
             _fp = rhs._fp;
             _p1 = rhs._p1;
@@ -4428,67 +4458,67 @@ namespace behaviac
 
         public override IMethod Clone()
         {
-            return new CAgentMethodVoid<P1, P2, P3, P4, P5, P6>(this);
+            return new CAgentMethodVoid<P1, P2, P3, P4, P5, P6>(this, Workspace);
         }
 
         public override void Load(string instance, string[] paramStrs)
         {
-            Debug.Check(paramStrs.Length == 6);
+            Debugs.Check(paramStrs.Length == 6);
 
             _instance = instance;
-            _p1 = AgentMeta.ParseProperty<P1>(paramStrs[0]);
-            _p2 = AgentMeta.ParseProperty<P2>(paramStrs[1]);
-            _p3 = AgentMeta.ParseProperty<P3>(paramStrs[2]);
-            _p4 = AgentMeta.ParseProperty<P4>(paramStrs[3]);
-            _p5 = AgentMeta.ParseProperty<P5>(paramStrs[4]);
-            _p6 = AgentMeta.ParseProperty<P6>(paramStrs[5]);
+            _p1 = AgentMeta.ParseProperty<P1>(paramStrs[0], Workspace);
+            _p2 = AgentMeta.ParseProperty<P2>(paramStrs[1], Workspace);
+            _p3 = AgentMeta.ParseProperty<P3>(paramStrs[2], Workspace);
+            _p4 = AgentMeta.ParseProperty<P4>(paramStrs[3], Workspace);
+            _p5 = AgentMeta.ParseProperty<P5>(paramStrs[4], Workspace);
+            _p6 = AgentMeta.ParseProperty<P6>(paramStrs[5], Workspace);
         }
 
-        public override void Run(Agent self)
+        public override async Task Run(Agent self)
         {
-            Debug.Check(_p1 != null);
-            Debug.Check(_p2 != null);
-            Debug.Check(_p3 != null);
-            Debug.Check(_p4 != null);
-            Debug.Check(_p5 != null);
-            Debug.Check(_p6 != null);
+            Debugs.Check(_p1 != null);
+            Debugs.Check(_p2 != null);
+            Debugs.Check(_p3 != null);
+            Debugs.Check(_p4 != null);
+            Debugs.Check(_p5 != null);
+            Debugs.Check(_p6 != null);
 
             Agent agent = Utils.GetParentAgent(self, _instance);
 
-            _fp(agent,
-                ((CInstanceMember<P1>)_p1).GetValue(self),
-                ((CInstanceMember<P2>)_p2).GetValue(self),
-                ((CInstanceMember<P3>)_p3).GetValue(self),
-                ((CInstanceMember<P4>)_p4).GetValue(self),
-                ((CInstanceMember<P5>)_p5).GetValue(self),
-                ((CInstanceMember<P6>)_p6).GetValue(self));
+            await _fp(agent,
+            await ((CInstanceMember<P1>)_p1).GetValue(self),
+            await ((CInstanceMember<P2>)_p2).GetValue(self),
+            await ((CInstanceMember<P3>)_p3).GetValue(self),
+            await ((CInstanceMember<P4>)_p4).GetValue(self),
+            await ((CInstanceMember<P5>)_p5).GetValue(self),
+            await ((CInstanceMember<P6>)_p6).GetValue(self));
         }
 
         public override void SetTaskParams(Agent self, BehaviorTreeTask treeTask)
         {
-            string paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 0);
+            string paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 0);
             treeTask.SetVariable(paramName, ((CInstanceMember<P1>)_p1).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 1);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 1);
             treeTask.SetVariable(paramName, ((CInstanceMember<P2>)_p2).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 2);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 2);
             treeTask.SetVariable(paramName, ((CInstanceMember<P3>)_p3).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 3);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 3);
             treeTask.SetVariable(paramName, ((CInstanceMember<P4>)_p4).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 4);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 4);
             treeTask.SetVariable(paramName, ((CInstanceMember<P5>)_p5).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 5);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 5);
             treeTask.SetVariable(paramName, ((CInstanceMember<P6>)_p6).GetValue(self));
         }
     }
 
     public class CAgentMethodVoid<P1, P2, P3, P4, P5, P6, P7> : CAgentMethodVoidBase
     {
-        public delegate void FunctionPointer(Agent a, P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6, P7 p7);
+        public delegate Task FunctionPointer(Agent a, P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6, P7 p7);
 
         FunctionPointer _fp;
         IInstanceMember _p1;
@@ -4499,13 +4529,13 @@ namespace behaviac
         IInstanceMember _p6;
         IInstanceMember _p7;
 
-        public CAgentMethodVoid(FunctionPointer f)
+        public CAgentMethodVoid(FunctionPointer f, Workspace workspace) : base(workspace)
         {
             _fp = f;
         }
 
-        public CAgentMethodVoid(CAgentMethodVoid<P1, P2, P3, P4, P5, P6, P7> rhs)
-        : base(rhs)
+        public CAgentMethodVoid(CAgentMethodVoid<P1, P2, P3, P4, P5, P6, P7> rhs, Workspace workspace)
+        : base(workspace, rhs)
         {
             _fp = rhs._fp;
             _p1 = rhs._p1;
@@ -4519,73 +4549,73 @@ namespace behaviac
 
         public override IMethod Clone()
         {
-            return new CAgentMethodVoid<P1, P2, P3, P4, P5, P6, P7>(this);
+            return new CAgentMethodVoid<P1, P2, P3, P4, P5, P6, P7>(this, Workspace);
         }
 
         public override void Load(string instance, string[] paramStrs)
         {
-            Debug.Check(paramStrs.Length == 7);
+            Debugs.Check(paramStrs.Length == 7);
 
             _instance = instance;
-            _p1 = AgentMeta.ParseProperty<P1>(paramStrs[0]);
-            _p2 = AgentMeta.ParseProperty<P2>(paramStrs[1]);
-            _p3 = AgentMeta.ParseProperty<P3>(paramStrs[2]);
-            _p4 = AgentMeta.ParseProperty<P4>(paramStrs[3]);
-            _p5 = AgentMeta.ParseProperty<P5>(paramStrs[4]);
-            _p6 = AgentMeta.ParseProperty<P6>(paramStrs[5]);
-            _p7 = AgentMeta.ParseProperty<P7>(paramStrs[6]);
+            _p1 = AgentMeta.ParseProperty<P1>(paramStrs[0], Workspace);
+            _p2 = AgentMeta.ParseProperty<P2>(paramStrs[1], Workspace);
+            _p3 = AgentMeta.ParseProperty<P3>(paramStrs[2], Workspace);
+            _p4 = AgentMeta.ParseProperty<P4>(paramStrs[3], Workspace);
+            _p5 = AgentMeta.ParseProperty<P5>(paramStrs[4], Workspace);
+            _p6 = AgentMeta.ParseProperty<P6>(paramStrs[5], Workspace);
+            _p7 = AgentMeta.ParseProperty<P7>(paramStrs[6], Workspace);
         }
 
-        public override void Run(Agent self)
+        public override async Task Run(Agent self)
         {
-            Debug.Check(_p1 != null);
-            Debug.Check(_p2 != null);
-            Debug.Check(_p3 != null);
-            Debug.Check(_p4 != null);
-            Debug.Check(_p5 != null);
-            Debug.Check(_p6 != null);
-            Debug.Check(_p7 != null);
+            Debugs.Check(_p1 != null);
+            Debugs.Check(_p2 != null);
+            Debugs.Check(_p3 != null);
+            Debugs.Check(_p4 != null);
+            Debugs.Check(_p5 != null);
+            Debugs.Check(_p6 != null);
+            Debugs.Check(_p7 != null);
 
             Agent agent = Utils.GetParentAgent(self, _instance);
 
-            _fp(agent,
-                ((CInstanceMember<P1>)_p1).GetValue(self),
-                ((CInstanceMember<P2>)_p2).GetValue(self),
-                ((CInstanceMember<P3>)_p3).GetValue(self),
-                ((CInstanceMember<P4>)_p4).GetValue(self),
-                ((CInstanceMember<P5>)_p5).GetValue(self),
-                ((CInstanceMember<P6>)_p6).GetValue(self),
-                ((CInstanceMember<P7>)_p7).GetValue(self));
+            await _fp(agent,
+            await ((CInstanceMember<P1>)_p1).GetValue(self),
+            await ((CInstanceMember<P2>)_p2).GetValue(self),
+            await ((CInstanceMember<P3>)_p3).GetValue(self),
+            await ((CInstanceMember<P4>)_p4).GetValue(self),
+            await ((CInstanceMember<P5>)_p5).GetValue(self),
+            await ((CInstanceMember<P6>)_p6).GetValue(self),
+            await ((CInstanceMember<P7>)_p7).GetValue(self));
         }
 
         public override void SetTaskParams(Agent self, BehaviorTreeTask treeTask)
         {
-            string paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 0);
+            string paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 0);
             treeTask.SetVariable(paramName, ((CInstanceMember<P1>)_p1).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 1);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 1);
             treeTask.SetVariable(paramName, ((CInstanceMember<P2>)_p2).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 2);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 2);
             treeTask.SetVariable(paramName, ((CInstanceMember<P3>)_p3).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 3);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 3);
             treeTask.SetVariable(paramName, ((CInstanceMember<P4>)_p4).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 4);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 4);
             treeTask.SetVariable(paramName, ((CInstanceMember<P5>)_p5).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 5);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 5);
             treeTask.SetVariable(paramName, ((CInstanceMember<P6>)_p6).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 6);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 6);
             treeTask.SetVariable(paramName, ((CInstanceMember<P7>)_p7).GetValue(self));
         }
     }
 
     public class CAgentMethodVoid<P1, P2, P3, P4, P5, P6, P7, P8> : CAgentMethodVoidBase
     {
-        public delegate void FunctionPointer(Agent a, P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6, P7 p7, P8 p8);
+        public delegate Task FunctionPointer(Agent a, P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6, P7 p7, P8 p8);
 
         FunctionPointer _fp;
         IInstanceMember _p1;
@@ -4597,13 +4627,13 @@ namespace behaviac
         IInstanceMember _p7;
         IInstanceMember _p8;
 
-        public CAgentMethodVoid(FunctionPointer f)
+        public CAgentMethodVoid(FunctionPointer f, Workspace workspace) : base(workspace)
         {
             _fp = f;
         }
 
-        public CAgentMethodVoid(CAgentMethodVoid<P1, P2, P3, P4, P5, P6, P7, P8> rhs)
-        : base(rhs)
+        public CAgentMethodVoid(CAgentMethodVoid<P1, P2, P3, P4, P5, P6, P7, P8> rhs, Workspace workspace)
+        : base(workspace, rhs)
         {
             _fp = rhs._fp;
             _p1 = rhs._p1;
@@ -4618,79 +4648,79 @@ namespace behaviac
 
         public override IMethod Clone()
         {
-            return new CAgentMethodVoid<P1, P2, P3, P4, P5, P6, P7, P8>(this);
+            return new CAgentMethodVoid<P1, P2, P3, P4, P5, P6, P7, P8>(this, Workspace);
         }
 
         public override void Load(string instance, string[] paramStrs)
         {
-            Debug.Check(paramStrs.Length == 8);
+            Debugs.Check(paramStrs.Length == 8);
 
             _instance = instance;
-            _p1 = AgentMeta.ParseProperty<P1>(paramStrs[0]);
-            _p2 = AgentMeta.ParseProperty<P2>(paramStrs[1]);
-            _p3 = AgentMeta.ParseProperty<P3>(paramStrs[2]);
-            _p4 = AgentMeta.ParseProperty<P4>(paramStrs[3]);
-            _p5 = AgentMeta.ParseProperty<P5>(paramStrs[4]);
-            _p6 = AgentMeta.ParseProperty<P6>(paramStrs[5]);
-            _p7 = AgentMeta.ParseProperty<P7>(paramStrs[6]);
-            _p8 = AgentMeta.ParseProperty<P8>(paramStrs[7]);
+            _p1 = AgentMeta.ParseProperty<P1>(paramStrs[0], Workspace);
+            _p2 = AgentMeta.ParseProperty<P2>(paramStrs[1], Workspace);
+            _p3 = AgentMeta.ParseProperty<P3>(paramStrs[2], Workspace);
+            _p4 = AgentMeta.ParseProperty<P4>(paramStrs[3], Workspace);
+            _p5 = AgentMeta.ParseProperty<P5>(paramStrs[4], Workspace);
+            _p6 = AgentMeta.ParseProperty<P6>(paramStrs[5], Workspace);
+            _p7 = AgentMeta.ParseProperty<P7>(paramStrs[6], Workspace);
+            _p8 = AgentMeta.ParseProperty<P8>(paramStrs[7], Workspace);
         }
 
-        public override void Run(Agent self)
+        public override async Task Run(Agent self)
         {
-            Debug.Check(_p1 != null);
-            Debug.Check(_p2 != null);
-            Debug.Check(_p3 != null);
-            Debug.Check(_p4 != null);
-            Debug.Check(_p5 != null);
-            Debug.Check(_p6 != null);
-            Debug.Check(_p7 != null);
-            Debug.Check(_p8 != null);
+            Debugs.Check(_p1 != null);
+            Debugs.Check(_p2 != null);
+            Debugs.Check(_p3 != null);
+            Debugs.Check(_p4 != null);
+            Debugs.Check(_p5 != null);
+            Debugs.Check(_p6 != null);
+            Debugs.Check(_p7 != null);
+            Debugs.Check(_p8 != null);
 
             Agent agent = Utils.GetParentAgent(self, _instance);
 
-            _fp(agent,
-                ((CInstanceMember<P1>)_p1).GetValue(self),
-                ((CInstanceMember<P2>)_p2).GetValue(self),
-                ((CInstanceMember<P3>)_p3).GetValue(self),
-                ((CInstanceMember<P4>)_p4).GetValue(self),
-                ((CInstanceMember<P5>)_p5).GetValue(self),
-                ((CInstanceMember<P6>)_p6).GetValue(self),
-                ((CInstanceMember<P7>)_p7).GetValue(self),
-                ((CInstanceMember<P8>)_p8).GetValue(self));
+            await _fp(agent,
+            await ((CInstanceMember<P1>)_p1).GetValue(self),
+            await ((CInstanceMember<P2>)_p2).GetValue(self),
+            await ((CInstanceMember<P3>)_p3).GetValue(self),
+            await ((CInstanceMember<P4>)_p4).GetValue(self),
+            await ((CInstanceMember<P5>)_p5).GetValue(self),
+            await ((CInstanceMember<P6>)_p6).GetValue(self),
+            await ((CInstanceMember<P7>)_p7).GetValue(self),
+            await ((CInstanceMember<P8>)_p8).GetValue(self));
         }
 
         public override void SetTaskParams(Agent self, BehaviorTreeTask treeTask)
         {
-            string paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 0);
+            string paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 0);
             treeTask.SetVariable(paramName, ((CInstanceMember<P1>)_p1).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 1);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 1);
             treeTask.SetVariable(paramName, ((CInstanceMember<P2>)_p2).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 2);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 2);
             treeTask.SetVariable(paramName, ((CInstanceMember<P3>)_p3).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 3);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 3);
             treeTask.SetVariable(paramName, ((CInstanceMember<P4>)_p4).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 4);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 4);
             treeTask.SetVariable(paramName, ((CInstanceMember<P5>)_p5).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 5);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 5);
             treeTask.SetVariable(paramName, ((CInstanceMember<P6>)_p6).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 6);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 6);
             treeTask.SetVariable(paramName, ((CInstanceMember<P7>)_p7).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 7);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 7);
             treeTask.SetVariable(paramName, ((CInstanceMember<P8>)_p8).GetValue(self));
         }
     }
 
     public class CAgentMethodVoid<P1, P2, P3, P4, P5, P6, P7, P8, P9> : CAgentMethodVoidBase
     {
-        public delegate void FunctionPointer(Agent a, P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6, P7 p7, P8 p8, P9 p9);
+        public delegate Task FunctionPointer(Agent a, P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6, P7 p7, P8 p8, P9 p9);
 
         FunctionPointer _fp;
         IInstanceMember _p1;
@@ -4703,13 +4733,13 @@ namespace behaviac
         IInstanceMember _p8;
         IInstanceMember _p9;
 
-        public CAgentMethodVoid(FunctionPointer f)
+        public CAgentMethodVoid(FunctionPointer f, Workspace workspace) : base(workspace)
         {
             _fp = f;
         }
 
-        public CAgentMethodVoid(CAgentMethodVoid<P1, P2, P3, P4, P5, P6, P7, P8, P9> rhs)
-        : base(rhs)
+        public CAgentMethodVoid(CAgentMethodVoid<P1, P2, P3, P4, P5, P6, P7, P8, P9> rhs, Workspace workspace)
+        : base(workspace, rhs)
         {
             _fp = rhs._fp;
             _p1 = rhs._p1;
@@ -4725,85 +4755,85 @@ namespace behaviac
 
         public override IMethod Clone()
         {
-            return new CAgentMethodVoid<P1, P2, P3, P4, P5, P6, P7, P8, P9>(this);
+            return new CAgentMethodVoid<P1, P2, P3, P4, P5, P6, P7, P8, P9>(this, Workspace);
         }
 
         public override void Load(string instance, string[] paramStrs)
         {
-            Debug.Check(paramStrs.Length == 9);
+            Debugs.Check(paramStrs.Length == 9);
 
             _instance = instance;
-            _p1 = AgentMeta.ParseProperty<P1>(paramStrs[0]);
-            _p2 = AgentMeta.ParseProperty<P2>(paramStrs[1]);
-            _p3 = AgentMeta.ParseProperty<P3>(paramStrs[2]);
-            _p4 = AgentMeta.ParseProperty<P4>(paramStrs[3]);
-            _p5 = AgentMeta.ParseProperty<P5>(paramStrs[4]);
-            _p6 = AgentMeta.ParseProperty<P6>(paramStrs[5]);
-            _p7 = AgentMeta.ParseProperty<P7>(paramStrs[6]);
-            _p8 = AgentMeta.ParseProperty<P8>(paramStrs[7]);
-            _p9 = AgentMeta.ParseProperty<P9>(paramStrs[8]);
+            _p1 = AgentMeta.ParseProperty<P1>(paramStrs[0], Workspace);
+            _p2 = AgentMeta.ParseProperty<P2>(paramStrs[1], Workspace);
+            _p3 = AgentMeta.ParseProperty<P3>(paramStrs[2], Workspace);
+            _p4 = AgentMeta.ParseProperty<P4>(paramStrs[3], Workspace);
+            _p5 = AgentMeta.ParseProperty<P5>(paramStrs[4], Workspace);
+            _p6 = AgentMeta.ParseProperty<P6>(paramStrs[5], Workspace);
+            _p7 = AgentMeta.ParseProperty<P7>(paramStrs[6], Workspace);
+            _p8 = AgentMeta.ParseProperty<P8>(paramStrs[7], Workspace);
+            _p9 = AgentMeta.ParseProperty<P9>(paramStrs[8], Workspace);
         }
 
-        public override void Run(Agent self)
+        public override async Task Run(Agent self)
         {
-            Debug.Check(_p1 != null);
-            Debug.Check(_p2 != null);
-            Debug.Check(_p3 != null);
-            Debug.Check(_p4 != null);
-            Debug.Check(_p5 != null);
-            Debug.Check(_p6 != null);
-            Debug.Check(_p7 != null);
-            Debug.Check(_p8 != null);
-            Debug.Check(_p9 != null);
+            Debugs.Check(_p1 != null);
+            Debugs.Check(_p2 != null);
+            Debugs.Check(_p3 != null);
+            Debugs.Check(_p4 != null);
+            Debugs.Check(_p5 != null);
+            Debugs.Check(_p6 != null);
+            Debugs.Check(_p7 != null);
+            Debugs.Check(_p8 != null);
+            Debugs.Check(_p9 != null);
 
             Agent agent = Utils.GetParentAgent(self, _instance);
 
-            _fp(agent,
-                ((CInstanceMember<P1>)_p1).GetValue(self),
-                ((CInstanceMember<P2>)_p2).GetValue(self),
-                ((CInstanceMember<P3>)_p3).GetValue(self),
-                ((CInstanceMember<P4>)_p4).GetValue(self),
-                ((CInstanceMember<P5>)_p5).GetValue(self),
-                ((CInstanceMember<P6>)_p6).GetValue(self),
-                ((CInstanceMember<P7>)_p7).GetValue(self),
-                ((CInstanceMember<P8>)_p8).GetValue(self),
-                ((CInstanceMember<P9>)_p9).GetValue(self));
+            await _fp(agent,
+            await ((CInstanceMember<P1>)_p1).GetValue(self),
+            await ((CInstanceMember<P2>)_p2).GetValue(self),
+            await ((CInstanceMember<P3>)_p3).GetValue(self),
+            await ((CInstanceMember<P4>)_p4).GetValue(self),
+            await ((CInstanceMember<P5>)_p5).GetValue(self),
+            await ((CInstanceMember<P6>)_p6).GetValue(self),
+            await ((CInstanceMember<P7>)_p7).GetValue(self),
+            await ((CInstanceMember<P8>)_p8).GetValue(self),
+            await ((CInstanceMember<P9>)_p9).GetValue(self));
         }
 
         public override void SetTaskParams(Agent self, BehaviorTreeTask treeTask)
         {
-            string paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 0);
+            string paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 0);
             treeTask.SetVariable(paramName, ((CInstanceMember<P1>)_p1).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 1);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 1);
             treeTask.SetVariable(paramName, ((CInstanceMember<P2>)_p2).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 2);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 2);
             treeTask.SetVariable(paramName, ((CInstanceMember<P3>)_p3).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 3);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 3);
             treeTask.SetVariable(paramName, ((CInstanceMember<P4>)_p4).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 4);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 4);
             treeTask.SetVariable(paramName, ((CInstanceMember<P5>)_p5).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 5);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 5);
             treeTask.SetVariable(paramName, ((CInstanceMember<P6>)_p6).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 6);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 6);
             treeTask.SetVariable(paramName, ((CInstanceMember<P7>)_p7).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 7);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 7);
             treeTask.SetVariable(paramName, ((CInstanceMember<P8>)_p8).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 8);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 8);
             treeTask.SetVariable(paramName, ((CInstanceMember<P9>)_p9).GetValue(self));
         }
     }
 
     public class CAgentMethodVoid<P1, P2, P3, P4, P5, P6, P7, P8, P9, P10> : CAgentMethodVoidBase
     {
-        public delegate void FunctionPointer(Agent a, P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6, P7 p7, P8 p8, P9 p9, P10 p10);
+        public delegate Task FunctionPointer(Agent a, P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6, P7 p7, P8 p8, P9 p9, P10 p10);
 
         FunctionPointer _fp;
         IInstanceMember _p1;
@@ -4817,13 +4847,13 @@ namespace behaviac
         IInstanceMember _p9;
         IInstanceMember _p10;
 
-        public CAgentMethodVoid(FunctionPointer f)
+        public CAgentMethodVoid(FunctionPointer f, Workspace workspace) : base(workspace)
         {
             _fp = f;
         }
 
-        public CAgentMethodVoid(CAgentMethodVoid<P1, P2, P3, P4, P5, P6, P7, P8, P9, P10> rhs)
-        : base(rhs)
+        public CAgentMethodVoid(CAgentMethodVoid<P1, P2, P3, P4, P5, P6, P7, P8, P9, P10> rhs, Workspace workspace)
+        : base(workspace, rhs)
         {
             _fp = rhs._fp;
             _p1 = rhs._p1;
@@ -4840,91 +4870,91 @@ namespace behaviac
 
         public override IMethod Clone()
         {
-            return new CAgentMethodVoid<P1, P2, P3, P4, P5, P6, P7, P8, P9, P10>(this);
+            return new CAgentMethodVoid<P1, P2, P3, P4, P5, P6, P7, P8, P9, P10>(this, Workspace);
         }
 
         public override void Load(string instance, string[] paramStrs)
         {
-            Debug.Check(paramStrs.Length == 10);
+            Debugs.Check(paramStrs.Length == 10);
 
             _instance = instance;
-            _p1 = AgentMeta.ParseProperty<P1>(paramStrs[0]);
-            _p2 = AgentMeta.ParseProperty<P2>(paramStrs[1]);
-            _p3 = AgentMeta.ParseProperty<P3>(paramStrs[2]);
-            _p4 = AgentMeta.ParseProperty<P4>(paramStrs[3]);
-            _p5 = AgentMeta.ParseProperty<P5>(paramStrs[4]);
-            _p6 = AgentMeta.ParseProperty<P6>(paramStrs[5]);
-            _p7 = AgentMeta.ParseProperty<P7>(paramStrs[6]);
-            _p8 = AgentMeta.ParseProperty<P8>(paramStrs[7]);
-            _p9 = AgentMeta.ParseProperty<P9>(paramStrs[8]);
-            _p10 = AgentMeta.ParseProperty<P10>(paramStrs[9]);
+            _p1 = AgentMeta.ParseProperty<P1>(paramStrs[0], Workspace);
+            _p2 = AgentMeta.ParseProperty<P2>(paramStrs[1], Workspace);
+            _p3 = AgentMeta.ParseProperty<P3>(paramStrs[2], Workspace);
+            _p4 = AgentMeta.ParseProperty<P4>(paramStrs[3], Workspace);
+            _p5 = AgentMeta.ParseProperty<P5>(paramStrs[4], Workspace);
+            _p6 = AgentMeta.ParseProperty<P6>(paramStrs[5], Workspace);
+            _p7 = AgentMeta.ParseProperty<P7>(paramStrs[6], Workspace);
+            _p8 = AgentMeta.ParseProperty<P8>(paramStrs[7], Workspace);
+            _p9 = AgentMeta.ParseProperty<P9>(paramStrs[8], Workspace);
+            _p10 = AgentMeta.ParseProperty<P10>(paramStrs[9], Workspace);
         }
 
-        public override void Run(Agent self)
+        public override async Task Run(Agent self)
         {
-            Debug.Check(_p1 != null);
-            Debug.Check(_p2 != null);
-            Debug.Check(_p3 != null);
-            Debug.Check(_p4 != null);
-            Debug.Check(_p5 != null);
-            Debug.Check(_p6 != null);
-            Debug.Check(_p7 != null);
-            Debug.Check(_p8 != null);
-            Debug.Check(_p9 != null);
-            Debug.Check(_p10 != null);
+            Debugs.Check(_p1 != null);
+            Debugs.Check(_p2 != null);
+            Debugs.Check(_p3 != null);
+            Debugs.Check(_p4 != null);
+            Debugs.Check(_p5 != null);
+            Debugs.Check(_p6 != null);
+            Debugs.Check(_p7 != null);
+            Debugs.Check(_p8 != null);
+            Debugs.Check(_p9 != null);
+            Debugs.Check(_p10 != null);
 
             Agent agent = Utils.GetParentAgent(self, _instance);
 
-            _fp(agent,
-                ((CInstanceMember<P1>)_p1).GetValue(self),
-                ((CInstanceMember<P2>)_p2).GetValue(self),
-                ((CInstanceMember<P3>)_p3).GetValue(self),
-                ((CInstanceMember<P4>)_p4).GetValue(self),
-                ((CInstanceMember<P5>)_p5).GetValue(self),
-                ((CInstanceMember<P6>)_p6).GetValue(self),
-                ((CInstanceMember<P7>)_p7).GetValue(self),
-                ((CInstanceMember<P8>)_p8).GetValue(self),
-                ((CInstanceMember<P9>)_p9).GetValue(self),
-                ((CInstanceMember<P10>)_p10).GetValue(self));
+            await _fp(agent,
+            await ((CInstanceMember<P1>)_p1).GetValue(self),
+            await ((CInstanceMember<P2>)_p2).GetValue(self),
+            await ((CInstanceMember<P3>)_p3).GetValue(self),
+            await ((CInstanceMember<P4>)_p4).GetValue(self),
+            await ((CInstanceMember<P5>)_p5).GetValue(self),
+            await ((CInstanceMember<P6>)_p6).GetValue(self),
+            await ((CInstanceMember<P7>)_p7).GetValue(self),
+            await ((CInstanceMember<P8>)_p8).GetValue(self),
+            await ((CInstanceMember<P9>)_p9).GetValue(self),
+            await ((CInstanceMember<P10>)_p10).GetValue(self));
         }
 
         public override void SetTaskParams(Agent self, BehaviorTreeTask treeTask)
         {
-            string paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 0);
+            string paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 0);
             treeTask.SetVariable(paramName, ((CInstanceMember<P1>)_p1).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 1);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 1);
             treeTask.SetVariable(paramName, ((CInstanceMember<P2>)_p2).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 2);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 2);
             treeTask.SetVariable(paramName, ((CInstanceMember<P3>)_p3).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 3);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 3);
             treeTask.SetVariable(paramName, ((CInstanceMember<P4>)_p4).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 4);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 4);
             treeTask.SetVariable(paramName, ((CInstanceMember<P5>)_p5).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 5);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 5);
             treeTask.SetVariable(paramName, ((CInstanceMember<P6>)_p6).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 6);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 6);
             treeTask.SetVariable(paramName, ((CInstanceMember<P7>)_p7).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 7);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 7);
             treeTask.SetVariable(paramName, ((CInstanceMember<P8>)_p8).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 8);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 8);
             treeTask.SetVariable(paramName, ((CInstanceMember<P9>)_p9).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 9);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 9);
             treeTask.SetVariable(paramName, ((CInstanceMember<P10>)_p10).GetValue(self));
         }
     }
 
     public class CAgentMethodVoid<P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11> : CAgentMethodVoidBase
     {
-        public delegate void FunctionPointer(Agent a, P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6, P7 p7, P8 p8, P9 p9, P10 p10, P11 p11);
+        public delegate Task FunctionPointer(Agent a, P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6, P7 p7, P8 p8, P9 p9, P10 p10, P11 p11);
 
         FunctionPointer _fp;
         IInstanceMember _p1;
@@ -4939,13 +4969,12 @@ namespace behaviac
         IInstanceMember _p10;
         IInstanceMember _p11;
 
-        public CAgentMethodVoid(FunctionPointer f)
+        public CAgentMethodVoid(FunctionPointer f, Workspace workspace) : base(workspace)
         {
             _fp = f;
         }
 
-        public CAgentMethodVoid(CAgentMethodVoid<P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11> rhs)
-        : base(rhs)
+        public CAgentMethodVoid(CAgentMethodVoid<P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11> rhs, Workspace workspace) : base(workspace, rhs)
         {
             _fp = rhs._fp;
             _p1 = rhs._p1;
@@ -4963,97 +4992,97 @@ namespace behaviac
 
         public override IMethod Clone()
         {
-            return new CAgentMethodVoid<P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11>(this);
+            return new CAgentMethodVoid<P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11>(this, Workspace);
         }
 
         public override void Load(string instance, string[] paramStrs)
         {
-            Debug.Check(paramStrs.Length == 11);
+            Debugs.Check(paramStrs.Length == 11);
 
             _instance = instance;
-            _p1 = AgentMeta.ParseProperty<P1>(paramStrs[0]);
-            _p2 = AgentMeta.ParseProperty<P2>(paramStrs[1]);
-            _p3 = AgentMeta.ParseProperty<P3>(paramStrs[2]);
-            _p4 = AgentMeta.ParseProperty<P4>(paramStrs[3]);
-            _p5 = AgentMeta.ParseProperty<P5>(paramStrs[4]);
-            _p6 = AgentMeta.ParseProperty<P6>(paramStrs[5]);
-            _p7 = AgentMeta.ParseProperty<P7>(paramStrs[6]);
-            _p8 = AgentMeta.ParseProperty<P8>(paramStrs[7]);
-            _p9 = AgentMeta.ParseProperty<P9>(paramStrs[8]);
-            _p10 = AgentMeta.ParseProperty<P10>(paramStrs[9]);
-            _p11 = AgentMeta.ParseProperty<P11>(paramStrs[10]);
+            _p1 = AgentMeta.ParseProperty<P1>(paramStrs[0], Workspace);
+            _p2 = AgentMeta.ParseProperty<P2>(paramStrs[1], Workspace);
+            _p3 = AgentMeta.ParseProperty<P3>(paramStrs[2], Workspace);
+            _p4 = AgentMeta.ParseProperty<P4>(paramStrs[3], Workspace);
+            _p5 = AgentMeta.ParseProperty<P5>(paramStrs[4], Workspace);
+            _p6 = AgentMeta.ParseProperty<P6>(paramStrs[5], Workspace);
+            _p7 = AgentMeta.ParseProperty<P7>(paramStrs[6], Workspace);
+            _p8 = AgentMeta.ParseProperty<P8>(paramStrs[7], Workspace);
+            _p9 = AgentMeta.ParseProperty<P9>(paramStrs[8], Workspace);
+            _p10 = AgentMeta.ParseProperty<P10>(paramStrs[9], Workspace);
+            _p11 = AgentMeta.ParseProperty<P11>(paramStrs[10], Workspace);
         }
 
-        public override void Run(Agent self)
+        public override async Task Run(Agent self)
         {
-            Debug.Check(_p1 != null);
-            Debug.Check(_p2 != null);
-            Debug.Check(_p3 != null);
-            Debug.Check(_p4 != null);
-            Debug.Check(_p5 != null);
-            Debug.Check(_p6 != null);
-            Debug.Check(_p7 != null);
-            Debug.Check(_p8 != null);
-            Debug.Check(_p9 != null);
-            Debug.Check(_p10 != null);
-            Debug.Check(_p11 != null);
+            Debugs.Check(_p1 != null);
+            Debugs.Check(_p2 != null);
+            Debugs.Check(_p3 != null);
+            Debugs.Check(_p4 != null);
+            Debugs.Check(_p5 != null);
+            Debugs.Check(_p6 != null);
+            Debugs.Check(_p7 != null);
+            Debugs.Check(_p8 != null);
+            Debugs.Check(_p9 != null);
+            Debugs.Check(_p10 != null);
+            Debugs.Check(_p11 != null);
 
             Agent agent = Utils.GetParentAgent(self, _instance);
 
-            _fp(agent,
-                ((CInstanceMember<P1>)_p1).GetValue(self),
-                ((CInstanceMember<P2>)_p2).GetValue(self),
-                ((CInstanceMember<P3>)_p3).GetValue(self),
-                ((CInstanceMember<P4>)_p4).GetValue(self),
-                ((CInstanceMember<P5>)_p5).GetValue(self),
-                ((CInstanceMember<P6>)_p6).GetValue(self),
-                ((CInstanceMember<P7>)_p7).GetValue(self),
-                ((CInstanceMember<P8>)_p8).GetValue(self),
-                ((CInstanceMember<P9>)_p9).GetValue(self),
-                ((CInstanceMember<P10>)_p10).GetValue(self),
-                ((CInstanceMember<P11>)_p11).GetValue(self));
+            await _fp(agent,
+              await ((CInstanceMember<P1>)_p1).GetValue(self),
+              await ((CInstanceMember<P2>)_p2).GetValue(self),
+              await ((CInstanceMember<P3>)_p3).GetValue(self),
+              await ((CInstanceMember<P4>)_p4).GetValue(self),
+              await ((CInstanceMember<P5>)_p5).GetValue(self),
+              await ((CInstanceMember<P6>)_p6).GetValue(self),
+              await ((CInstanceMember<P7>)_p7).GetValue(self),
+              await ((CInstanceMember<P8>)_p8).GetValue(self),
+              await ((CInstanceMember<P9>)_p9).GetValue(self),
+              await ((CInstanceMember<P10>)_p10).GetValue(self),
+              await ((CInstanceMember<P11>)_p11).GetValue(self));
         }
 
         public override void SetTaskParams(Agent self, BehaviorTreeTask treeTask)
         {
-            string paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 0);
+            string paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 0);
             treeTask.SetVariable(paramName, ((CInstanceMember<P1>)_p1).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 1);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 1);
             treeTask.SetVariable(paramName, ((CInstanceMember<P2>)_p2).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 2);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 2);
             treeTask.SetVariable(paramName, ((CInstanceMember<P3>)_p3).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 3);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 3);
             treeTask.SetVariable(paramName, ((CInstanceMember<P4>)_p4).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 4);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 4);
             treeTask.SetVariable(paramName, ((CInstanceMember<P5>)_p5).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 5);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 5);
             treeTask.SetVariable(paramName, ((CInstanceMember<P6>)_p6).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 6);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 6);
             treeTask.SetVariable(paramName, ((CInstanceMember<P7>)_p7).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 7);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 7);
             treeTask.SetVariable(paramName, ((CInstanceMember<P8>)_p8).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 8);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 8);
             treeTask.SetVariable(paramName, ((CInstanceMember<P9>)_p9).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 9);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 9);
             treeTask.SetVariable(paramName, ((CInstanceMember<P10>)_p10).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 10);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 10);
             treeTask.SetVariable(paramName, ((CInstanceMember<P11>)_p11).GetValue(self));
         }
     }
 
     public class CAgentMethodVoid<P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12> : CAgentMethodVoidBase
     {
-        public delegate void FunctionPointer(Agent a, P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6, P7 p7, P8 p8, P9 p9, P10 p10, P11 p11, P12 p12);
+        public delegate Task FunctionPointer(Agent a, P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6, P7 p7, P8 p8, P9 p9, P10 p10, P11 p11, P12 p12);
 
         FunctionPointer _fp;
         IInstanceMember _p1;
@@ -5069,13 +5098,13 @@ namespace behaviac
         IInstanceMember _p11;
         IInstanceMember _p12;
 
-        public CAgentMethodVoid(FunctionPointer f)
+        public CAgentMethodVoid(FunctionPointer f, Workspace workspace) : base(workspace)
         {
             _fp = f;
         }
 
-        public CAgentMethodVoid(CAgentMethodVoid<P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12> rhs)
-        : base(rhs)
+        public CAgentMethodVoid(CAgentMethodVoid<P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12> rhs, Workspace workspace)
+        : base(workspace, rhs)
         {
             _fp = rhs._fp;
             _p1 = rhs._p1;
@@ -5094,103 +5123,103 @@ namespace behaviac
 
         public override IMethod Clone()
         {
-            return new CAgentMethodVoid<P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12>(this);
+            return new CAgentMethodVoid<P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12>(this, Workspace);
         }
 
         public override void Load(string instance, string[] paramStrs)
         {
-            Debug.Check(paramStrs.Length == 12);
+            Debugs.Check(paramStrs.Length == 12);
 
             _instance = instance;
-            _p1 = AgentMeta.ParseProperty<P1>(paramStrs[0]);
-            _p2 = AgentMeta.ParseProperty<P2>(paramStrs[1]);
-            _p3 = AgentMeta.ParseProperty<P3>(paramStrs[2]);
-            _p4 = AgentMeta.ParseProperty<P4>(paramStrs[3]);
-            _p5 = AgentMeta.ParseProperty<P5>(paramStrs[4]);
-            _p6 = AgentMeta.ParseProperty<P6>(paramStrs[5]);
-            _p7 = AgentMeta.ParseProperty<P7>(paramStrs[6]);
-            _p8 = AgentMeta.ParseProperty<P8>(paramStrs[7]);
-            _p9 = AgentMeta.ParseProperty<P9>(paramStrs[8]);
-            _p10 = AgentMeta.ParseProperty<P10>(paramStrs[9]);
-            _p11 = AgentMeta.ParseProperty<P11>(paramStrs[10]);
-            _p12 = AgentMeta.ParseProperty<P12>(paramStrs[11]);
+            _p1 = AgentMeta.ParseProperty<P1>(paramStrs[0], Workspace);
+            _p2 = AgentMeta.ParseProperty<P2>(paramStrs[1], Workspace);
+            _p3 = AgentMeta.ParseProperty<P3>(paramStrs[2], Workspace);
+            _p4 = AgentMeta.ParseProperty<P4>(paramStrs[3], Workspace);
+            _p5 = AgentMeta.ParseProperty<P5>(paramStrs[4], Workspace);
+            _p6 = AgentMeta.ParseProperty<P6>(paramStrs[5], Workspace);
+            _p7 = AgentMeta.ParseProperty<P7>(paramStrs[6], Workspace);
+            _p8 = AgentMeta.ParseProperty<P8>(paramStrs[7], Workspace);
+            _p9 = AgentMeta.ParseProperty<P9>(paramStrs[8], Workspace);
+            _p10 = AgentMeta.ParseProperty<P10>(paramStrs[9], Workspace);
+            _p11 = AgentMeta.ParseProperty<P11>(paramStrs[10], Workspace);
+            _p12 = AgentMeta.ParseProperty<P12>(paramStrs[11], Workspace);
         }
 
-        public override void Run(Agent self)
+        public override async Task Run(Agent self)
         {
-            Debug.Check(_p1 != null);
-            Debug.Check(_p2 != null);
-            Debug.Check(_p3 != null);
-            Debug.Check(_p4 != null);
-            Debug.Check(_p5 != null);
-            Debug.Check(_p6 != null);
-            Debug.Check(_p7 != null);
-            Debug.Check(_p8 != null);
-            Debug.Check(_p9 != null);
-            Debug.Check(_p10 != null);
-            Debug.Check(_p11 != null);
-            Debug.Check(_p12 != null);
+            Debugs.Check(_p1 != null);
+            Debugs.Check(_p2 != null);
+            Debugs.Check(_p3 != null);
+            Debugs.Check(_p4 != null);
+            Debugs.Check(_p5 != null);
+            Debugs.Check(_p6 != null);
+            Debugs.Check(_p7 != null);
+            Debugs.Check(_p8 != null);
+            Debugs.Check(_p9 != null);
+            Debugs.Check(_p10 != null);
+            Debugs.Check(_p11 != null);
+            Debugs.Check(_p12 != null);
 
             Agent agent = Utils.GetParentAgent(self, _instance);
 
-            _fp(agent,
-                ((CInstanceMember<P1>)_p1).GetValue(self),
-                ((CInstanceMember<P2>)_p2).GetValue(self),
-                ((CInstanceMember<P3>)_p3).GetValue(self),
-                ((CInstanceMember<P4>)_p4).GetValue(self),
-                ((CInstanceMember<P5>)_p5).GetValue(self),
-                ((CInstanceMember<P6>)_p6).GetValue(self),
-                ((CInstanceMember<P7>)_p7).GetValue(self),
-                ((CInstanceMember<P8>)_p8).GetValue(self),
-                ((CInstanceMember<P9>)_p9).GetValue(self),
-                ((CInstanceMember<P10>)_p10).GetValue(self),
-                ((CInstanceMember<P11>)_p11).GetValue(self),
-                ((CInstanceMember<P12>)_p12).GetValue(self));
+            await _fp(agent,
+             await ((CInstanceMember<P1>)_p1).GetValue(self),
+             await ((CInstanceMember<P2>)_p2).GetValue(self),
+             await ((CInstanceMember<P3>)_p3).GetValue(self),
+             await ((CInstanceMember<P4>)_p4).GetValue(self),
+             await ((CInstanceMember<P5>)_p5).GetValue(self),
+             await ((CInstanceMember<P6>)_p6).GetValue(self),
+             await ((CInstanceMember<P7>)_p7).GetValue(self),
+             await ((CInstanceMember<P8>)_p8).GetValue(self),
+             await ((CInstanceMember<P9>)_p9).GetValue(self),
+             await ((CInstanceMember<P10>)_p10).GetValue(self),
+             await ((CInstanceMember<P11>)_p11).GetValue(self),
+             await ((CInstanceMember<P12>)_p12).GetValue(self));
         }
 
         public override void SetTaskParams(Agent self, BehaviorTreeTask treeTask)
         {
-            string paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 0);
+            string paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 0);
             treeTask.SetVariable(paramName, ((CInstanceMember<P1>)_p1).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 1);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 1);
             treeTask.SetVariable(paramName, ((CInstanceMember<P2>)_p2).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 2);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 2);
             treeTask.SetVariable(paramName, ((CInstanceMember<P3>)_p3).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 3);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 3);
             treeTask.SetVariable(paramName, ((CInstanceMember<P4>)_p4).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 4);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 4);
             treeTask.SetVariable(paramName, ((CInstanceMember<P5>)_p5).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 5);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 5);
             treeTask.SetVariable(paramName, ((CInstanceMember<P6>)_p6).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 6);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 6);
             treeTask.SetVariable(paramName, ((CInstanceMember<P7>)_p7).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 7);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 7);
             treeTask.SetVariable(paramName, ((CInstanceMember<P8>)_p8).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 8);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 8);
             treeTask.SetVariable(paramName, ((CInstanceMember<P9>)_p9).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 9);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 9);
             treeTask.SetVariable(paramName, ((CInstanceMember<P10>)_p10).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 10);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 10);
             treeTask.SetVariable(paramName, ((CInstanceMember<P11>)_p11).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 11);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 11);
             treeTask.SetVariable(paramName, ((CInstanceMember<P12>)_p12).GetValue(self));
         }
     }
 
     public class CAgentMethodVoid<P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12, P13> : CAgentMethodVoidBase
     {
-        public delegate void FunctionPointer(Agent a, P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6, P7 p7, P8 p8, P9 p9, P10 p10, P11 p11, P12 p12, P13 p13);
+        public delegate Task FunctionPointer(Agent a, P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6, P7 p7, P8 p8, P9 p9, P10 p10, P11 p11, P12 p12, P13 p13);
 
         FunctionPointer _fp;
         IInstanceMember _p1;
@@ -5207,13 +5236,13 @@ namespace behaviac
         IInstanceMember _p12;
         IInstanceMember _p13;
 
-        public CAgentMethodVoid(FunctionPointer f)
+        public CAgentMethodVoid(FunctionPointer f, Workspace workspace) : base(workspace)
         {
             _fp = f;
         }
 
-        public CAgentMethodVoid(CAgentMethodVoid<P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12, P13> rhs)
-        : base(rhs)
+        public CAgentMethodVoid(CAgentMethodVoid<P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12, P13> rhs, Workspace workspace)
+        : base(workspace, rhs)
         {
             _fp = rhs._fp;
             _p1 = rhs._p1;
@@ -5233,109 +5262,109 @@ namespace behaviac
 
         public override IMethod Clone()
         {
-            return new CAgentMethodVoid<P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12, P13>(this);
+            return new CAgentMethodVoid<P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12, P13>(this, Workspace);
         }
 
         public override void Load(string instance, string[] paramStrs)
         {
-            Debug.Check(paramStrs.Length == 13);
+            Debugs.Check(paramStrs.Length == 13);
 
             _instance = instance;
-            _p1 = AgentMeta.ParseProperty<P1>(paramStrs[0]);
-            _p2 = AgentMeta.ParseProperty<P2>(paramStrs[1]);
-            _p3 = AgentMeta.ParseProperty<P3>(paramStrs[2]);
-            _p4 = AgentMeta.ParseProperty<P4>(paramStrs[3]);
-            _p5 = AgentMeta.ParseProperty<P5>(paramStrs[4]);
-            _p6 = AgentMeta.ParseProperty<P6>(paramStrs[5]);
-            _p7 = AgentMeta.ParseProperty<P7>(paramStrs[6]);
-            _p8 = AgentMeta.ParseProperty<P8>(paramStrs[7]);
-            _p9 = AgentMeta.ParseProperty<P9>(paramStrs[8]);
-            _p10 = AgentMeta.ParseProperty<P10>(paramStrs[9]);
-            _p11 = AgentMeta.ParseProperty<P11>(paramStrs[10]);
-            _p12 = AgentMeta.ParseProperty<P12>(paramStrs[11]);
-            _p13 = AgentMeta.ParseProperty<P13>(paramStrs[12]);
+            _p1 = AgentMeta.ParseProperty<P1>(paramStrs[0], Workspace);
+            _p2 = AgentMeta.ParseProperty<P2>(paramStrs[1], Workspace);
+            _p3 = AgentMeta.ParseProperty<P3>(paramStrs[2], Workspace);
+            _p4 = AgentMeta.ParseProperty<P4>(paramStrs[3], Workspace);
+            _p5 = AgentMeta.ParseProperty<P5>(paramStrs[4], Workspace);
+            _p6 = AgentMeta.ParseProperty<P6>(paramStrs[5], Workspace);
+            _p7 = AgentMeta.ParseProperty<P7>(paramStrs[6], Workspace);
+            _p8 = AgentMeta.ParseProperty<P8>(paramStrs[7], Workspace);
+            _p9 = AgentMeta.ParseProperty<P9>(paramStrs[8], Workspace);
+            _p10 = AgentMeta.ParseProperty<P10>(paramStrs[9], Workspace);
+            _p11 = AgentMeta.ParseProperty<P11>(paramStrs[10], Workspace);
+            _p12 = AgentMeta.ParseProperty<P12>(paramStrs[11], Workspace);
+            _p13 = AgentMeta.ParseProperty<P13>(paramStrs[12], Workspace);
         }
 
-        public override void Run(Agent self)
+        public override async Task Run(Agent self)
         {
-            Debug.Check(_p1 != null);
-            Debug.Check(_p2 != null);
-            Debug.Check(_p3 != null);
-            Debug.Check(_p4 != null);
-            Debug.Check(_p5 != null);
-            Debug.Check(_p6 != null);
-            Debug.Check(_p7 != null);
-            Debug.Check(_p8 != null);
-            Debug.Check(_p9 != null);
-            Debug.Check(_p10 != null);
-            Debug.Check(_p11 != null);
-            Debug.Check(_p12 != null);
-            Debug.Check(_p13 != null);
+            Debugs.Check(_p1 != null);
+            Debugs.Check(_p2 != null);
+            Debugs.Check(_p3 != null);
+            Debugs.Check(_p4 != null);
+            Debugs.Check(_p5 != null);
+            Debugs.Check(_p6 != null);
+            Debugs.Check(_p7 != null);
+            Debugs.Check(_p8 != null);
+            Debugs.Check(_p9 != null);
+            Debugs.Check(_p10 != null);
+            Debugs.Check(_p11 != null);
+            Debugs.Check(_p12 != null);
+            Debugs.Check(_p13 != null);
 
             Agent agent = Utils.GetParentAgent(self, _instance);
 
-            _fp(agent,
-                ((CInstanceMember<P1>)_p1).GetValue(self),
-                ((CInstanceMember<P2>)_p2).GetValue(self),
-                ((CInstanceMember<P3>)_p3).GetValue(self),
-                ((CInstanceMember<P4>)_p4).GetValue(self),
-                ((CInstanceMember<P5>)_p5).GetValue(self),
-                ((CInstanceMember<P6>)_p6).GetValue(self),
-                ((CInstanceMember<P7>)_p7).GetValue(self),
-                ((CInstanceMember<P8>)_p8).GetValue(self),
-                ((CInstanceMember<P9>)_p9).GetValue(self),
-                ((CInstanceMember<P10>)_p10).GetValue(self),
-                ((CInstanceMember<P11>)_p11).GetValue(self),
-                ((CInstanceMember<P12>)_p12).GetValue(self),
-                ((CInstanceMember<P13>)_p13).GetValue(self));
+            await _fp(agent,
+                 await ((CInstanceMember<P1>)_p1).GetValue(self),
+              await ((CInstanceMember<P2>)_p2).GetValue(self),
+              await ((CInstanceMember<P3>)_p3).GetValue(self),
+              await ((CInstanceMember<P4>)_p4).GetValue(self),
+             await ((CInstanceMember<P5>)_p5).GetValue(self),
+             await ((CInstanceMember<P6>)_p6).GetValue(self),
+            await ((CInstanceMember<P7>)_p7).GetValue(self),
+           await ((CInstanceMember<P8>)_p8).GetValue(self),
+             await ((CInstanceMember<P9>)_p9).GetValue(self),
+             await ((CInstanceMember<P10>)_p10).GetValue(self),
+            await ((CInstanceMember<P11>)_p11).GetValue(self),
+            await ((CInstanceMember<P12>)_p12).GetValue(self),
+             await ((CInstanceMember<P13>)_p13).GetValue(self));
         }
 
         public override void SetTaskParams(Agent self, BehaviorTreeTask treeTask)
         {
-            string paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 0);
+            string paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 0);
             treeTask.SetVariable(paramName, ((CInstanceMember<P1>)_p1).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 1);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 1);
             treeTask.SetVariable(paramName, ((CInstanceMember<P2>)_p2).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 2);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 2);
             treeTask.SetVariable(paramName, ((CInstanceMember<P3>)_p3).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 3);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 3);
             treeTask.SetVariable(paramName, ((CInstanceMember<P4>)_p4).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 4);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 4);
             treeTask.SetVariable(paramName, ((CInstanceMember<P5>)_p5).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 5);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 5);
             treeTask.SetVariable(paramName, ((CInstanceMember<P6>)_p6).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 6);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 6);
             treeTask.SetVariable(paramName, ((CInstanceMember<P7>)_p7).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 7);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 7);
             treeTask.SetVariable(paramName, ((CInstanceMember<P8>)_p8).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 8);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 8);
             treeTask.SetVariable(paramName, ((CInstanceMember<P9>)_p9).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 9);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 9);
             treeTask.SetVariable(paramName, ((CInstanceMember<P10>)_p10).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 10);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 10);
             treeTask.SetVariable(paramName, ((CInstanceMember<P11>)_p11).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 11);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 11);
             treeTask.SetVariable(paramName, ((CInstanceMember<P12>)_p12).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 12);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 12);
             treeTask.SetVariable(paramName, ((CInstanceMember<P13>)_p13).GetValue(self));
         }
     }
 
     public class CAgentMethodVoid<P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12, P13, P14> : CAgentMethodVoidBase
     {
-        public delegate void FunctionPointer(Agent a, P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6, P7 p7, P8 p8, P9 p9, P10 p10, P11 p11, P12 p12, P13 p13, P14 p14);
+        public delegate Task FunctionPointer(Agent a, P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6, P7 p7, P8 p8, P9 p9, P10 p10, P11 p11, P12 p12, P13 p13, P14 p14);
 
         FunctionPointer _fp;
         IInstanceMember _p1;
@@ -5353,13 +5382,13 @@ namespace behaviac
         IInstanceMember _p13;
         IInstanceMember _p14;
 
-        public CAgentMethodVoid(FunctionPointer f)
+        public CAgentMethodVoid(FunctionPointer f, Workspace workspace) : base(workspace)
         {
             _fp = f;
         }
 
-        public CAgentMethodVoid(CAgentMethodVoid<P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12, P13, P14> rhs)
-        : base(rhs)
+        public CAgentMethodVoid(CAgentMethodVoid<P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12, P13, P14> rhs, Workspace workspace)
+        : base(workspace, rhs)
         {
             _fp = rhs._fp;
             _p1 = rhs._p1;
@@ -5380,144 +5409,144 @@ namespace behaviac
 
         public override IMethod Clone()
         {
-            return new CAgentMethodVoid<P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12, P13, P14>(this);
+            return new CAgentMethodVoid<P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12, P13, P14>(this, Workspace);
         }
 
         public override void Load(string instance, string[] paramStrs)
         {
-            Debug.Check(paramStrs.Length == 14);
+            Debugs.Check(paramStrs.Length == 14);
 
             _instance = instance;
-            _p1 = AgentMeta.ParseProperty<P1>(paramStrs[0]);
-            _p2 = AgentMeta.ParseProperty<P2>(paramStrs[1]);
-            _p3 = AgentMeta.ParseProperty<P3>(paramStrs[2]);
-            _p4 = AgentMeta.ParseProperty<P4>(paramStrs[3]);
-            _p5 = AgentMeta.ParseProperty<P5>(paramStrs[4]);
-            _p6 = AgentMeta.ParseProperty<P6>(paramStrs[5]);
-            _p7 = AgentMeta.ParseProperty<P7>(paramStrs[6]);
-            _p8 = AgentMeta.ParseProperty<P8>(paramStrs[7]);
-            _p9 = AgentMeta.ParseProperty<P9>(paramStrs[8]);
-            _p10 = AgentMeta.ParseProperty<P10>(paramStrs[9]);
-            _p11 = AgentMeta.ParseProperty<P11>(paramStrs[10]);
-            _p12 = AgentMeta.ParseProperty<P12>(paramStrs[11]);
-            _p13 = AgentMeta.ParseProperty<P13>(paramStrs[12]);
-            _p14 = AgentMeta.ParseProperty<P14>(paramStrs[13]);
+            _p1 = AgentMeta.ParseProperty<P1>(paramStrs[0], Workspace);
+            _p2 = AgentMeta.ParseProperty<P2>(paramStrs[1], Workspace);
+            _p3 = AgentMeta.ParseProperty<P3>(paramStrs[2], Workspace);
+            _p4 = AgentMeta.ParseProperty<P4>(paramStrs[3], Workspace);
+            _p5 = AgentMeta.ParseProperty<P5>(paramStrs[4], Workspace);
+            _p6 = AgentMeta.ParseProperty<P6>(paramStrs[5], Workspace);
+            _p7 = AgentMeta.ParseProperty<P7>(paramStrs[6], Workspace);
+            _p8 = AgentMeta.ParseProperty<P8>(paramStrs[7], Workspace);
+            _p9 = AgentMeta.ParseProperty<P9>(paramStrs[8], Workspace);
+            _p10 = AgentMeta.ParseProperty<P10>(paramStrs[9], Workspace);
+            _p11 = AgentMeta.ParseProperty<P11>(paramStrs[10], Workspace);
+            _p12 = AgentMeta.ParseProperty<P12>(paramStrs[11], Workspace);
+            _p13 = AgentMeta.ParseProperty<P13>(paramStrs[12], Workspace);
+            _p14 = AgentMeta.ParseProperty<P14>(paramStrs[13], Workspace);
         }
 
-        public override void Run(Agent self)
+        public override async Task Run(Agent self)
         {
-            Debug.Check(_p1 != null);
-            Debug.Check(_p2 != null);
-            Debug.Check(_p3 != null);
-            Debug.Check(_p4 != null);
-            Debug.Check(_p5 != null);
-            Debug.Check(_p6 != null);
-            Debug.Check(_p7 != null);
-            Debug.Check(_p8 != null);
-            Debug.Check(_p9 != null);
-            Debug.Check(_p10 != null);
-            Debug.Check(_p11 != null);
-            Debug.Check(_p12 != null);
-            Debug.Check(_p13 != null);
-            Debug.Check(_p14 != null);
+            Debugs.Check(_p1 != null);
+            Debugs.Check(_p2 != null);
+            Debugs.Check(_p3 != null);
+            Debugs.Check(_p4 != null);
+            Debugs.Check(_p5 != null);
+            Debugs.Check(_p6 != null);
+            Debugs.Check(_p7 != null);
+            Debugs.Check(_p8 != null);
+            Debugs.Check(_p9 != null);
+            Debugs.Check(_p10 != null);
+            Debugs.Check(_p11 != null);
+            Debugs.Check(_p12 != null);
+            Debugs.Check(_p13 != null);
+            Debugs.Check(_p14 != null);
 
             Agent agent = Utils.GetParentAgent(self, _instance);
 
-            _fp(agent,
-                ((CInstanceMember<P1>)_p1).GetValue(self),
-                ((CInstanceMember<P2>)_p2).GetValue(self),
-                ((CInstanceMember<P3>)_p3).GetValue(self),
-                ((CInstanceMember<P4>)_p4).GetValue(self),
-                ((CInstanceMember<P5>)_p5).GetValue(self),
-                ((CInstanceMember<P6>)_p6).GetValue(self),
-                ((CInstanceMember<P7>)_p7).GetValue(self),
-                ((CInstanceMember<P8>)_p8).GetValue(self),
-                ((CInstanceMember<P9>)_p9).GetValue(self),
-                ((CInstanceMember<P10>)_p10).GetValue(self),
-                ((CInstanceMember<P11>)_p11).GetValue(self),
-                ((CInstanceMember<P12>)_p12).GetValue(self),
-                ((CInstanceMember<P13>)_p13).GetValue(self),
-                ((CInstanceMember<P14>)_p14).GetValue(self));
+            await _fp(agent,
+                 await ((CInstanceMember<P1>)_p1).GetValue(self),
+                 await ((CInstanceMember<P2>)_p2).GetValue(self),
+                 await ((CInstanceMember<P3>)_p3).GetValue(self),
+                 await ((CInstanceMember<P4>)_p4).GetValue(self),
+                 await ((CInstanceMember<P5>)_p5).GetValue(self),
+                 await ((CInstanceMember<P6>)_p6).GetValue(self),
+                 await ((CInstanceMember<P7>)_p7).GetValue(self),
+                 await ((CInstanceMember<P8>)_p8).GetValue(self),
+                 await ((CInstanceMember<P9>)_p9).GetValue(self),
+                 await ((CInstanceMember<P10>)_p10).GetValue(self),
+                 await ((CInstanceMember<P11>)_p11).GetValue(self),
+                 await ((CInstanceMember<P12>)_p12).GetValue(self),
+                 await ((CInstanceMember<P13>)_p13).GetValue(self),
+                 await ((CInstanceMember<P14>)_p14).GetValue(self));
         }
 
         public override void SetTaskParams(Agent self, BehaviorTreeTask treeTask)
         {
-            string paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 0);
+            string paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 0);
             treeTask.SetVariable(paramName, ((CInstanceMember<P1>)_p1).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 1);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 1);
             treeTask.SetVariable(paramName, ((CInstanceMember<P2>)_p2).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 2);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 2);
             treeTask.SetVariable(paramName, ((CInstanceMember<P3>)_p3).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 3);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 3);
             treeTask.SetVariable(paramName, ((CInstanceMember<P4>)_p4).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 4);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 4);
             treeTask.SetVariable(paramName, ((CInstanceMember<P5>)_p5).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 5);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 5);
             treeTask.SetVariable(paramName, ((CInstanceMember<P6>)_p6).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 6);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 6);
             treeTask.SetVariable(paramName, ((CInstanceMember<P7>)_p7).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 7);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 7);
             treeTask.SetVariable(paramName, ((CInstanceMember<P8>)_p8).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 8);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 8);
             treeTask.SetVariable(paramName, ((CInstanceMember<P9>)_p9).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 9);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 9);
             treeTask.SetVariable(paramName, ((CInstanceMember<P10>)_p10).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 10);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 10);
             treeTask.SetVariable(paramName, ((CInstanceMember<P11>)_p11).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 11);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 11);
             treeTask.SetVariable(paramName, ((CInstanceMember<P12>)_p12).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 12);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 12);
             treeTask.SetVariable(paramName, ((CInstanceMember<P13>)_p13).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 13);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 13);
             treeTask.SetVariable(paramName, ((CInstanceMember<P14>)_p14).GetValue(self));
         }
     }
 
     public class CAgentStaticMethodVoid : CAgentMethodVoidBase
     {
-        public delegate void FunctionPointer();
+        public delegate Task FunctionPointer();
 
         FunctionPointer _fp;
 
-        public CAgentStaticMethodVoid(FunctionPointer f)
+        public CAgentStaticMethodVoid(FunctionPointer f, Workspace workspace) : base(workspace)
         {
             _fp = f;
         }
 
-        public CAgentStaticMethodVoid(CAgentStaticMethodVoid rhs)
-        : base(rhs)
+        public CAgentStaticMethodVoid(CAgentStaticMethodVoid rhs, Workspace workspace)
+        : base(workspace, rhs)
         {
             _fp = rhs._fp;
         }
 
         public override IMethod Clone()
         {
-            return new CAgentStaticMethodVoid(this);
+            return new CAgentStaticMethodVoid(this, Workspace);
         }
 
         public override void Load(string instance, string[] paramStrs)
         {
-            Debug.Check(paramStrs.Length == 0);
+            Debugs.Check(paramStrs.Length == 0);
 
             _instance = instance;
         }
 
-        public override void Run(Agent self)
+        public override Task Run(Agent self)
         {
-            _fp();
+            return _fp();
         }
 
         public override void SetTaskParams(Agent self, BehaviorTreeTask treeTask)
@@ -5527,18 +5556,18 @@ namespace behaviac
 
     public class CAgentStaticMethodVoid<P1> : CAgentMethodVoidBase
     {
-        public delegate void FunctionPointer(P1 p1);
+        public delegate Task FunctionPointer(P1 p1);
 
         FunctionPointer _fp;
         IInstanceMember _p1;
 
-        public CAgentStaticMethodVoid(FunctionPointer f)
+        public CAgentStaticMethodVoid(FunctionPointer f, Workspace workspace) : base(workspace)
         {
             _fp = f;
         }
 
-        public CAgentStaticMethodVoid(CAgentStaticMethodVoid<P1> rhs)
-        : base(rhs)
+        public CAgentStaticMethodVoid(CAgentStaticMethodVoid<P1> rhs, Workspace workspace)
+        : base(workspace, rhs)
         {
             _fp = rhs._fp;
             _p1 = rhs._p1;
@@ -5546,46 +5575,46 @@ namespace behaviac
 
         public override IMethod Clone()
         {
-            return new CAgentStaticMethodVoid<P1>(this);
+            return new CAgentStaticMethodVoid<P1>(this, Workspace);
         }
 
         public override void Load(string instance, string[] paramStrs)
         {
-            Debug.Check(paramStrs.Length == 1);
+            Debugs.Check(paramStrs.Length == 1);
 
             _instance = instance;
-            _p1 = AgentMeta.ParseProperty<P1>(paramStrs[0]);
+            _p1 = AgentMeta.ParseProperty<P1>(paramStrs[0], Workspace);
         }
 
-        public override void Run(Agent self)
+        public override async Task Run(Agent self)
         {
-            Debug.Check(_p1 != null);
+            Debugs.Check(_p1 != null);
 
-            _fp(((CInstanceMember<P1>)_p1).GetValue(self));
+            await _fp(await ((CInstanceMember<P1>)_p1).GetValue(self));
         }
 
         public override void SetTaskParams(Agent self, BehaviorTreeTask treeTask)
         {
-            string paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 0);
+            string paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 0);
             treeTask.SetVariable(paramName, ((CInstanceMember<P1>)_p1).GetValue(self));
         }
     }
 
     public class CAgentStaticMethodVoid<P1, P2> : CAgentMethodVoidBase
     {
-        public delegate void FunctionPointer(P1 p1, P2 p2);
+        public delegate Task FunctionPointer(P1 p1, P2 p2);
 
         FunctionPointer _fp;
         IInstanceMember _p1;
         IInstanceMember _p2;
 
-        public CAgentStaticMethodVoid(FunctionPointer f)
+        public CAgentStaticMethodVoid(FunctionPointer f, Workspace workspace) : base(workspace)
         {
             _fp = f;
         }
 
-        public CAgentStaticMethodVoid(CAgentStaticMethodVoid<P1, P2> rhs)
-        : base(rhs)
+        public CAgentStaticMethodVoid(CAgentStaticMethodVoid<P1, P2> rhs, Workspace workspace)
+        : base(workspace, rhs)
         {
             _fp = rhs._fp;
             _p1 = rhs._p1;
@@ -5594,52 +5623,52 @@ namespace behaviac
 
         public override IMethod Clone()
         {
-            return new CAgentStaticMethodVoid<P1, P2>(this);
+            return new CAgentStaticMethodVoid<P1, P2>(this, Workspace);
         }
 
         public override void Load(string instance, string[] paramStrs)
         {
-            Debug.Check(paramStrs.Length == 2);
+            Debugs.Check(paramStrs.Length == 2);
 
             _instance = instance;
-            _p1 = AgentMeta.ParseProperty<P1>(paramStrs[0]);
-            _p2 = AgentMeta.ParseProperty<P2>(paramStrs[1]);
+            _p1 = AgentMeta.ParseProperty<P1>(paramStrs[0], Workspace);
+            _p2 = AgentMeta.ParseProperty<P2>(paramStrs[1], Workspace);
         }
 
-        public override void Run(Agent self)
+        public override async Task Run(Agent self)
         {
-            Debug.Check(_p1 != null);
-            Debug.Check(_p2 != null);
+            Debugs.Check(_p1 != null);
+            Debugs.Check(_p2 != null);
 
-            _fp(((CInstanceMember<P1>)_p1).GetValue(self), ((CInstanceMember<P2>)_p2).GetValue(self));
+            await _fp(await ((CInstanceMember<P1>)_p1).GetValue(self), await ((CInstanceMember<P2>)_p2).GetValue(self));
         }
 
         public override void SetTaskParams(Agent self, BehaviorTreeTask treeTask)
         {
-            string paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 0);
+            string paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 0);
             treeTask.SetVariable(paramName, ((CInstanceMember<P1>)_p1).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 1);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 1);
             treeTask.SetVariable(paramName, ((CInstanceMember<P2>)_p2).GetValue(self));
         }
     }
 
     public class CAgentStaticMethodVoid<P1, P2, P3> : CAgentMethodVoidBase
     {
-        public delegate void FunctionPointer(P1 p1, P2 p2, P3 p3);
+        public delegate Task FunctionPointer(P1 p1, P2 p2, P3 p3);
 
         FunctionPointer _fp;
         IInstanceMember _p1;
         IInstanceMember _p2;
         IInstanceMember _p3;
 
-        public CAgentStaticMethodVoid(FunctionPointer f)
+        public CAgentStaticMethodVoid(FunctionPointer f, Workspace workspace) : base(workspace)
         {
             _fp = f;
         }
 
-        public CAgentStaticMethodVoid(CAgentStaticMethodVoid<P1, P2, P3> rhs)
-        : base(rhs)
+        public CAgentStaticMethodVoid(CAgentStaticMethodVoid<P1, P2, P3> rhs, Workspace workspace)
+        : base(workspace, rhs)
         {
             _fp = rhs._fp;
             _p1 = rhs._p1;
@@ -5649,46 +5678,47 @@ namespace behaviac
 
         public override IMethod Clone()
         {
-            return new CAgentStaticMethodVoid<P1, P2, P3>(this);
+            return new CAgentStaticMethodVoid<P1, P2, P3>(this, Workspace);
         }
 
         public override void Load(string instance, string[] paramStrs)
         {
-            Debug.Check(paramStrs.Length == 3);
+            Debugs.Check(paramStrs.Length == 3);
 
             _instance = instance;
-            _p1 = AgentMeta.ParseProperty<P1>(paramStrs[0]);
-            _p2 = AgentMeta.ParseProperty<P2>(paramStrs[1]);
-            _p3 = AgentMeta.ParseProperty<P3>(paramStrs[2]);
+            _p1 = AgentMeta.ParseProperty<P1>(paramStrs[0], Workspace);
+            _p2 = AgentMeta.ParseProperty<P2>(paramStrs[1], Workspace);
+            _p3 = AgentMeta.ParseProperty<P3>(paramStrs[2], Workspace);
         }
 
-        public override void Run(Agent self)
+        public override async Task Run(Agent self)
         {
-            Debug.Check(_p1 != null);
-            Debug.Check(_p2 != null);
-            Debug.Check(_p3 != null);
+            Debugs.Check(_p1 != null);
+            Debugs.Check(_p2 != null);
+            Debugs.Check(_p3 != null);
 
-            _fp(((CInstanceMember<P1>)_p1).GetValue(self),
-                ((CInstanceMember<P2>)_p2).GetValue(self),
-                ((CInstanceMember<P3>)_p3).GetValue(self));
+            await _fp(
+                await ((CInstanceMember<P1>)_p1).GetValue(self),
+            await ((CInstanceMember<P2>)_p2).GetValue(self),
+            await ((CInstanceMember<P3>)_p3).GetValue(self));
         }
 
         public override void SetTaskParams(Agent self, BehaviorTreeTask treeTask)
         {
-            string paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 0);
+            string paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 0);
             treeTask.SetVariable(paramName, ((CInstanceMember<P1>)_p1).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 1);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 1);
             treeTask.SetVariable(paramName, ((CInstanceMember<P2>)_p2).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 2);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 2);
             treeTask.SetVariable(paramName, ((CInstanceMember<P3>)_p3).GetValue(self));
         }
     }
 
     public class CAgentStaticMethodVoid<P1, P2, P3, P4> : CAgentMethodVoidBase
     {
-        public delegate void FunctionPointer(P1 p1, P2 p2, P3 p3, P4 p4);
+        public delegate Task FunctionPointer(P1 p1, P2 p2, P3 p3, P4 p4);
 
         FunctionPointer _fp;
         IInstanceMember _p1;
@@ -5696,13 +5726,13 @@ namespace behaviac
         IInstanceMember _p3;
         IInstanceMember _p4;
 
-        public CAgentStaticMethodVoid(FunctionPointer f, IInstanceMember p1, IInstanceMember p2, IInstanceMember p3, IInstanceMember p4)
+        public CAgentStaticMethodVoid(FunctionPointer f, IInstanceMember p1, IInstanceMember p2, IInstanceMember p3, IInstanceMember p4, Workspace workspace) : base(workspace)
         {
             _fp = f;
         }
 
-        public CAgentStaticMethodVoid(CAgentStaticMethodVoid<P1, P2, P3, P4> rhs)
-        : base(rhs)
+        public CAgentStaticMethodVoid(CAgentStaticMethodVoid<P1, P2, P3, P4> rhs, Workspace workspace)
+        : base(workspace, rhs)
         {
             _fp = rhs._fp;
             _p1 = rhs._p1;
@@ -5713,52 +5743,53 @@ namespace behaviac
 
         public override IMethod Clone()
         {
-            return new CAgentStaticMethodVoid<P1, P2, P3, P4>(this);
+            return new CAgentStaticMethodVoid<P1, P2, P3, P4>(this, Workspace);
         }
 
         public override void Load(string instance, string[] paramStrs)
         {
-            Debug.Check(paramStrs.Length == 4);
+            Debugs.Check(paramStrs.Length == 4);
 
             _instance = instance;
-            _p1 = AgentMeta.ParseProperty<P1>(paramStrs[0]);
-            _p2 = AgentMeta.ParseProperty<P2>(paramStrs[1]);
-            _p3 = AgentMeta.ParseProperty<P3>(paramStrs[2]);
-            _p4 = AgentMeta.ParseProperty<P4>(paramStrs[3]);
+            _p1 = AgentMeta.ParseProperty<P1>(paramStrs[0], Workspace);
+            _p2 = AgentMeta.ParseProperty<P2>(paramStrs[1], Workspace);
+            _p3 = AgentMeta.ParseProperty<P3>(paramStrs[2], Workspace);
+            _p4 = AgentMeta.ParseProperty<P4>(paramStrs[3], Workspace);
         }
 
-        public override void Run(Agent self)
+        public override async Task Run(Agent self)
         {
-            Debug.Check(_p1 != null);
-            Debug.Check(_p2 != null);
-            Debug.Check(_p3 != null);
-            Debug.Check(_p4 != null);
+            Debugs.Check(_p1 != null);
+            Debugs.Check(_p2 != null);
+            Debugs.Check(_p3 != null);
+            Debugs.Check(_p4 != null);
 
-            _fp(((CInstanceMember<P1>)_p1).GetValue(self),
-                ((CInstanceMember<P2>)_p2).GetValue(self),
-                ((CInstanceMember<P3>)_p3).GetValue(self),
-                ((CInstanceMember<P4>)_p4).GetValue(self));
+            await _fp(
+            await ((CInstanceMember<P1>)_p1).GetValue(self),
+            await ((CInstanceMember<P2>)_p2).GetValue(self),
+            await ((CInstanceMember<P3>)_p3).GetValue(self),
+            await ((CInstanceMember<P4>)_p4).GetValue(self));
         }
 
         public override void SetTaskParams(Agent self, BehaviorTreeTask treeTask)
         {
-            string paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 0);
+            string paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 0);
             treeTask.SetVariable(paramName, ((CInstanceMember<P1>)_p1).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 1);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 1);
             treeTask.SetVariable(paramName, ((CInstanceMember<P2>)_p2).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 2);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 2);
             treeTask.SetVariable(paramName, ((CInstanceMember<P3>)_p3).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 3);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 3);
             treeTask.SetVariable(paramName, ((CInstanceMember<P4>)_p4).GetValue(self));
         }
     }
 
     public class CAgentStaticMethodVoid<P1, P2, P3, P4, P5> : CAgentMethodVoidBase
     {
-        public delegate void FunctionPointer(P1 p1, P2 p2, P3 p3, P4 p4, P5 p5);
+        public delegate Task FunctionPointer(P1 p1, P2 p2, P3 p3, P4 p4, P5 p5);
 
         FunctionPointer _fp;
         IInstanceMember _p1;
@@ -5767,13 +5798,13 @@ namespace behaviac
         IInstanceMember _p4;
         IInstanceMember _p5;
 
-        public CAgentStaticMethodVoid(FunctionPointer f)
+        public CAgentStaticMethodVoid(FunctionPointer f, Workspace workspace) : base(workspace)
         {
             _fp = f;
         }
 
-        public CAgentStaticMethodVoid(CAgentStaticMethodVoid<P1, P2, P3, P4, P5> rhs)
-        : base(rhs)
+        public CAgentStaticMethodVoid(CAgentStaticMethodVoid<P1, P2, P3, P4, P5> rhs, Workspace workspace)
+        : base(workspace, rhs)
         {
             _fp = rhs._fp;
             _p1 = rhs._p1;
@@ -5785,58 +5816,59 @@ namespace behaviac
 
         public override IMethod Clone()
         {
-            return new CAgentStaticMethodVoid<P1, P2, P3, P4, P5>(this);
+            return new CAgentStaticMethodVoid<P1, P2, P3, P4, P5>(this, Workspace);
         }
 
         public override void Load(string instance, string[] paramStrs)
         {
-            Debug.Check(paramStrs.Length == 5);
+            Debugs.Check(paramStrs.Length == 5);
 
             _instance = instance;
-            _p1 = AgentMeta.ParseProperty<P1>(paramStrs[0]);
-            _p2 = AgentMeta.ParseProperty<P2>(paramStrs[1]);
-            _p3 = AgentMeta.ParseProperty<P3>(paramStrs[2]);
-            _p4 = AgentMeta.ParseProperty<P4>(paramStrs[3]);
-            _p5 = AgentMeta.ParseProperty<P5>(paramStrs[4]);
+            _p1 = AgentMeta.ParseProperty<P1>(paramStrs[0], Workspace);
+            _p2 = AgentMeta.ParseProperty<P2>(paramStrs[1], Workspace);
+            _p3 = AgentMeta.ParseProperty<P3>(paramStrs[2], Workspace);
+            _p4 = AgentMeta.ParseProperty<P4>(paramStrs[3], Workspace);
+            _p5 = AgentMeta.ParseProperty<P5>(paramStrs[4], Workspace);
         }
 
-        public override void Run(Agent self)
+        public override async Task Run(Agent self)
         {
-            Debug.Check(_p1 != null);
-            Debug.Check(_p2 != null);
-            Debug.Check(_p3 != null);
-            Debug.Check(_p4 != null);
-            Debug.Check(_p5 != null);
+            Debugs.Check(_p1 != null);
+            Debugs.Check(_p2 != null);
+            Debugs.Check(_p3 != null);
+            Debugs.Check(_p4 != null);
+            Debugs.Check(_p5 != null);
 
-            _fp(((CInstanceMember<P1>)_p1).GetValue(self),
-                ((CInstanceMember<P2>)_p2).GetValue(self),
-                ((CInstanceMember<P3>)_p3).GetValue(self),
-                ((CInstanceMember<P4>)_p4).GetValue(self),
-                ((CInstanceMember<P5>)_p5).GetValue(self));
+            await _fp(
+            await ((CInstanceMember<P1>)_p1).GetValue(self),
+            await ((CInstanceMember<P2>)_p2).GetValue(self),
+            await ((CInstanceMember<P3>)_p3).GetValue(self),
+            await ((CInstanceMember<P4>)_p4).GetValue(self),
+            await ((CInstanceMember<P5>)_p5).GetValue(self));
         }
 
         public override void SetTaskParams(Agent self, BehaviorTreeTask treeTask)
         {
-            string paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 0);
+            string paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 0);
             treeTask.SetVariable(paramName, ((CInstanceMember<P1>)_p1).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 1);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 1);
             treeTask.SetVariable(paramName, ((CInstanceMember<P2>)_p2).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 2);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 2);
             treeTask.SetVariable(paramName, ((CInstanceMember<P3>)_p3).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 3);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 3);
             treeTask.SetVariable(paramName, ((CInstanceMember<P4>)_p4).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 4);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 4);
             treeTask.SetVariable(paramName, ((CInstanceMember<P5>)_p5).GetValue(self));
         }
     }
 
     public class CAgentStaticMethodVoid<P1, P2, P3, P4, P5, P6> : CAgentMethodVoidBase
     {
-        public delegate void FunctionPointer(P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6);
+        public delegate Task FunctionPointer(P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6);
 
         FunctionPointer _fp;
         IInstanceMember _p1;
@@ -5846,13 +5878,13 @@ namespace behaviac
         IInstanceMember _p5;
         IInstanceMember _p6;
 
-        public CAgentStaticMethodVoid(FunctionPointer f)
+        public CAgentStaticMethodVoid(FunctionPointer f, Workspace workspace) : base(workspace)
         {
             _fp = f;
         }
 
-        public CAgentStaticMethodVoid(CAgentStaticMethodVoid<P1, P2, P3, P4, P5, P6> rhs)
-        : base(rhs)
+        public CAgentStaticMethodVoid(CAgentStaticMethodVoid<P1, P2, P3, P4, P5, P6> rhs, Workspace workspace)
+        : base(workspace, rhs)
         {
             _fp = rhs._fp;
             _p1 = rhs._p1;
@@ -5865,64 +5897,65 @@ namespace behaviac
 
         public override IMethod Clone()
         {
-            return new CAgentStaticMethodVoid<P1, P2, P3, P4, P5, P6>(this);
+            return new CAgentStaticMethodVoid<P1, P2, P3, P4, P5, P6>(this, Workspace);
         }
 
         public override void Load(string instance, string[] paramStrs)
         {
-            Debug.Check(paramStrs.Length == 6);
+            Debugs.Check(paramStrs.Length == 6);
 
             _instance = instance;
-            _p1 = AgentMeta.ParseProperty<P1>(paramStrs[0]);
-            _p2 = AgentMeta.ParseProperty<P2>(paramStrs[1]);
-            _p3 = AgentMeta.ParseProperty<P3>(paramStrs[2]);
-            _p4 = AgentMeta.ParseProperty<P4>(paramStrs[3]);
-            _p5 = AgentMeta.ParseProperty<P5>(paramStrs[4]);
-            _p6 = AgentMeta.ParseProperty<P6>(paramStrs[5]);
+            _p1 = AgentMeta.ParseProperty<P1>(paramStrs[0], Workspace);
+            _p2 = AgentMeta.ParseProperty<P2>(paramStrs[1], Workspace);
+            _p3 = AgentMeta.ParseProperty<P3>(paramStrs[2], Workspace);
+            _p4 = AgentMeta.ParseProperty<P4>(paramStrs[3], Workspace);
+            _p5 = AgentMeta.ParseProperty<P5>(paramStrs[4], Workspace);
+            _p6 = AgentMeta.ParseProperty<P6>(paramStrs[5], Workspace);
         }
 
-        public override void Run(Agent self)
+        public override async Task Run(Agent self)
         {
-            Debug.Check(_p1 != null);
-            Debug.Check(_p2 != null);
-            Debug.Check(_p3 != null);
-            Debug.Check(_p4 != null);
-            Debug.Check(_p5 != null);
-            Debug.Check(_p6 != null);
+            Debugs.Check(_p1 != null);
+            Debugs.Check(_p2 != null);
+            Debugs.Check(_p3 != null);
+            Debugs.Check(_p4 != null);
+            Debugs.Check(_p5 != null);
+            Debugs.Check(_p6 != null);
 
-            _fp(((CInstanceMember<P1>)_p1).GetValue(self),
-                ((CInstanceMember<P2>)_p2).GetValue(self),
-                ((CInstanceMember<P3>)_p3).GetValue(self),
-                ((CInstanceMember<P4>)_p4).GetValue(self),
-                ((CInstanceMember<P5>)_p5).GetValue(self),
-                ((CInstanceMember<P6>)_p6).GetValue(self));
+            await _fp(
+            await ((CInstanceMember<P1>)_p1).GetValue(self),
+            await ((CInstanceMember<P2>)_p2).GetValue(self),
+            await ((CInstanceMember<P3>)_p3).GetValue(self),
+            await ((CInstanceMember<P4>)_p4).GetValue(self),
+            await ((CInstanceMember<P5>)_p5).GetValue(self),
+            await ((CInstanceMember<P6>)_p6).GetValue(self));
         }
 
         public override void SetTaskParams(Agent self, BehaviorTreeTask treeTask)
         {
-            string paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 0);
+            string paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 0);
             treeTask.SetVariable(paramName, ((CInstanceMember<P1>)_p1).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 1);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 1);
             treeTask.SetVariable(paramName, ((CInstanceMember<P2>)_p2).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 2);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 2);
             treeTask.SetVariable(paramName, ((CInstanceMember<P3>)_p3).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 3);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 3);
             treeTask.SetVariable(paramName, ((CInstanceMember<P4>)_p4).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 4);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 4);
             treeTask.SetVariable(paramName, ((CInstanceMember<P5>)_p5).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 5);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 5);
             treeTask.SetVariable(paramName, ((CInstanceMember<P6>)_p6).GetValue(self));
         }
     }
 
     public class CAgentStaticMethodVoid<P1, P2, P3, P4, P5, P6, P7> : CAgentMethodVoidBase
     {
-        public delegate void FunctionPointer(P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6, P7 p7);
+        public delegate Task FunctionPointer(P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6, P7 p7);
 
         FunctionPointer _fp;
         IInstanceMember _p1;
@@ -5933,13 +5966,13 @@ namespace behaviac
         IInstanceMember _p6;
         IInstanceMember _p7;
 
-        public CAgentStaticMethodVoid(FunctionPointer f)
+        public CAgentStaticMethodVoid(FunctionPointer f, Workspace workspace) : base(workspace)
         {
             _fp = f;
         }
 
-        public CAgentStaticMethodVoid(CAgentStaticMethodVoid<P1, P2, P3, P4, P5, P6, P7> rhs)
-        : base(rhs)
+        public CAgentStaticMethodVoid(CAgentStaticMethodVoid<P1, P2, P3, P4, P5, P6, P7> rhs, Workspace workspace)
+        : base(workspace, rhs)
         {
             _fp = rhs._fp;
             _p1 = rhs._p1;
@@ -5953,70 +5986,71 @@ namespace behaviac
 
         public override IMethod Clone()
         {
-            return new CAgentStaticMethodVoid<P1, P2, P3, P4, P5, P6, P7>(this);
+            return new CAgentStaticMethodVoid<P1, P2, P3, P4, P5, P6, P7>(this, Workspace);
         }
 
         public override void Load(string instance, string[] paramStrs)
         {
-            Debug.Check(paramStrs.Length == 7);
+            Debugs.Check(paramStrs.Length == 7);
 
             _instance = instance;
-            _p1 = AgentMeta.ParseProperty<P1>(paramStrs[0]);
-            _p2 = AgentMeta.ParseProperty<P2>(paramStrs[1]);
-            _p3 = AgentMeta.ParseProperty<P3>(paramStrs[2]);
-            _p4 = AgentMeta.ParseProperty<P4>(paramStrs[3]);
-            _p5 = AgentMeta.ParseProperty<P5>(paramStrs[4]);
-            _p6 = AgentMeta.ParseProperty<P6>(paramStrs[5]);
-            _p7 = AgentMeta.ParseProperty<P7>(paramStrs[6]);
+            _p1 = AgentMeta.ParseProperty<P1>(paramStrs[0], Workspace);
+            _p2 = AgentMeta.ParseProperty<P2>(paramStrs[1], Workspace);
+            _p3 = AgentMeta.ParseProperty<P3>(paramStrs[2], Workspace);
+            _p4 = AgentMeta.ParseProperty<P4>(paramStrs[3], Workspace);
+            _p5 = AgentMeta.ParseProperty<P5>(paramStrs[4], Workspace);
+            _p6 = AgentMeta.ParseProperty<P6>(paramStrs[5], Workspace);
+            _p7 = AgentMeta.ParseProperty<P7>(paramStrs[6], Workspace);
         }
 
-        public override void Run(Agent self)
+        public override async Task Run(Agent self)
         {
-            Debug.Check(_p1 != null);
-            Debug.Check(_p2 != null);
-            Debug.Check(_p3 != null);
-            Debug.Check(_p4 != null);
-            Debug.Check(_p5 != null);
-            Debug.Check(_p6 != null);
-            Debug.Check(_p7 != null);
+            Debugs.Check(_p1 != null);
+            Debugs.Check(_p2 != null);
+            Debugs.Check(_p3 != null);
+            Debugs.Check(_p4 != null);
+            Debugs.Check(_p5 != null);
+            Debugs.Check(_p6 != null);
+            Debugs.Check(_p7 != null);
 
-            _fp(((CInstanceMember<P1>)_p1).GetValue(self),
-                ((CInstanceMember<P2>)_p2).GetValue(self),
-                ((CInstanceMember<P3>)_p3).GetValue(self),
-                ((CInstanceMember<P4>)_p4).GetValue(self),
-                ((CInstanceMember<P5>)_p5).GetValue(self),
-                ((CInstanceMember<P6>)_p6).GetValue(self),
-                ((CInstanceMember<P7>)_p7).GetValue(self));
+            await _fp(
+            await ((CInstanceMember<P1>)_p1).GetValue(self),
+            await ((CInstanceMember<P2>)_p2).GetValue(self),
+            await ((CInstanceMember<P3>)_p3).GetValue(self),
+            await ((CInstanceMember<P4>)_p4).GetValue(self),
+            await ((CInstanceMember<P5>)_p5).GetValue(self),
+            await ((CInstanceMember<P6>)_p6).GetValue(self),
+            await ((CInstanceMember<P7>)_p7).GetValue(self));
         }
 
         public override void SetTaskParams(Agent self, BehaviorTreeTask treeTask)
         {
-            string paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 0);
+            string paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 0);
             treeTask.SetVariable(paramName, ((CInstanceMember<P1>)_p1).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 1);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 1);
             treeTask.SetVariable(paramName, ((CInstanceMember<P2>)_p2).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 2);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 2);
             treeTask.SetVariable(paramName, ((CInstanceMember<P3>)_p3).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 3);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 3);
             treeTask.SetVariable(paramName, ((CInstanceMember<P4>)_p4).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 4);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 4);
             treeTask.SetVariable(paramName, ((CInstanceMember<P5>)_p5).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 5);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 5);
             treeTask.SetVariable(paramName, ((CInstanceMember<P6>)_p6).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 6);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 6);
             treeTask.SetVariable(paramName, ((CInstanceMember<P7>)_p7).GetValue(self));
         }
     }
 
     public class CAgentStaticMethodVoid<P1, P2, P3, P4, P5, P6, P7, P8> : CAgentMethodVoidBase
     {
-        public delegate void FunctionPointer(P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6, P7 p7, P8 p8);
+        public delegate Task FunctionPointer(P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6, P7 p7, P8 p8);
 
         FunctionPointer _fp;
         IInstanceMember _p1;
@@ -6028,13 +6062,13 @@ namespace behaviac
         IInstanceMember _p7;
         IInstanceMember _p8;
 
-        public CAgentStaticMethodVoid(FunctionPointer f)
+        public CAgentStaticMethodVoid(FunctionPointer f, Workspace workspace) : base(workspace)
         {
             _fp = f;
         }
 
-        public CAgentStaticMethodVoid(CAgentStaticMethodVoid<P1, P2, P3, P4, P5, P6, P7, P8> rhs)
-        : base(rhs)
+        public CAgentStaticMethodVoid(CAgentStaticMethodVoid<P1, P2, P3, P4, P5, P6, P7, P8> rhs, Workspace workspace)
+        : base(workspace, rhs)
         {
             _fp = rhs._fp;
             _p1 = rhs._p1;
@@ -6049,76 +6083,77 @@ namespace behaviac
 
         public override IMethod Clone()
         {
-            return new CAgentStaticMethodVoid<P1, P2, P3, P4, P5, P6, P7, P8>(this);
+            return new CAgentStaticMethodVoid<P1, P2, P3, P4, P5, P6, P7, P8>(this, Workspace);
         }
 
         public override void Load(string instance, string[] paramStrs)
         {
-            Debug.Check(paramStrs.Length == 8);
+            Debugs.Check(paramStrs.Length == 8);
 
             _instance = instance;
-            _p1 = AgentMeta.ParseProperty<P1>(paramStrs[0]);
-            _p2 = AgentMeta.ParseProperty<P2>(paramStrs[1]);
-            _p3 = AgentMeta.ParseProperty<P3>(paramStrs[2]);
-            _p4 = AgentMeta.ParseProperty<P4>(paramStrs[3]);
-            _p5 = AgentMeta.ParseProperty<P5>(paramStrs[4]);
-            _p6 = AgentMeta.ParseProperty<P6>(paramStrs[5]);
-            _p7 = AgentMeta.ParseProperty<P7>(paramStrs[6]);
-            _p8 = AgentMeta.ParseProperty<P8>(paramStrs[7]);
+            _p1 = AgentMeta.ParseProperty<P1>(paramStrs[0], Workspace);
+            _p2 = AgentMeta.ParseProperty<P2>(paramStrs[1], Workspace);
+            _p3 = AgentMeta.ParseProperty<P3>(paramStrs[2], Workspace);
+            _p4 = AgentMeta.ParseProperty<P4>(paramStrs[3], Workspace);
+            _p5 = AgentMeta.ParseProperty<P5>(paramStrs[4], Workspace);
+            _p6 = AgentMeta.ParseProperty<P6>(paramStrs[5], Workspace);
+            _p7 = AgentMeta.ParseProperty<P7>(paramStrs[6], Workspace);
+            _p8 = AgentMeta.ParseProperty<P8>(paramStrs[7], Workspace);
         }
 
-        public override void Run(Agent self)
+        public override async Task Run(Agent self)
         {
-            Debug.Check(_p1 != null);
-            Debug.Check(_p2 != null);
-            Debug.Check(_p3 != null);
-            Debug.Check(_p4 != null);
-            Debug.Check(_p5 != null);
-            Debug.Check(_p6 != null);
-            Debug.Check(_p7 != null);
-            Debug.Check(_p8 != null);
+            Debugs.Check(_p1 != null);
+            Debugs.Check(_p2 != null);
+            Debugs.Check(_p3 != null);
+            Debugs.Check(_p4 != null);
+            Debugs.Check(_p5 != null);
+            Debugs.Check(_p6 != null);
+            Debugs.Check(_p7 != null);
+            Debugs.Check(_p8 != null);
 
-            _fp(((CInstanceMember<P1>)_p1).GetValue(self),
-                ((CInstanceMember<P2>)_p2).GetValue(self),
-                ((CInstanceMember<P3>)_p3).GetValue(self),
-                ((CInstanceMember<P4>)_p4).GetValue(self),
-                ((CInstanceMember<P5>)_p5).GetValue(self),
-                ((CInstanceMember<P6>)_p6).GetValue(self),
-                ((CInstanceMember<P7>)_p7).GetValue(self),
-                ((CInstanceMember<P8>)_p8).GetValue(self));
+            await _fp(
+            await ((CInstanceMember<P1>)_p1).GetValue(self),
+            await ((CInstanceMember<P2>)_p2).GetValue(self),
+            await ((CInstanceMember<P3>)_p3).GetValue(self),
+            await ((CInstanceMember<P4>)_p4).GetValue(self),
+            await ((CInstanceMember<P5>)_p5).GetValue(self),
+            await ((CInstanceMember<P6>)_p6).GetValue(self),
+            await ((CInstanceMember<P7>)_p7).GetValue(self),
+            await ((CInstanceMember<P8>)_p8).GetValue(self));
         }
 
         public override void SetTaskParams(Agent self, BehaviorTreeTask treeTask)
         {
-            string paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 0);
+            string paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 0);
             treeTask.SetVariable(paramName, ((CInstanceMember<P1>)_p1).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 1);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 1);
             treeTask.SetVariable(paramName, ((CInstanceMember<P2>)_p2).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 2);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 2);
             treeTask.SetVariable(paramName, ((CInstanceMember<P3>)_p3).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 3);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 3);
             treeTask.SetVariable(paramName, ((CInstanceMember<P4>)_p4).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 4);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 4);
             treeTask.SetVariable(paramName, ((CInstanceMember<P5>)_p5).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 5);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 5);
             treeTask.SetVariable(paramName, ((CInstanceMember<P6>)_p6).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 6);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 6);
             treeTask.SetVariable(paramName, ((CInstanceMember<P7>)_p7).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 7);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 7);
             treeTask.SetVariable(paramName, ((CInstanceMember<P8>)_p8).GetValue(self));
         }
     }
 
     public class CAgentStaticMethodVoid<P1, P2, P3, P4, P5, P6, P7, P8, P9> : CAgentMethodVoidBase
     {
-        public delegate void FunctionPointer(P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6, P7 p7, P8 p8, P9 p9);
+        public delegate Task FunctionPointer(P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6, P7 p7, P8 p8, P9 p9);
 
         FunctionPointer _fp;
         IInstanceMember _p1;
@@ -6131,13 +6166,13 @@ namespace behaviac
         IInstanceMember _p8;
         IInstanceMember _p9;
 
-        public CAgentStaticMethodVoid(FunctionPointer f)
+        public CAgentStaticMethodVoid(FunctionPointer f, Workspace workspace) : base(workspace)
         {
             _fp = f;
         }
 
-        public CAgentStaticMethodVoid(CAgentStaticMethodVoid<P1, P2, P3, P4, P5, P6, P7, P8, P9> rhs)
-        : base(rhs)
+        public CAgentStaticMethodVoid(CAgentStaticMethodVoid<P1, P2, P3, P4, P5, P6, P7, P8, P9> rhs, Workspace workspace)
+        : base(workspace, rhs)
         {
             _fp = rhs._fp;
             _p1 = rhs._p1;
@@ -6153,82 +6188,83 @@ namespace behaviac
 
         public override IMethod Clone()
         {
-            return new CAgentStaticMethodVoid<P1, P2, P3, P4, P5, P6, P7, P8, P9>(this);
+            return new CAgentStaticMethodVoid<P1, P2, P3, P4, P5, P6, P7, P8, P9>(this, Workspace);
         }
 
         public override void Load(string instance, string[] paramStrs)
         {
-            Debug.Check(paramStrs.Length == 9);
+            Debugs.Check(paramStrs.Length == 9);
 
             _instance = instance;
-            _p1 = AgentMeta.ParseProperty<P1>(paramStrs[0]);
-            _p2 = AgentMeta.ParseProperty<P2>(paramStrs[1]);
-            _p3 = AgentMeta.ParseProperty<P3>(paramStrs[2]);
-            _p4 = AgentMeta.ParseProperty<P4>(paramStrs[3]);
-            _p5 = AgentMeta.ParseProperty<P5>(paramStrs[4]);
-            _p6 = AgentMeta.ParseProperty<P6>(paramStrs[5]);
-            _p7 = AgentMeta.ParseProperty<P7>(paramStrs[6]);
-            _p8 = AgentMeta.ParseProperty<P8>(paramStrs[7]);
-            _p9 = AgentMeta.ParseProperty<P9>(paramStrs[8]);
+            _p1 = AgentMeta.ParseProperty<P1>(paramStrs[0], Workspace);
+            _p2 = AgentMeta.ParseProperty<P2>(paramStrs[1], Workspace);
+            _p3 = AgentMeta.ParseProperty<P3>(paramStrs[2], Workspace);
+            _p4 = AgentMeta.ParseProperty<P4>(paramStrs[3], Workspace);
+            _p5 = AgentMeta.ParseProperty<P5>(paramStrs[4], Workspace);
+            _p6 = AgentMeta.ParseProperty<P6>(paramStrs[5], Workspace);
+            _p7 = AgentMeta.ParseProperty<P7>(paramStrs[6], Workspace);
+            _p8 = AgentMeta.ParseProperty<P8>(paramStrs[7], Workspace);
+            _p9 = AgentMeta.ParseProperty<P9>(paramStrs[8], Workspace);
         }
 
-        public override void Run(Agent self)
+        public override async Task Run(Agent self)
         {
-            Debug.Check(_p1 != null);
-            Debug.Check(_p2 != null);
-            Debug.Check(_p3 != null);
-            Debug.Check(_p4 != null);
-            Debug.Check(_p5 != null);
-            Debug.Check(_p6 != null);
-            Debug.Check(_p7 != null);
-            Debug.Check(_p8 != null);
-            Debug.Check(_p9 != null);
+            Debugs.Check(_p1 != null);
+            Debugs.Check(_p2 != null);
+            Debugs.Check(_p3 != null);
+            Debugs.Check(_p4 != null);
+            Debugs.Check(_p5 != null);
+            Debugs.Check(_p6 != null);
+            Debugs.Check(_p7 != null);
+            Debugs.Check(_p8 != null);
+            Debugs.Check(_p9 != null);
 
-            _fp(((CInstanceMember<P1>)_p1).GetValue(self),
-                ((CInstanceMember<P2>)_p2).GetValue(self),
-                ((CInstanceMember<P3>)_p3).GetValue(self),
-                ((CInstanceMember<P4>)_p4).GetValue(self),
-                ((CInstanceMember<P5>)_p5).GetValue(self),
-                ((CInstanceMember<P6>)_p6).GetValue(self),
-                ((CInstanceMember<P7>)_p7).GetValue(self),
-                ((CInstanceMember<P8>)_p8).GetValue(self),
-                ((CInstanceMember<P9>)_p9).GetValue(self));
+            await _fp(
+             await ((CInstanceMember<P1>)_p1).GetValue(self),
+             await ((CInstanceMember<P2>)_p2).GetValue(self),
+             await ((CInstanceMember<P3>)_p3).GetValue(self),
+             await ((CInstanceMember<P4>)_p4).GetValue(self),
+             await ((CInstanceMember<P5>)_p5).GetValue(self),
+             await ((CInstanceMember<P6>)_p6).GetValue(self),
+             await ((CInstanceMember<P7>)_p7).GetValue(self),
+             await ((CInstanceMember<P8>)_p8).GetValue(self),
+             await ((CInstanceMember<P9>)_p9).GetValue(self));
         }
 
         public override void SetTaskParams(Agent self, BehaviorTreeTask treeTask)
         {
-            string paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 0);
+            string paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 0);
             treeTask.SetVariable(paramName, ((CInstanceMember<P1>)_p1).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 1);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 1);
             treeTask.SetVariable(paramName, ((CInstanceMember<P2>)_p2).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 2);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 2);
             treeTask.SetVariable(paramName, ((CInstanceMember<P3>)_p3).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 3);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 3);
             treeTask.SetVariable(paramName, ((CInstanceMember<P4>)_p4).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 4);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 4);
             treeTask.SetVariable(paramName, ((CInstanceMember<P5>)_p5).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 5);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 5);
             treeTask.SetVariable(paramName, ((CInstanceMember<P6>)_p6).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 6);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 6);
             treeTask.SetVariable(paramName, ((CInstanceMember<P7>)_p7).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 7);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 7);
             treeTask.SetVariable(paramName, ((CInstanceMember<P8>)_p8).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 8);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 8);
             treeTask.SetVariable(paramName, ((CInstanceMember<P9>)_p9).GetValue(self));
         }
     }
 
     public class CAgentStaticMethodVoid<P1, P2, P3, P4, P5, P6, P7, P8, P9, P10> : CAgentMethodVoidBase
     {
-        public delegate void FunctionPointer(P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6, P7 p7, P8 p8, P9 p9, P10 p10);
+        public delegate Task FunctionPointer(P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6, P7 p7, P8 p8, P9 p9, P10 p10);
 
         FunctionPointer _fp;
         IInstanceMember _p1;
@@ -6242,13 +6278,13 @@ namespace behaviac
         IInstanceMember _p9;
         IInstanceMember _p10;
 
-        public CAgentStaticMethodVoid(FunctionPointer f)
+        public CAgentStaticMethodVoid(FunctionPointer f, Workspace workspace) : base(workspace)
         {
             _fp = f;
         }
 
-        public CAgentStaticMethodVoid(CAgentStaticMethodVoid<P1, P2, P3, P4, P5, P6, P7, P8, P9, P10> rhs)
-        : base(rhs)
+        public CAgentStaticMethodVoid(CAgentStaticMethodVoid<P1, P2, P3, P4, P5, P6, P7, P8, P9, P10> rhs, Workspace workspace)
+        : base(workspace, rhs)
         {
             _fp = rhs._fp;
             _p1 = rhs._p1;
@@ -6265,88 +6301,89 @@ namespace behaviac
 
         public override IMethod Clone()
         {
-            return new CAgentStaticMethodVoid<P1, P2, P3, P4, P5, P6, P7, P8, P9, P10>(this);
+            return new CAgentStaticMethodVoid<P1, P2, P3, P4, P5, P6, P7, P8, P9, P10>(this, Workspace);
         }
 
         public override void Load(string instance, string[] paramStrs)
         {
-            Debug.Check(paramStrs.Length == 10);
+            Debugs.Check(paramStrs.Length == 10);
 
             _instance = instance;
-            _p1 = AgentMeta.ParseProperty<P1>(paramStrs[0]);
-            _p2 = AgentMeta.ParseProperty<P2>(paramStrs[1]);
-            _p3 = AgentMeta.ParseProperty<P3>(paramStrs[2]);
-            _p4 = AgentMeta.ParseProperty<P4>(paramStrs[3]);
-            _p5 = AgentMeta.ParseProperty<P5>(paramStrs[4]);
-            _p6 = AgentMeta.ParseProperty<P6>(paramStrs[5]);
-            _p7 = AgentMeta.ParseProperty<P7>(paramStrs[6]);
-            _p8 = AgentMeta.ParseProperty<P8>(paramStrs[7]);
-            _p9 = AgentMeta.ParseProperty<P9>(paramStrs[8]);
-            _p10 = AgentMeta.ParseProperty<P10>(paramStrs[9]);
+            _p1 = AgentMeta.ParseProperty<P1>(paramStrs[0], Workspace);
+            _p2 = AgentMeta.ParseProperty<P2>(paramStrs[1], Workspace);
+            _p3 = AgentMeta.ParseProperty<P3>(paramStrs[2], Workspace);
+            _p4 = AgentMeta.ParseProperty<P4>(paramStrs[3], Workspace);
+            _p5 = AgentMeta.ParseProperty<P5>(paramStrs[4], Workspace);
+            _p6 = AgentMeta.ParseProperty<P6>(paramStrs[5], Workspace);
+            _p7 = AgentMeta.ParseProperty<P7>(paramStrs[6], Workspace);
+            _p8 = AgentMeta.ParseProperty<P8>(paramStrs[7], Workspace);
+            _p9 = AgentMeta.ParseProperty<P9>(paramStrs[8], Workspace);
+            _p10 = AgentMeta.ParseProperty<P10>(paramStrs[9], Workspace);
         }
 
-        public override void Run(Agent self)
+        public override async Task Run(Agent self)
         {
-            Debug.Check(_p1 != null);
-            Debug.Check(_p2 != null);
-            Debug.Check(_p3 != null);
-            Debug.Check(_p4 != null);
-            Debug.Check(_p5 != null);
-            Debug.Check(_p6 != null);
-            Debug.Check(_p7 != null);
-            Debug.Check(_p8 != null);
-            Debug.Check(_p9 != null);
-            Debug.Check(_p10 != null);
+            Debugs.Check(_p1 != null);
+            Debugs.Check(_p2 != null);
+            Debugs.Check(_p3 != null);
+            Debugs.Check(_p4 != null);
+            Debugs.Check(_p5 != null);
+            Debugs.Check(_p6 != null);
+            Debugs.Check(_p7 != null);
+            Debugs.Check(_p8 != null);
+            Debugs.Check(_p9 != null);
+            Debugs.Check(_p10 != null);
 
-            _fp(((CInstanceMember<P1>)_p1).GetValue(self),
-                ((CInstanceMember<P2>)_p2).GetValue(self),
-                ((CInstanceMember<P3>)_p3).GetValue(self),
-                ((CInstanceMember<P4>)_p4).GetValue(self),
-                ((CInstanceMember<P5>)_p5).GetValue(self),
-                ((CInstanceMember<P6>)_p6).GetValue(self),
-                ((CInstanceMember<P7>)_p7).GetValue(self),
-                ((CInstanceMember<P8>)_p8).GetValue(self),
-                ((CInstanceMember<P9>)_p9).GetValue(self),
-                ((CInstanceMember<P10>)_p10).GetValue(self));
+            await _fp(
+              await ((CInstanceMember<P1>)_p1).GetValue(self),
+              await ((CInstanceMember<P2>)_p2).GetValue(self),
+              await ((CInstanceMember<P3>)_p3).GetValue(self),
+              await ((CInstanceMember<P4>)_p4).GetValue(self),
+              await ((CInstanceMember<P5>)_p5).GetValue(self),
+              await ((CInstanceMember<P6>)_p6).GetValue(self),
+              await ((CInstanceMember<P7>)_p7).GetValue(self),
+              await ((CInstanceMember<P8>)_p8).GetValue(self),
+              await ((CInstanceMember<P9>)_p9).GetValue(self),
+              await ((CInstanceMember<P10>)_p10).GetValue(self));
         }
 
         public override void SetTaskParams(Agent self, BehaviorTreeTask treeTask)
         {
-            string paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 0);
+            string paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 0);
             treeTask.SetVariable(paramName, ((CInstanceMember<P1>)_p1).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 1);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 1);
             treeTask.SetVariable(paramName, ((CInstanceMember<P2>)_p2).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 2);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 2);
             treeTask.SetVariable(paramName, ((CInstanceMember<P3>)_p3).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 3);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 3);
             treeTask.SetVariable(paramName, ((CInstanceMember<P4>)_p4).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 4);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 4);
             treeTask.SetVariable(paramName, ((CInstanceMember<P5>)_p5).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 5);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 5);
             treeTask.SetVariable(paramName, ((CInstanceMember<P6>)_p6).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 6);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 6);
             treeTask.SetVariable(paramName, ((CInstanceMember<P7>)_p7).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 7);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 7);
             treeTask.SetVariable(paramName, ((CInstanceMember<P8>)_p8).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 8);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 8);
             treeTask.SetVariable(paramName, ((CInstanceMember<P9>)_p9).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 9);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 9);
             treeTask.SetVariable(paramName, ((CInstanceMember<P10>)_p10).GetValue(self));
         }
     }
 
     public class CAgentStaticMethodVoid<P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11> : CAgentMethodVoidBase
     {
-        public delegate void FunctionPointer(P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6, P7 p7, P8 p8, P9 p9, P10 p10, P11 p11);
+        public delegate Task FunctionPointer(P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6, P7 p7, P8 p8, P9 p9, P10 p10, P11 p11);
 
         FunctionPointer _fp;
         IInstanceMember _p1;
@@ -6361,13 +6398,13 @@ namespace behaviac
         IInstanceMember _p10;
         IInstanceMember _p11;
 
-        public CAgentStaticMethodVoid(FunctionPointer f)
+        public CAgentStaticMethodVoid(FunctionPointer f, Workspace workspace) : base(workspace)
         {
             _fp = f;
         }
 
-        public CAgentStaticMethodVoid(CAgentStaticMethodVoid<P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11> rhs)
-        : base(rhs)
+        public CAgentStaticMethodVoid(CAgentStaticMethodVoid<P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11> rhs, Workspace workspace)
+        : base(workspace, rhs)
         {
             _fp = rhs._fp;
             _p1 = rhs._p1;
@@ -6385,94 +6422,95 @@ namespace behaviac
 
         public override IMethod Clone()
         {
-            return new CAgentStaticMethodVoid<P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11>(this);
+            return new CAgentStaticMethodVoid<P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11>(this, Workspace);
         }
 
         public override void Load(string instance, string[] paramStrs)
         {
-            Debug.Check(paramStrs.Length == 11);
+            Debugs.Check(paramStrs.Length == 11);
 
             _instance = instance;
-            _p1 = AgentMeta.ParseProperty<P1>(paramStrs[0]);
-            _p2 = AgentMeta.ParseProperty<P2>(paramStrs[1]);
-            _p3 = AgentMeta.ParseProperty<P3>(paramStrs[2]);
-            _p4 = AgentMeta.ParseProperty<P4>(paramStrs[3]);
-            _p5 = AgentMeta.ParseProperty<P5>(paramStrs[4]);
-            _p6 = AgentMeta.ParseProperty<P6>(paramStrs[5]);
-            _p7 = AgentMeta.ParseProperty<P7>(paramStrs[6]);
-            _p8 = AgentMeta.ParseProperty<P8>(paramStrs[7]);
-            _p9 = AgentMeta.ParseProperty<P9>(paramStrs[8]);
-            _p10 = AgentMeta.ParseProperty<P10>(paramStrs[9]);
-            _p11 = AgentMeta.ParseProperty<P11>(paramStrs[10]);
+            _p1 = AgentMeta.ParseProperty<P1>(paramStrs[0], Workspace);
+            _p2 = AgentMeta.ParseProperty<P2>(paramStrs[1], Workspace);
+            _p3 = AgentMeta.ParseProperty<P3>(paramStrs[2], Workspace);
+            _p4 = AgentMeta.ParseProperty<P4>(paramStrs[3], Workspace);
+            _p5 = AgentMeta.ParseProperty<P5>(paramStrs[4], Workspace);
+            _p6 = AgentMeta.ParseProperty<P6>(paramStrs[5], Workspace);
+            _p7 = AgentMeta.ParseProperty<P7>(paramStrs[6], Workspace);
+            _p8 = AgentMeta.ParseProperty<P8>(paramStrs[7], Workspace);
+            _p9 = AgentMeta.ParseProperty<P9>(paramStrs[8], Workspace);
+            _p10 = AgentMeta.ParseProperty<P10>(paramStrs[9], Workspace);
+            _p11 = AgentMeta.ParseProperty<P11>(paramStrs[10], Workspace);
         }
 
-        public override void Run(Agent self)
+        public override async Task Run(Agent self)
         {
-            Debug.Check(_p1 != null);
-            Debug.Check(_p2 != null);
-            Debug.Check(_p3 != null);
-            Debug.Check(_p4 != null);
-            Debug.Check(_p5 != null);
-            Debug.Check(_p6 != null);
-            Debug.Check(_p7 != null);
-            Debug.Check(_p8 != null);
-            Debug.Check(_p9 != null);
-            Debug.Check(_p10 != null);
-            Debug.Check(_p11 != null);
+            Debugs.Check(_p1 != null);
+            Debugs.Check(_p2 != null);
+            Debugs.Check(_p3 != null);
+            Debugs.Check(_p4 != null);
+            Debugs.Check(_p5 != null);
+            Debugs.Check(_p6 != null);
+            Debugs.Check(_p7 != null);
+            Debugs.Check(_p8 != null);
+            Debugs.Check(_p9 != null);
+            Debugs.Check(_p10 != null);
+            Debugs.Check(_p11 != null);
 
-            _fp(((CInstanceMember<P1>)_p1).GetValue(self),
-                ((CInstanceMember<P2>)_p2).GetValue(self),
-                ((CInstanceMember<P3>)_p3).GetValue(self),
-                ((CInstanceMember<P4>)_p4).GetValue(self),
-                ((CInstanceMember<P5>)_p5).GetValue(self),
-                ((CInstanceMember<P6>)_p6).GetValue(self),
-                ((CInstanceMember<P7>)_p7).GetValue(self),
-                ((CInstanceMember<P8>)_p8).GetValue(self),
-                ((CInstanceMember<P9>)_p9).GetValue(self),
-                ((CInstanceMember<P10>)_p10).GetValue(self),
-                ((CInstanceMember<P11>)_p11).GetValue(self));
+            await _fp(
+               await ((CInstanceMember<P1>)_p1).GetValue(self),
+               await ((CInstanceMember<P2>)_p2).GetValue(self),
+               await ((CInstanceMember<P3>)_p3).GetValue(self),
+               await ((CInstanceMember<P4>)_p4).GetValue(self),
+               await ((CInstanceMember<P5>)_p5).GetValue(self),
+               await ((CInstanceMember<P6>)_p6).GetValue(self),
+               await ((CInstanceMember<P7>)_p7).GetValue(self),
+               await ((CInstanceMember<P8>)_p8).GetValue(self),
+               await ((CInstanceMember<P9>)_p9).GetValue(self),
+               await ((CInstanceMember<P10>)_p10).GetValue(self),
+               await ((CInstanceMember<P11>)_p11).GetValue(self));
         }
 
         public override void SetTaskParams(Agent self, BehaviorTreeTask treeTask)
         {
-            string paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 0);
+            string paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 0);
             treeTask.SetVariable(paramName, ((CInstanceMember<P1>)_p1).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 1);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 1);
             treeTask.SetVariable(paramName, ((CInstanceMember<P2>)_p2).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 2);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 2);
             treeTask.SetVariable(paramName, ((CInstanceMember<P3>)_p3).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 3);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 3);
             treeTask.SetVariable(paramName, ((CInstanceMember<P4>)_p4).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 4);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 4);
             treeTask.SetVariable(paramName, ((CInstanceMember<P5>)_p5).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 5);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 5);
             treeTask.SetVariable(paramName, ((CInstanceMember<P6>)_p6).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 6);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 6);
             treeTask.SetVariable(paramName, ((CInstanceMember<P7>)_p7).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 7);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 7);
             treeTask.SetVariable(paramName, ((CInstanceMember<P8>)_p8).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 8);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 8);
             treeTask.SetVariable(paramName, ((CInstanceMember<P9>)_p9).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 9);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 9);
             treeTask.SetVariable(paramName, ((CInstanceMember<P10>)_p10).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 10);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 10);
             treeTask.SetVariable(paramName, ((CInstanceMember<P11>)_p11).GetValue(self));
         }
     }
 
     public class CAgentStaticMethodVoid<P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12> : CAgentMethodVoidBase
     {
-        public delegate void FunctionPointer(P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6, P7 p7, P8 p8, P9 p9, P10 p10, P11 p11, P12 p12);
+        public delegate Task FunctionPointer(P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6, P7 p7, P8 p8, P9 p9, P10 p10, P11 p11, P12 p12);
 
         FunctionPointer _fp;
         IInstanceMember _p1;
@@ -6488,13 +6526,13 @@ namespace behaviac
         IInstanceMember _p11;
         IInstanceMember _p12;
 
-        public CAgentStaticMethodVoid(FunctionPointer f)
+        public CAgentStaticMethodVoid(FunctionPointer f, Workspace workspace) : base(workspace)
         {
             _fp = f;
         }
 
-        public CAgentStaticMethodVoid(CAgentStaticMethodVoid<P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12> rhs)
-        : base(rhs)
+        public CAgentStaticMethodVoid(CAgentStaticMethodVoid<P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12> rhs, Workspace workspace)
+        : base(workspace, rhs)
         {
             _fp = rhs._fp;
             _p1 = rhs._p1;
@@ -6513,100 +6551,101 @@ namespace behaviac
 
         public override IMethod Clone()
         {
-            return new CAgentStaticMethodVoid<P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12>(this);
+            return new CAgentStaticMethodVoid<P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12>(this, Workspace);
         }
 
         public override void Load(string instance, string[] paramStrs)
         {
-            Debug.Check(paramStrs.Length == 12);
+            Debugs.Check(paramStrs.Length == 12);
 
             _instance = instance;
-            _p1 = AgentMeta.ParseProperty<P1>(paramStrs[0]);
-            _p2 = AgentMeta.ParseProperty<P2>(paramStrs[1]);
-            _p3 = AgentMeta.ParseProperty<P3>(paramStrs[2]);
-            _p4 = AgentMeta.ParseProperty<P4>(paramStrs[3]);
-            _p5 = AgentMeta.ParseProperty<P5>(paramStrs[4]);
-            _p6 = AgentMeta.ParseProperty<P6>(paramStrs[5]);
-            _p7 = AgentMeta.ParseProperty<P7>(paramStrs[6]);
-            _p8 = AgentMeta.ParseProperty<P8>(paramStrs[7]);
-            _p9 = AgentMeta.ParseProperty<P9>(paramStrs[8]);
-            _p10 = AgentMeta.ParseProperty<P10>(paramStrs[9]);
-            _p11 = AgentMeta.ParseProperty<P11>(paramStrs[10]);
-            _p12 = AgentMeta.ParseProperty<P12>(paramStrs[11]);
+            _p1 = AgentMeta.ParseProperty<P1>(paramStrs[0], Workspace);
+            _p2 = AgentMeta.ParseProperty<P2>(paramStrs[1], Workspace);
+            _p3 = AgentMeta.ParseProperty<P3>(paramStrs[2], Workspace);
+            _p4 = AgentMeta.ParseProperty<P4>(paramStrs[3], Workspace);
+            _p5 = AgentMeta.ParseProperty<P5>(paramStrs[4], Workspace);
+            _p6 = AgentMeta.ParseProperty<P6>(paramStrs[5], Workspace);
+            _p7 = AgentMeta.ParseProperty<P7>(paramStrs[6], Workspace);
+            _p8 = AgentMeta.ParseProperty<P8>(paramStrs[7], Workspace);
+            _p9 = AgentMeta.ParseProperty<P9>(paramStrs[8], Workspace);
+            _p10 = AgentMeta.ParseProperty<P10>(paramStrs[9], Workspace);
+            _p11 = AgentMeta.ParseProperty<P11>(paramStrs[10], Workspace);
+            _p12 = AgentMeta.ParseProperty<P12>(paramStrs[11], Workspace);
         }
 
-        public override void Run(Agent self)
+        public override async Task Run(Agent self)
         {
-            Debug.Check(_p1 != null);
-            Debug.Check(_p2 != null);
-            Debug.Check(_p3 != null);
-            Debug.Check(_p4 != null);
-            Debug.Check(_p5 != null);
-            Debug.Check(_p6 != null);
-            Debug.Check(_p7 != null);
-            Debug.Check(_p8 != null);
-            Debug.Check(_p9 != null);
-            Debug.Check(_p10 != null);
-            Debug.Check(_p11 != null);
-            Debug.Check(_p12 != null);
+            Debugs.Check(_p1 != null);
+            Debugs.Check(_p2 != null);
+            Debugs.Check(_p3 != null);
+            Debugs.Check(_p4 != null);
+            Debugs.Check(_p5 != null);
+            Debugs.Check(_p6 != null);
+            Debugs.Check(_p7 != null);
+            Debugs.Check(_p8 != null);
+            Debugs.Check(_p9 != null);
+            Debugs.Check(_p10 != null);
+            Debugs.Check(_p11 != null);
+            Debugs.Check(_p12 != null);
 
-            _fp(((CInstanceMember<P1>)_p1).GetValue(self),
-                ((CInstanceMember<P2>)_p2).GetValue(self),
-                ((CInstanceMember<P3>)_p3).GetValue(self),
-                ((CInstanceMember<P4>)_p4).GetValue(self),
-                ((CInstanceMember<P5>)_p5).GetValue(self),
-                ((CInstanceMember<P6>)_p6).GetValue(self),
-                ((CInstanceMember<P7>)_p7).GetValue(self),
-                ((CInstanceMember<P8>)_p8).GetValue(self),
-                ((CInstanceMember<P9>)_p9).GetValue(self),
-                ((CInstanceMember<P10>)_p10).GetValue(self),
-                ((CInstanceMember<P11>)_p11).GetValue(self),
-                ((CInstanceMember<P12>)_p12).GetValue(self));
+            await _fp(
+                await ((CInstanceMember<P1>)_p1).GetValue(self),
+                await ((CInstanceMember<P2>)_p2).GetValue(self),
+                await ((CInstanceMember<P3>)_p3).GetValue(self),
+                await ((CInstanceMember<P4>)_p4).GetValue(self),
+                await ((CInstanceMember<P5>)_p5).GetValue(self),
+                await ((CInstanceMember<P6>)_p6).GetValue(self),
+                await ((CInstanceMember<P7>)_p7).GetValue(self),
+                await ((CInstanceMember<P8>)_p8).GetValue(self),
+                await ((CInstanceMember<P9>)_p9).GetValue(self),
+                await ((CInstanceMember<P10>)_p10).GetValue(self),
+                await ((CInstanceMember<P11>)_p11).GetValue(self),
+                await ((CInstanceMember<P12>)_p12).GetValue(self));
         }
 
         public override void SetTaskParams(Agent self, BehaviorTreeTask treeTask)
         {
-            string paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 0);
+            string paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 0);
             treeTask.SetVariable(paramName, ((CInstanceMember<P1>)_p1).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 1);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 1);
             treeTask.SetVariable(paramName, ((CInstanceMember<P2>)_p2).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 2);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 2);
             treeTask.SetVariable(paramName, ((CInstanceMember<P3>)_p3).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 3);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 3);
             treeTask.SetVariable(paramName, ((CInstanceMember<P4>)_p4).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 4);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 4);
             treeTask.SetVariable(paramName, ((CInstanceMember<P5>)_p5).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 5);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 5);
             treeTask.SetVariable(paramName, ((CInstanceMember<P6>)_p6).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 6);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 6);
             treeTask.SetVariable(paramName, ((CInstanceMember<P7>)_p7).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 7);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 7);
             treeTask.SetVariable(paramName, ((CInstanceMember<P8>)_p8).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 8);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 8);
             treeTask.SetVariable(paramName, ((CInstanceMember<P9>)_p9).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 9);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 9);
             treeTask.SetVariable(paramName, ((CInstanceMember<P10>)_p10).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 10);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 10);
             treeTask.SetVariable(paramName, ((CInstanceMember<P11>)_p11).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 11);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 11);
             treeTask.SetVariable(paramName, ((CInstanceMember<P12>)_p12).GetValue(self));
         }
     }
 
     public class CAgentStaticMethodVoid<P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12, P13> : CAgentMethodVoidBase
     {
-        public delegate void FunctionPointer(P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6, P7 p7, P8 p8, P9 p9, P10 p10, P11 p11, P12 p12, P13 p13);
+        public delegate Task FunctionPointer(P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6, P7 p7, P8 p8, P9 p9, P10 p10, P11 p11, P12 p12, P13 p13);
 
         FunctionPointer _fp;
         IInstanceMember _p1;
@@ -6623,13 +6662,13 @@ namespace behaviac
         IInstanceMember _p12;
         IInstanceMember _p13;
 
-        public CAgentStaticMethodVoid(FunctionPointer f)
+        public CAgentStaticMethodVoid(FunctionPointer f, Workspace workspace) : base(workspace)
         {
             _fp = f;
         }
 
-        public CAgentStaticMethodVoid(CAgentStaticMethodVoid<P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12, P13> rhs)
-        : base(rhs)
+        public CAgentStaticMethodVoid(CAgentStaticMethodVoid<P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12, P13> rhs, Workspace workspace)
+        : base(workspace, rhs)
         {
             _fp = rhs._fp;
             _p1 = rhs._p1;
@@ -6649,106 +6688,107 @@ namespace behaviac
 
         public override IMethod Clone()
         {
-            return new CAgentStaticMethodVoid<P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12, P13>(this);
+            return new CAgentStaticMethodVoid<P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12, P13>(this, Workspace);
         }
 
         public override void Load(string instance, string[] paramStrs)
         {
-            Debug.Check(paramStrs.Length == 13);
+            Debugs.Check(paramStrs.Length == 13);
 
             _instance = instance;
-            _p1 = AgentMeta.ParseProperty<P1>(paramStrs[0]);
-            _p2 = AgentMeta.ParseProperty<P2>(paramStrs[1]);
-            _p3 = AgentMeta.ParseProperty<P3>(paramStrs[2]);
-            _p4 = AgentMeta.ParseProperty<P4>(paramStrs[3]);
-            _p5 = AgentMeta.ParseProperty<P5>(paramStrs[4]);
-            _p6 = AgentMeta.ParseProperty<P6>(paramStrs[5]);
-            _p7 = AgentMeta.ParseProperty<P7>(paramStrs[6]);
-            _p8 = AgentMeta.ParseProperty<P8>(paramStrs[7]);
-            _p9 = AgentMeta.ParseProperty<P9>(paramStrs[8]);
-            _p10 = AgentMeta.ParseProperty<P10>(paramStrs[9]);
-            _p11 = AgentMeta.ParseProperty<P11>(paramStrs[10]);
-            _p12 = AgentMeta.ParseProperty<P12>(paramStrs[11]);
-            _p13 = AgentMeta.ParseProperty<P13>(paramStrs[12]);
+            _p1 = AgentMeta.ParseProperty<P1>(paramStrs[0], Workspace);
+            _p2 = AgentMeta.ParseProperty<P2>(paramStrs[1], Workspace);
+            _p3 = AgentMeta.ParseProperty<P3>(paramStrs[2], Workspace);
+            _p4 = AgentMeta.ParseProperty<P4>(paramStrs[3], Workspace);
+            _p5 = AgentMeta.ParseProperty<P5>(paramStrs[4], Workspace);
+            _p6 = AgentMeta.ParseProperty<P6>(paramStrs[5], Workspace);
+            _p7 = AgentMeta.ParseProperty<P7>(paramStrs[6], Workspace);
+            _p8 = AgentMeta.ParseProperty<P8>(paramStrs[7], Workspace);
+            _p9 = AgentMeta.ParseProperty<P9>(paramStrs[8], Workspace);
+            _p10 = AgentMeta.ParseProperty<P10>(paramStrs[9], Workspace);
+            _p11 = AgentMeta.ParseProperty<P11>(paramStrs[10], Workspace);
+            _p12 = AgentMeta.ParseProperty<P12>(paramStrs[11], Workspace);
+            _p13 = AgentMeta.ParseProperty<P13>(paramStrs[12], Workspace);
         }
 
-        public override void Run(Agent self)
+        public override async Task Run(Agent self)
         {
-            Debug.Check(_p1 != null);
-            Debug.Check(_p2 != null);
-            Debug.Check(_p3 != null);
-            Debug.Check(_p4 != null);
-            Debug.Check(_p5 != null);
-            Debug.Check(_p6 != null);
-            Debug.Check(_p7 != null);
-            Debug.Check(_p8 != null);
-            Debug.Check(_p9 != null);
-            Debug.Check(_p10 != null);
-            Debug.Check(_p11 != null);
-            Debug.Check(_p12 != null);
-            Debug.Check(_p13 != null);
+            Debugs.Check(_p1 != null);
+            Debugs.Check(_p2 != null);
+            Debugs.Check(_p3 != null);
+            Debugs.Check(_p4 != null);
+            Debugs.Check(_p5 != null);
+            Debugs.Check(_p6 != null);
+            Debugs.Check(_p7 != null);
+            Debugs.Check(_p8 != null);
+            Debugs.Check(_p9 != null);
+            Debugs.Check(_p10 != null);
+            Debugs.Check(_p11 != null);
+            Debugs.Check(_p12 != null);
+            Debugs.Check(_p13 != null);
 
-            _fp(((CInstanceMember<P1>)_p1).GetValue(self),
-                ((CInstanceMember<P2>)_p2).GetValue(self),
-                ((CInstanceMember<P3>)_p3).GetValue(self),
-                ((CInstanceMember<P4>)_p4).GetValue(self),
-                ((CInstanceMember<P5>)_p5).GetValue(self),
-                ((CInstanceMember<P6>)_p6).GetValue(self),
-                ((CInstanceMember<P7>)_p7).GetValue(self),
-                ((CInstanceMember<P8>)_p8).GetValue(self),
-                ((CInstanceMember<P9>)_p9).GetValue(self),
-                ((CInstanceMember<P10>)_p10).GetValue(self),
-                ((CInstanceMember<P11>)_p11).GetValue(self),
-                ((CInstanceMember<P12>)_p12).GetValue(self),
-                ((CInstanceMember<P13>)_p13).GetValue(self));
+            await _fp(
+                await ((CInstanceMember<P1>)_p1).GetValue(self),
+                await ((CInstanceMember<P2>)_p2).GetValue(self),
+                await ((CInstanceMember<P3>)_p3).GetValue(self),
+                await ((CInstanceMember<P4>)_p4).GetValue(self),
+                await ((CInstanceMember<P5>)_p5).GetValue(self),
+                await ((CInstanceMember<P6>)_p6).GetValue(self),
+                await ((CInstanceMember<P7>)_p7).GetValue(self),
+                await ((CInstanceMember<P8>)_p8).GetValue(self),
+                await ((CInstanceMember<P9>)_p9).GetValue(self),
+                await ((CInstanceMember<P10>)_p10).GetValue(self),
+                await ((CInstanceMember<P11>)_p11).GetValue(self),
+                await ((CInstanceMember<P12>)_p12).GetValue(self),
+                await ((CInstanceMember<P13>)_p13).GetValue(self));
         }
 
         public override void SetTaskParams(Agent self, BehaviorTreeTask treeTask)
         {
-            string paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 0);
+            string paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 0);
             treeTask.SetVariable(paramName, ((CInstanceMember<P1>)_p1).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 1);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 1);
             treeTask.SetVariable(paramName, ((CInstanceMember<P2>)_p2).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 2);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 2);
             treeTask.SetVariable(paramName, ((CInstanceMember<P3>)_p3).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 3);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 3);
             treeTask.SetVariable(paramName, ((CInstanceMember<P4>)_p4).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 4);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 4);
             treeTask.SetVariable(paramName, ((CInstanceMember<P5>)_p5).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 5);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 5);
             treeTask.SetVariable(paramName, ((CInstanceMember<P6>)_p6).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 6);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 6);
             treeTask.SetVariable(paramName, ((CInstanceMember<P7>)_p7).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 7);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 7);
             treeTask.SetVariable(paramName, ((CInstanceMember<P8>)_p8).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 8);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 8);
             treeTask.SetVariable(paramName, ((CInstanceMember<P9>)_p9).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 9);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 9);
             treeTask.SetVariable(paramName, ((CInstanceMember<P10>)_p10).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 10);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 10);
             treeTask.SetVariable(paramName, ((CInstanceMember<P11>)_p11).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 11);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 11);
             treeTask.SetVariable(paramName, ((CInstanceMember<P12>)_p12).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 12);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 12);
             treeTask.SetVariable(paramName, ((CInstanceMember<P13>)_p13).GetValue(self));
         }
     }
 
     public class CAgentStaticMethodVoid<P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12, P13, P14> : CAgentMethodVoidBase
     {
-        public delegate void FunctionPointer(P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6, P7 p7, P8 p8, P9 p9, P10 p10, P11 p11, P12 p12, P13 p13, P14 p14);
+        public delegate Task FunctionPointer(P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6, P7 p7, P8 p8, P9 p9, P10 p10, P11 p11, P12 p12, P13 p13, P14 p14);
 
         FunctionPointer _fp;
         IInstanceMember _p1;
@@ -6766,13 +6806,13 @@ namespace behaviac
         IInstanceMember _p13;
         IInstanceMember _p14;
 
-        public CAgentStaticMethodVoid(FunctionPointer f)
+        public CAgentStaticMethodVoid(FunctionPointer f, Workspace workspace) : base(workspace)
         {
             _fp = f;
         }
 
-        public CAgentStaticMethodVoid(CAgentStaticMethodVoid<P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12, P13, P14> rhs)
-        : base(rhs)
+        public CAgentStaticMethodVoid(CAgentStaticMethodVoid<P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12, P13, P14> rhs, Workspace workspace)
+        : base(workspace, rhs)
         {
             _fp = rhs._fp;
             _p1 = rhs._p1;
@@ -6793,105 +6833,106 @@ namespace behaviac
 
         public override IMethod Clone()
         {
-            return new CAgentStaticMethodVoid<P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12, P13, P14>(this);
+            return new CAgentStaticMethodVoid<P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12, P13, P14>(this, Workspace);
         }
 
         public override void Load(string instance, string[] paramStrs)
         {
-            Debug.Check(paramStrs.Length == 14);
+            Debugs.Check(paramStrs.Length == 14);
 
             _instance = instance;
-            _p1 = AgentMeta.ParseProperty<P1>(paramStrs[0]);
-            _p2 = AgentMeta.ParseProperty<P2>(paramStrs[1]);
-            _p3 = AgentMeta.ParseProperty<P3>(paramStrs[2]);
-            _p4 = AgentMeta.ParseProperty<P4>(paramStrs[3]);
-            _p5 = AgentMeta.ParseProperty<P5>(paramStrs[4]);
-            _p6 = AgentMeta.ParseProperty<P6>(paramStrs[5]);
-            _p7 = AgentMeta.ParseProperty<P7>(paramStrs[6]);
-            _p8 = AgentMeta.ParseProperty<P8>(paramStrs[7]);
-            _p9 = AgentMeta.ParseProperty<P9>(paramStrs[8]);
-            _p10 = AgentMeta.ParseProperty<P10>(paramStrs[9]);
-            _p11 = AgentMeta.ParseProperty<P11>(paramStrs[10]);
-            _p12 = AgentMeta.ParseProperty<P12>(paramStrs[11]);
-            _p13 = AgentMeta.ParseProperty<P13>(paramStrs[12]);
-            _p14 = AgentMeta.ParseProperty<P14>(paramStrs[13]);
+            _p1 = AgentMeta.ParseProperty<P1>(paramStrs[0], Workspace);
+            _p2 = AgentMeta.ParseProperty<P2>(paramStrs[1], Workspace);
+            _p3 = AgentMeta.ParseProperty<P3>(paramStrs[2], Workspace);
+            _p4 = AgentMeta.ParseProperty<P4>(paramStrs[3], Workspace);
+            _p5 = AgentMeta.ParseProperty<P5>(paramStrs[4], Workspace);
+            _p6 = AgentMeta.ParseProperty<P6>(paramStrs[5], Workspace);
+            _p7 = AgentMeta.ParseProperty<P7>(paramStrs[6], Workspace);
+            _p8 = AgentMeta.ParseProperty<P8>(paramStrs[7], Workspace);
+            _p9 = AgentMeta.ParseProperty<P9>(paramStrs[8], Workspace);
+            _p10 = AgentMeta.ParseProperty<P10>(paramStrs[9], Workspace);
+            _p11 = AgentMeta.ParseProperty<P11>(paramStrs[10], Workspace);
+            _p12 = AgentMeta.ParseProperty<P12>(paramStrs[11], Workspace);
+            _p13 = AgentMeta.ParseProperty<P13>(paramStrs[12], Workspace);
+            _p14 = AgentMeta.ParseProperty<P14>(paramStrs[13], Workspace);
         }
 
-        public override void Run(Agent self)
+        public override async Task Run(Agent self)
         {
-            Debug.Check(_p1 != null);
-            Debug.Check(_p2 != null);
-            Debug.Check(_p3 != null);
-            Debug.Check(_p4 != null);
-            Debug.Check(_p5 != null);
-            Debug.Check(_p6 != null);
-            Debug.Check(_p7 != null);
-            Debug.Check(_p8 != null);
-            Debug.Check(_p9 != null);
-            Debug.Check(_p10 != null);
-            Debug.Check(_p11 != null);
-            Debug.Check(_p12 != null);
-            Debug.Check(_p13 != null);
-            Debug.Check(_p14 != null);
+            Debugs.Check(_p1 != null);
+            Debugs.Check(_p2 != null);
+            Debugs.Check(_p3 != null);
+            Debugs.Check(_p4 != null);
+            Debugs.Check(_p5 != null);
+            Debugs.Check(_p6 != null);
+            Debugs.Check(_p7 != null);
+            Debugs.Check(_p8 != null);
+            Debugs.Check(_p9 != null);
+            Debugs.Check(_p10 != null);
+            Debugs.Check(_p11 != null);
+            Debugs.Check(_p12 != null);
+            Debugs.Check(_p13 != null);
+            Debugs.Check(_p14 != null);
 
-            _fp(((CInstanceMember<P1>)_p1).GetValue(self),
-                ((CInstanceMember<P2>)_p2).GetValue(self),
-                ((CInstanceMember<P3>)_p3).GetValue(self),
-                ((CInstanceMember<P4>)_p4).GetValue(self),
-                ((CInstanceMember<P5>)_p5).GetValue(self),
-                ((CInstanceMember<P6>)_p6).GetValue(self),
-                ((CInstanceMember<P7>)_p7).GetValue(self),
-                ((CInstanceMember<P8>)_p8).GetValue(self),
-                ((CInstanceMember<P9>)_p9).GetValue(self),
-                ((CInstanceMember<P10>)_p10).GetValue(self),
-                ((CInstanceMember<P11>)_p11).GetValue(self),
-                ((CInstanceMember<P12>)_p12).GetValue(self),
-                ((CInstanceMember<P13>)_p13).GetValue(self),
-                ((CInstanceMember<P14>)_p14).GetValue(self));
+            await _fp(
+                await ((CInstanceMember<P1>)_p1).GetValue(self),
+                 await ((CInstanceMember<P2>)_p2).GetValue(self),
+               await ((CInstanceMember<P3>)_p3).GetValue(self),
+               await ((CInstanceMember<P4>)_p4).GetValue(self),
+               await ((CInstanceMember<P5>)_p5).GetValue(self),
+              await ((CInstanceMember<P6>)_p6).GetValue(self),
+               await ((CInstanceMember<P7>)_p7).GetValue(self),
+              await ((CInstanceMember<P8>)_p8).GetValue(self),
+              await ((CInstanceMember<P9>)_p9).GetValue(self),
+             await ((CInstanceMember<P10>)_p10).GetValue(self),
+             await ((CInstanceMember<P11>)_p11).GetValue(self),
+              await ((CInstanceMember<P12>)_p12).GetValue(self),
+             await ((CInstanceMember<P13>)_p13).GetValue(self),
+             await ((CInstanceMember<P14>)_p14).GetValue(self));
         }
 
         public override void SetTaskParams(Agent self, BehaviorTreeTask treeTask)
         {
-            string paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 0);
+            string paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 0);
             treeTask.SetVariable(paramName, ((CInstanceMember<P1>)_p1).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 1);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 1);
             treeTask.SetVariable(paramName, ((CInstanceMember<P2>)_p2).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 2);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 2);
             treeTask.SetVariable(paramName, ((CInstanceMember<P3>)_p3).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 3);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 3);
             treeTask.SetVariable(paramName, ((CInstanceMember<P4>)_p4).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 4);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 4);
             treeTask.SetVariable(paramName, ((CInstanceMember<P5>)_p5).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 5);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 5);
             treeTask.SetVariable(paramName, ((CInstanceMember<P6>)_p6).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 6);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 6);
             treeTask.SetVariable(paramName, ((CInstanceMember<P7>)_p7).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 7);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 7);
             treeTask.SetVariable(paramName, ((CInstanceMember<P8>)_p8).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 8);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 8);
             treeTask.SetVariable(paramName, ((CInstanceMember<P9>)_p9).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 9);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 9);
             treeTask.SetVariable(paramName, ((CInstanceMember<P10>)_p10).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 10);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 10);
             treeTask.SetVariable(paramName, ((CInstanceMember<P11>)_p11).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 11);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 11);
             treeTask.SetVariable(paramName, ((CInstanceMember<P12>)_p12).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 12);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 12);
             treeTask.SetVariable(paramName, ((CInstanceMember<P13>)_p13).GetValue(self));
 
-            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 13);
+            paramName = string.Format("{0}{1}", Tasks.LOCAL_TASK_PARAM_PRE, 13);
             treeTask.SetVariable(paramName, ((CInstanceMember<P14>)_p14).GetValue(self));
         }
     }

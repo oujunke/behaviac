@@ -409,7 +409,7 @@ namespace Behaviac.Design.Attributes
                         if (string.IsNullOrEmpty(propertyValue) || propertyValue[0] != '{')
                         {
                             MethodDef.Param parParam = null;
-                            Nodes.Action action = node as Nodes.Action;
+                            Nodes.Actions action = node as Nodes.Actions;
 
                             if (action != null)
                             {

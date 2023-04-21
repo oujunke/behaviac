@@ -19,16 +19,16 @@
           <property Opl="int Self.FirstAgent::p1" />
           <property Opr="const int 2" />
         </node>
-        <node class="Action" id="7">
+        <node class="Actions" id="7">
           <property Method="Self.FirstAgent::Say(&quot;In Parallel 1&quot;,false)" />
           <property ResultOption="BT_INVALID" />
         </node>
-        <node class="Action" id="0">
+        <node class="Actions" id="0">
           <property Method="Self.FirstAgent::Say(&quot;In Parallel 2&quot;,true)" />
           <property ResultOption="BT_INVALID" />
         </node>
       </node>
-      <node class="Action" id="8">
+      <node class="Actions" id="8">
         <property Method="Self.FirstAgent::Say(&quot;Out of Parallel&quot;,false)" />
         <property ResultOption="BT_INVALID" />
       </node>

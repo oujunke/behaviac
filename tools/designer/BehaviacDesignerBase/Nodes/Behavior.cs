@@ -202,7 +202,7 @@ namespace Behaviac.Design.Nodes
         {
             get
             {
-                return (this.Children.Count == 1 && this.Children[0] is Task);
+                return (this.Children.Count == 1 && this.Children[0] is Tasks);
             }
         }
 
@@ -510,9 +510,9 @@ namespace Behaviac.Design.Nodes
             if (this.LocalVars != null && this.Children.Count > 0)
             {
                 BaseNode child = this.Children[0];
-                if (child is Task)
+                if (child is Tasks)
                 {
-                    Task task = child as Task;
+                    Tasks task = child as Tasks;
                     List<ParInfo> pars = new List<ParInfo>();
 
                     task.CollectTaskPars(ref pars);

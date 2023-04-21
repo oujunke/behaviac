@@ -12,12 +12,13 @@
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace behaviac
 {
     public class SequenceStochastic : CompositeStochastic
     {
-        public SequenceStochastic()
+        public SequenceStochastic(Workspace workspace):base(workspace)
         {
         }
 
@@ -25,9 +26,9 @@ namespace behaviac
         //{
         //}
 
-        protected override void load(int version, string agentType, List<property_t> properties)
+        protected override  async Task  load(int version, string agentType, List<property_t> properties)
         {
-            base.load(version, agentType, properties);
+            await base.load(version, agentType, properties);
         }
 
         public override bool IsValid(Agent pAgent, BehaviorTask pTask)
@@ -42,15 +43,14 @@ namespace behaviac
 
         protected override BehaviorTask createTask()
         {
-            SequenceStochasticTask pTask = new SequenceStochasticTask();
+            SequenceStochasticTask pTask = new SequenceStochasticTask(Workspace);
 
             return pTask;
         }
 
         private class SequenceStochasticTask : CompositeStochasticTask
         {
-            public SequenceStochasticTask()
-            : base()
+            public SequenceStochasticTask(Workspace workspace) : base(workspace)
             {
             }
 
@@ -74,9 +74,9 @@ namespace behaviac
                 base.load(node);
             }
 
-            protected override bool onenter(Agent pAgent)
+            protected override async Task<bool> onenter(Agent pAgent)
             {
-                base.onenter(pAgent);
+               await base.onenter(pAgent);
 
                 return true;
             }
@@ -86,9 +86,9 @@ namespace behaviac
                 base.onexit(pAgent, s);
             }
 
-            protected override EBTStatus update(Agent pAgent, EBTStatus childStatus)
+            protected override async Task<EBTStatus> update(Agent pAgent, EBTStatus childStatus)
             {
-                Debug.Check(this.m_activeChildIndex < this.m_children.Count);
+                Debugs.Check(this.m_activeChildIndex < this.m_children.Count);
 
                 SequenceStochastic node = this.m_node as SequenceStochastic;
 
@@ -102,12 +102,12 @@ namespace behaviac
                         int childIndex = this.m_set[this.m_activeChildIndex];
                         BehaviorTask pBehavior = this.m_children[childIndex];
 
-                        if (node.CheckIfInterrupted(pAgent))
+                        if (await node.CheckIfInterrupted(pAgent))
                         {
                             return EBTStatus.BT_FAILURE;
                         }
 
-                        s = pBehavior.exec(pAgent);
+                        s =await pBehavior.exec(pAgent);
                     }
 
                     // If the child fails, or keeps running, do the same.

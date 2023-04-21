@@ -12,14 +12,15 @@
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace behaviac
 {
     public class WaitFramesState : State
     {
-        protected override void load(int version, string agentType, List<property_t> properties)
+        protected override  async Task  load(int version, string agentType, List<property_t> properties)
         {
-            base.load(version, agentType, properties);
+            await base.load(version, agentType, properties);
 
             for (int i = 0; i < properties.Count; ++i)
             {
@@ -31,22 +32,22 @@ namespace behaviac
 
                     if (pParenthesis == -1)
                     {
-                        this.m_frames = AgentMeta.ParseProperty(p.value);
+                        this.m_frames = AgentMeta.ParseProperty(p.value, Workspace);
                     }
                     else
                     {
-                        this.m_frames = AgentMeta.ParseMethod(p.value);
+                        this.m_frames = AgentMeta.ParseMethod(p.value, Workspace);
                     }
                 }
             }
         }
 
-        protected virtual int GetFrames(Agent pAgent)
+        protected virtual async Task<int> GetFrames(Agent pAgent)
         {
             if (this.m_frames != null)
             {
-                Debug.Check(this.m_frames is CInstanceMember<int>);
-                return ((CInstanceMember<int>)this.m_frames).GetValue(pAgent);
+                Debugs.Check(this.m_frames is CInstanceMember<int>);
+                return await((CInstanceMember<int>)this.m_frames).GetValue(pAgent);
             }
 
             return 0;
@@ -54,12 +55,16 @@ namespace behaviac
 
         protected override BehaviorTask createTask()
         {
-            WaitFramesStateTask pTask = new WaitFramesStateTask();
+            WaitFramesStateTask pTask = new WaitFramesStateTask(Workspace);
 
             return pTask;
         }
 
         protected IInstanceMember m_frames;
+
+        public WaitFramesState(Workspace workspace) : base(workspace)
+        {
+        }
 
         private class WaitFramesStateTask : State.StateTask
         {
@@ -67,7 +72,7 @@ namespace behaviac
             {
                 base.copyto(target);
 
-                Debug.Check(target is WaitFramesStateTask);
+                Debugs.Check(target is WaitFramesStateTask);
                 WaitFramesStateTask ttask = (WaitFramesStateTask)target;
                 ttask.m_start = this.m_start;
                 ttask.m_frames = this.m_frames;
@@ -89,12 +94,12 @@ namespace behaviac
                 base.load(node);
             }
 
-            protected override bool onenter(Agent pAgent)
+            protected override async Task<bool> onenter(Agent pAgent)
             {
                 this.m_nextStateId = -1;
 
-                this.m_start = Workspace.Instance.FrameSinceStartup;
-                this.m_frames = this.GetFrames(pAgent);
+                this.m_start = Workspace.FrameSinceStartup;
+                this.m_frames =await this.GetFrames(pAgent);
 
                 return (this.m_frames >= 0);
             }
@@ -103,31 +108,36 @@ namespace behaviac
             {
             }
 
-            protected override EBTStatus update(Agent pAgent, EBTStatus childStatus)
+            protected override async Task<EBTStatus> update(Agent pAgent, EBTStatus childStatus)
             {
-                Debug.Check(childStatus == EBTStatus.BT_RUNNING);
-                Debug.Check(this.m_node is WaitFramesState, "node is not an WaitFramesState");
+                Debugs.Check(childStatus == EBTStatus.BT_RUNNING);
+                Debugs.Check(this.m_node is WaitFramesState, "node is not an WaitFramesState");
                 WaitFramesState pStateNode = (WaitFramesState)this.m_node;
 
-                if (Workspace.Instance.FrameSinceStartup - this.m_start + 1 >= this.m_frames)
+                if (Workspace.FrameSinceStartup - this.m_start + 1 >= this.m_frames)
                 {
-                    pStateNode.Update(pAgent, out this.m_nextStateId);
+                    var (result, mnsi) = await pStateNode.Update(pAgent);
+                    this.m_nextStateId = mnsi;
                     return EBTStatus.BT_SUCCESS;
                 }
 
                 return EBTStatus.BT_RUNNING;
             }
 
-            private int GetFrames(Agent pAgent)
+            private async Task<int>  GetFrames(Agent pAgent)
             {
-                Debug.Check(this.GetNode() is WaitFramesState);
+                Debugs.Check(this.GetNode() is WaitFramesState);
                 WaitFramesState pWaitNode = (WaitFramesState)(this.GetNode());
 
-                return pWaitNode != null ? pWaitNode.GetFrames(pAgent) : 0;
+                return pWaitNode != null ?await pWaitNode.GetFrames(pAgent) : 0;
             }
 
             private int m_start;
             private int m_frames;
+
+            public WaitFramesStateTask(Workspace workspace) : base(workspace)
+            {
+            }
         }
     }
 }

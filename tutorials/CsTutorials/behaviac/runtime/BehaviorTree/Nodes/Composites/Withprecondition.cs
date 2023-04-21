@@ -12,12 +12,14 @@
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace behaviac
 {
     public class WithPrecondition : BehaviorNode
     {
-        public WithPrecondition()
+
+        public WithPrecondition(Workspace workspace) : base(workspace)
         {
         }
 
@@ -25,9 +27,9 @@ namespace behaviac
         //{
         //}
 
-        protected override void load(int version, string agentType, List<property_t> properties)
+        protected override  async Task  load(int version, string agentType, List<property_t> properties)
         {
-            base.load(version, agentType, properties);
+            await base.load(version, agentType, properties);
         }
 
         public override bool IsValid(Agent pAgent, BehaviorTask pTask)
@@ -42,7 +44,7 @@ namespace behaviac
 
         protected override BehaviorTask createTask()
         {
-            WithPreconditionTask pTask = new WithPreconditionTask();
+            WithPreconditionTask pTask = new WithPreconditionTask(Workspace);
 
             return pTask;
         }
@@ -50,8 +52,7 @@ namespace behaviac
 
     internal class WithPreconditionTask : Sequence.SequenceTask
     {
-        public WithPreconditionTask()
-        : base()
+        public WithPreconditionTask(Workspace workspace) : base(workspace)
         {
         }
 
@@ -75,28 +76,28 @@ namespace behaviac
             base.load(node);
         }
 
-        protected override bool onenter(Agent pAgent)
+        protected override Task<bool> onenter(Agent pAgent)
         {
             BehaviorTask pParent = this.GetParent();
 
             //when as child of SelctorLoop, it is not ticked normally
-            Debug.Check(pParent is SelectorLoop.SelectorLoopTask);
+            Debugs.Check(pParent is SelectorLoop.SelectorLoopTask);
 
-            return true;
+            return Task.FromResult(true);
         }
 
         protected override void onexit(Agent pAgent, EBTStatus s)
         {
             BehaviorTask pParent = this.GetParent();
 
-            Debug.Check(pParent is SelectorLoop.SelectorLoopTask);
+            Debugs.Check(pParent is SelectorLoop.SelectorLoopTask);
         }
 
         public BehaviorTask PreconditionNode
         {
             get
             {
-                Debug.Check(this.m_children.Count == 2);
+                Debugs.Check(this.m_children.Count == 2);
 
                 return (this.m_children)[0];
             }
@@ -106,25 +107,25 @@ namespace behaviac
         {
             get
             {
-                Debug.Check(this.m_children.Count == 2);
+                Debugs.Check(this.m_children.Count == 2);
 
                 return (this.m_children)[1];
             }
         }
 
-        protected override EBTStatus update_current(Agent pAgent, EBTStatus childStatus)
+        protected override Task<EBTStatus> update_current(Agent pAgent, EBTStatus childStatus)
         {
             return this.update(pAgent, childStatus);
         }
 
-        protected override EBTStatus update(Agent pAgent, EBTStatus childStatus)
+        protected override Task<EBTStatus> update(Agent pAgent, EBTStatus childStatus)
         {
             BehaviorTask pParent = this.GetParent();
-            Debug.Check(pParent is SelectorLoop.SelectorLoopTask);
+            Debugs.Check(pParent is SelectorLoop.SelectorLoopTask);
 
-            Debug.Check(false);
+            Debugs.Check(false);
 
-            return EBTStatus.BT_RUNNING;
+            return Task.FromResult(EBTStatus.BT_RUNNING);
         }
     }
 }

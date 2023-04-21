@@ -15,6 +15,7 @@
 
 using System;
 using System.Runtime.InteropServices;
+using System.Threading.Tasks;
 
 namespace behaviac
 {
@@ -60,7 +61,7 @@ namespace behaviac
 
     internal class ConnectorImpl : ConnectorInterface
     {
-        public ConnectorImpl()
+        public ConnectorImpl(Workspace workspace):base(workspace)
         {
             m_workspaceSent = false;
             //don't handle message automatically
@@ -77,7 +78,7 @@ namespace behaviac
             initialPacket.Init();
             int bytesWritten = 0;
 
-            if (!SocketBase.Write(m_writeSocket, initialPacket.GetData(), ref bytesWritten))
+            if (!SocketBase.Write(m_writeSocket, initialPacket.GetData(), ref bytesWritten,Workspace))
             {
                 Log("behaviac: Couldn't send initial settings.\n");
             }
@@ -85,15 +86,15 @@ namespace behaviac
             gs_packetsStats.init++;
         }
 
-        protected override void OnConnection()
+        protected override async Task OnConnection()
         {
             Log("behaviac: sending initial settings.\n");
 
             this.SendInitialSettings();
 
-            SocketUtils.SendWorkspaceSettings();
+            Workspace.SocketUtil.SendWorkspaceSettings();
 
-            this.SendInitialProperties();
+            await this.SendInitialProperties();
 
             {
                 Log("behaviac: sending packets before connecting.\n");
@@ -101,7 +102,7 @@ namespace behaviac
                 this.SendExistingPackets();
             }
 
-            SocketUtils.SendText("[connected]precached message done\n");
+            Workspace.SocketUtil.SendText("[connected]precached message done\n");
 
             //when '[connected]' is handled in the designer, it will send back all the breakpoints if any and '[breakcpp]' and '[start]'
             //here we block until all those messages have been received, otherwise, if we don't block here to wait for all those messages
@@ -133,9 +134,9 @@ namespace behaviac
             //this.m_bHandleMessage = false;
         }
 
-        private void SendInitialProperties()
+        private async Task SendInitialProperties()
         {
-            Workspace.Instance.LogCurrentStates();
+            await Workspace.LogCurrentStates();
         }
 
         public bool IsWorkspaceSent()
@@ -163,17 +164,26 @@ namespace behaviac
 
 namespace behaviac
 {
-    public static class SocketUtils
+    public  class SocketUtils
     {
 #if !BEHAVIAC_RELEASE
-        private static ConnectorImpl s_tracer = new ConnectorImpl();
+        private  ConnectorImpl s_tracer;
 #endif
-
-        internal static bool SetupConnection(bool bBlocking, ushort port)
+        public Workspace Workspace { get; private set; }
+        private Config Configs { set; get; }
+        public Debug Debugs { set; get; }
+        public SocketUtils(Workspace workspace)
+        {
+            Workspace = workspace;
+            Configs = workspace.Configs;
+            Debugs = workspace.Debugs;
+            s_tracer = new ConnectorImpl(workspace);
+        }
+        internal  bool SetupConnection(bool bBlocking, ushort port)
         {
 #if !BEHAVIAC_RELEASE
 
-            if (Config.IsSocketing)
+            if (Configs.IsSocketing)
             {
                 if (!s_tracer.IsInited())
                 {
@@ -185,7 +195,7 @@ namespace behaviac
                     }
                 }
 
-                behaviac.Debug.Log("behaviac: SetupConnection successful\n");
+                Debugs.Log("behaviac: SetupConnection successful\n");
 
                 return true;
             }
@@ -194,25 +204,25 @@ namespace behaviac
             return false;
         }
 
-        internal static void ShutdownConnection()
+        internal void ShutdownConnection()
         {
 #if !BEHAVIAC_RELEASE
 
-            if (Config.IsSocketing)
+            if (Configs.IsSocketing)
             {
                 s_tracer.Close();
 
-                behaviac.Debug.Log("behaviac: ShutdownConnection\n");
+                Debugs.Log("behaviac: ShutdownConnection\n");
             }
 
 #endif
         }
 
-        public static void SendText(string text)
+        public void SendText(string text)
         {
 #if !BEHAVIAC_RELEASE
 
-            if (Config.IsSocketing)
+            if (Configs.IsSocketing)
             {
                 s_tracer.SendText(text, (byte)CommandId.CMDID_TEXT);
             }
@@ -220,11 +230,11 @@ namespace behaviac
 #endif
         }
 
-        public static bool ReadText(ref string text)
+        public bool ReadText(ref string text)
         {
 #if !BEHAVIAC_RELEASE
 
-            if (Config.IsSocketing)
+            if (Configs.IsSocketing)
             {
                 return s_tracer.ReadText(ref text);
             }
@@ -233,11 +243,11 @@ namespace behaviac
             return false;
         }
 
-        public static bool IsConnected()
+        public bool IsConnected()
         {
 #if !BEHAVIAC_RELEASE
 
-            if (Config.IsSocketing)
+            if (Configs.IsSocketing)
             {
                 return s_tracer.IsConnected();
             }
@@ -247,11 +257,11 @@ namespace behaviac
             return false;
         }
 
-        public static void Flush()
+        public void Flush()
         {
 #if !BEHAVIAC_RELEASE
 
-            if (Config.IsSocketing)
+            if (Configs.IsSocketing)
             {
                 while (s_tracer.GetPacketsCount() > 0)
                 {
@@ -262,15 +272,15 @@ namespace behaviac
 #endif
         }
 
-        public static void SendWorkspaceSettings()
+        public void SendWorkspaceSettings()
         {
 #if !BEHAVIAC_RELEASE
 
-            if (Config.IsSocketing)
+            if (Configs.IsSocketing)
             {
                 if (!s_tracer.IsWorkspaceSent() && s_tracer.IsConnected())
                 {
-                    Workspace.Instance.LogWorkspaceInfo();
+                    Workspace.LogWorkspaceInfo();
 
                     s_tracer.SetWorkspaceSent(true);
                 }
@@ -279,11 +289,11 @@ namespace behaviac
 #endif
         }
 
-        public static int GetMemoryOverhead()
+        public int GetMemoryOverhead()
         {
 #if !BEHAVIAC_RELEASE
 
-            if (Config.IsSocketing)
+            if (Configs.IsSocketing)
             {
                 return s_tracer.GetMemoryOverhead();
             }
@@ -292,11 +302,11 @@ namespace behaviac
             return 0;
         }
 
-        public static int GetNumTrackedThreads()
+        public int GetNumTrackedThreads()
         {
 #if !BEHAVIAC_RELEASE
 
-            if (Config.IsSocketing)
+            if (Configs.IsSocketing)
             {
                 return s_tracer.GetNumTrackedThreads();
             }
@@ -305,11 +315,11 @@ namespace behaviac
             return 0;
         }
 
-        public static void UpdatePacketsStats()
+        public void UpdatePacketsStats()
         {
 #if !BEHAVIAC_RELEASE
 
-            if (Config.IsSocketing)
+            if (Configs.IsSocketing)
             {
                 //uint overhead = (behaviac.GetMemoryOverhead());
                 //BEHAVIAC_SETTRACEDVAR("Stats.Vars", gs_packetsStats.vars);

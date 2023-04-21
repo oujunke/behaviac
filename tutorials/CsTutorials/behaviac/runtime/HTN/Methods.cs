@@ -13,12 +13,14 @@
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace behaviac
 {
-    public class Method : BehaviorNode
+    public class Methods : BehaviorNode
     {
-        public Method()
+
+        public Methods(Workspace workspace) : base(workspace)
         {
         }
 
@@ -28,7 +30,7 @@ namespace behaviac
 
         public override bool IsValid(Agent pAgent, BehaviorTask pTask)
         {
-            if (!(pTask.GetNode() is Method))
+            if (!(pTask.GetNode() is Methods))
             {
                 return false;
             }
@@ -38,7 +40,7 @@ namespace behaviac
 
         protected override BehaviorTask createTask()
         {
-            Debug.Check(false);
+            Debugs.Check(false);
             return null;
         }
 
@@ -61,9 +63,9 @@ namespace behaviac
         }
 #endif//
 
-        protected override void load(int version, string agentType, List<property_t> properties)
+        protected override  async Task  load(int version, string agentType, List<property_t> properties)
         {
-            base.load(version, agentType, properties);
+            await base.load(version, agentType, properties);
         }
     }
 }

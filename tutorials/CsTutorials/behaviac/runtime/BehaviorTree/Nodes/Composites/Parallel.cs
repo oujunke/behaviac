@@ -12,6 +12,7 @@
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace behaviac
 {
@@ -54,7 +55,7 @@ namespace behaviac
 
     public class Parallel : BehaviorNode
     {
-        public Parallel()
+        public Parallel(Workspace workspace) : base(workspace)
         {
             m_failPolicy = FAILURE_POLICY.FAIL_ON_ONE;
             m_succeedPolicy = SUCCESS_POLICY.SUCCEED_ON_ALL;
@@ -93,9 +94,9 @@ namespace behaviac
         }
 #endif//
 
-        protected override void load(int version, string agentType, List<property_t> properties)
+        protected override async Task load(int version, string agentType, List<property_t> properties)
         {
-            base.load(version, agentType, properties);
+            await base.load(version, agentType, properties);
 
             for (int i = 0; i < properties.Count; ++i)
             {
@@ -113,7 +114,7 @@ namespace behaviac
                     }
                     else
                     {
-                        Debug.Check(false);
+                        Debugs.Check(false);
                     }
                 }
                 else if (p.name == "SuccessPolicy")
@@ -128,7 +129,7 @@ namespace behaviac
                     }
                     else
                     {
-                        Debug.Check(false);
+                        Debugs.Check(false);
                     }
                 }
                 else if (p.name == "ExitPolicy")
@@ -143,7 +144,7 @@ namespace behaviac
                     }
                     else
                     {
-                        Debug.Check(false);
+                        Debugs.Check(false);
                     }
                 }
                 else if (p.name == "ChildFinishPolicy")
@@ -158,7 +159,7 @@ namespace behaviac
                     }
                     else
                     {
-                        Debug.Check(false);
+                        Debugs.Check(false);
                     }
                 }
                 else
@@ -195,12 +196,12 @@ namespace behaviac
 
         protected override BehaviorTask createTask()
         {
-            ParallelTask pTask = new ParallelTask();
+            ParallelTask pTask = new ParallelTask(Workspace);
 
             return pTask;
         }
 
-        public EBTStatus ParallelUpdate(Agent pAgent, List<BehaviorTask> children)
+        public async Task<EBTStatus> ParallelUpdate(Agent pAgent, List<BehaviorTask> children)
         {
             bool sawSuccess = false;
             bool sawFail = false;
@@ -219,7 +220,7 @@ namespace behaviac
 
                 if (bLoop || (treeStatus == EBTStatus.BT_RUNNING || treeStatus == EBTStatus.BT_INVALID))
                 {
-                    EBTStatus status = pChild.exec(pAgent);
+                    EBTStatus status = await pChild.exec(pAgent);
 
                     if (status == EBTStatus.BT_FAILURE)
                     {
@@ -245,7 +246,7 @@ namespace behaviac
                 }
                 else
                 {
-                    Debug.Check(treeStatus == EBTStatus.BT_FAILURE);
+                    Debugs.Check(treeStatus == EBTStatus.BT_FAILURE);
 
                     sawFail = true;
                     sawAllSuccess = false;
@@ -298,14 +299,18 @@ namespace behaviac
         //the policy for failure, and the policy for success.
         private class ParallelTask : CompositeTask
         {
+            public ParallelTask(Workspace workspace) : base(workspace)
+            {
+            }
+
             //~ParallelTask()
             //{
             //    this.m_children.Clear();
             //}
 
-            protected override bool onenter(Agent pAgent)
+            protected override Task<bool> onenter(Agent pAgent)
             {
-                Debug.Check(this.m_activeChildIndex == CompositeTask.InvalidChildIndex);
+                Debugs.Check(this.m_activeChildIndex == CompositeTask.InvalidChildIndex);
 
                 // reset the status cache of the children
                 //for (int i = 0; i < this.m_children.Count; ++i)
@@ -315,7 +320,7 @@ namespace behaviac
                 //    pChild.reset(pAgent);
                 //}
 
-                return true;
+                return Task.FromResult(true);
             }
 
             protected override void onexit(Agent pAgent, EBTStatus s)
@@ -324,18 +329,16 @@ namespace behaviac
             }
 
             //no current task, as it needs to update every child for every update
-            protected override EBTStatus update_current(Agent pAgent, EBTStatus childStatus)
+            protected override Task<EBTStatus> update_current(Agent pAgent, EBTStatus childStatus)
             {
-                EBTStatus s = this.update(pAgent, childStatus);
-
-                return s;
+                return update(pAgent, childStatus);
             }
 
-            protected override EBTStatus update(Agent pAgent, EBTStatus childStatus)
+            protected override Task<EBTStatus> update(Agent pAgent, EBTStatus childStatus)
             {
-                Debug.Check(childStatus == EBTStatus.BT_RUNNING);
+                Debugs.Check(childStatus == EBTStatus.BT_RUNNING);
 
-                Debug.Check(this.GetNode() is Parallel);
+                Debugs.Check(this.GetNode() is Parallel);
                 Parallel pParallelNode = (Parallel)(this.GetNode());
 
                 return pParallelNode.ParallelUpdate(pAgent, this.m_children);

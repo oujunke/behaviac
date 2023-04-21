@@ -21,14 +21,23 @@ namespace behaviac
 {
     public class Variables
     {
-        public Variables(Dictionary<uint, IInstantiatedVariable> vars)
+        public Workspace Workspace { get; private set; }
+        public Config Configs { set; get; }
+        public Debug Debugs { set; get; }
+        public Variables(Dictionary<uint, IInstantiatedVariable> vars,Workspace workspace)
         {
             this.m_variables = vars;
+            Workspace = workspace;
+            Configs = workspace.Configs;
+            Debugs = workspace.Debugs;
         }
 
-        public Variables()
+        public Variables(Workspace workspace)
         {
             this.m_variables = new Dictionary<uint, IInstantiatedVariable>();
+            Workspace = workspace;
+            Configs = workspace.Configs;
+            Debugs = workspace.Debugs;
         }
 
         public bool IsExisting(uint varId)
@@ -48,7 +57,7 @@ namespace behaviac
 
         public virtual void AddVariable(uint varId, IInstantiatedVariable pVar, int stackIndex)
         {
-            Debug.Check(!this.m_variables.ContainsKey(varId));
+            Debugs.Check(!this.m_variables.ContainsKey(varId));
 
             this.m_variables[varId] = pVar;
         }
@@ -71,7 +80,7 @@ namespace behaviac
 
         public void UnLoad(string variableName)
         {
-            Debug.Check(!string.IsNullOrEmpty(variableName));
+            Debugs.Check(!string.IsNullOrEmpty(variableName));
 
             uint varId = Utils.MakeVariableId(variableName);
 

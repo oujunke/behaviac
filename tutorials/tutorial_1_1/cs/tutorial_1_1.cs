@@ -3,19 +3,20 @@ using System.Collections.Generic;
 using System.Text;
 using System.IO;
 using System.Diagnostics;
+using System.Threading.Tasks;
 
 namespace tutorial_1_1
 {
     class Program
     {
         static FirstAgent g_FirstAgent;
-
+        static behaviac.Workspace Instance;
         static bool InitBehavic()
         {
             Console.WriteLine("InitBehavic");
-
-            behaviac.Workspace.Instance.FilePath = "../../exported";
-            behaviac.Workspace.Instance.FileFormat = behaviac.Workspace.EFileFormat.EFF_xml;
+            Instance = behaviac.Workspace.CreatWorkspace();
+            Instance.FilePath = "../../exported";
+            Instance.FileFormat = behaviac.Workspace.EFileFormat.EFF_xml;
 
             return true;
         }
@@ -24,7 +25,7 @@ namespace tutorial_1_1
         {
             Console.WriteLine("InitPlayer");
 
-            g_FirstAgent = new FirstAgent();
+            g_FirstAgent = new FirstAgent(new FirstAgentImp(), Instance);
 
             bool bRet = g_FirstAgent.btload("FirstBT");
             Debug.Assert(bRet);
@@ -34,7 +35,7 @@ namespace tutorial_1_1
             return bRet;
         }
 
-        static void UpdateLoop()
+        static async Task UpdateLoop()
         {
             Console.WriteLine("UpdateLoop");
 
@@ -45,7 +46,7 @@ namespace tutorial_1_1
             {
                 Console.WriteLine("frame {0}", ++frames);
 
-                status = g_FirstAgent.btexec();
+                status =await g_FirstAgent.btexec();
             }
         }
 
@@ -60,16 +61,16 @@ namespace tutorial_1_1
         {
             Console.WriteLine("CleanupBehaviac");
 
-            behaviac.Workspace.Instance.Cleanup();
+            Instance.Cleanup();
         }
 
-        static void Main(string[] args)
+        static  void Main(string[] args)
         {
             InitBehavic();
 
             InitPlayer();
 
-            UpdateLoop();
+            UpdateLoop().Wait();
 
             CleanupPlayer();
 

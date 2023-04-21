@@ -20,7 +20,7 @@
       <property EndOutside="false" />
       <property EndStatus="const behaviac::EBTStatus BT_SUCCESS" />
     </node>
-    <node class="Action" id="2">
+    <node class="Actions" id="2">
       <property Method="Self.FirstAgent::m1(&quot;Hello, subtree1!&quot;)" />
       <property ResultOption="BT_SUCCESS" />
     </node>

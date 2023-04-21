@@ -19,6 +19,7 @@ using Behaviac.Design;
 using Behaviac.Design.Nodes;
 using PluginBehaviac.Nodes;
 using PluginBehaviac.DataExporters;
+using System.Threading.Tasks;
 
 namespace PluginBehaviac.NodeExporters
 {
@@ -43,11 +44,14 @@ namespace PluginBehaviac.NodeExporters
 
             if (decoratorCount.Count != null)
             {
-                stream.WriteLine("{0}\t\tprotected override int GetCount(Agent pAgent)", indent);
+                stream.WriteLine("{0}\t\tprotected override Task<int> GetCount(Agent pAgent)", indent);
                 stream.WriteLine("{0}\t\t{{", indent);
 
                 string retStr = VariableCsExporter.GenerateCode(node, decoratorCount.Count, false, stream, indent + "\t\t\t", string.Empty, string.Empty, string.Empty);
-
+                if(decoratorCount.Count.Property != null)
+                {
+                    retStr = $"Task.FromResult({retStr})";
+                }
                 stream.WriteLine("{0}\t\t\treturn {1};", indent, retStr);
                 stream.WriteLine("{0}\t\t}}", indent);
             }

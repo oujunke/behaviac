@@ -12,14 +12,19 @@
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace behaviac
 {
     public class Transition : StartCondition
     {
-        protected override void load(int version, string agentType, List<property_t> properties)
+        public Transition(Workspace workspace) : base(workspace)
         {
-            base.load(version, agentType, properties);
+        }
+
+        protected override  async Task  load(int version, string agentType, List<property_t> properties)
+        {
+            await base.load(version, agentType, properties);
         }
 
         public override bool IsValid(Agent pAgent, BehaviorTask pTask)
@@ -35,7 +40,7 @@ namespace behaviac
         protected override BehaviorTask createTask()
         {
             //return new StartConditionTask();
-            Debug.Check(false);
+            Debugs.Check(false);
             return null;
         }
     }

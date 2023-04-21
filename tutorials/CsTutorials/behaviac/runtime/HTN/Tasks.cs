@@ -1,14 +1,20 @@
 using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace behaviac
 {
-    public class Task : BehaviorNode
+    public class Tasks : BehaviorNode
     {
         public const string LOCAL_TASK_PARAM_PRE = "_$local_task_param_$_";
 
         protected IMethod m_task;
 
         protected bool m_bHTN;
+
+        public Tasks(Workspace workspace) : base(workspace)
+        {
+        }
+
         public bool IsHTN
         {
             get
@@ -17,7 +23,7 @@ namespace behaviac
             }
         }
 
-        public int FindMethodIndex(Method method)
+        public int FindMethodIndex(Methods method)
         {
             for (int i = 0; i < this.GetChildrenCount(); ++i)
             {
@@ -34,7 +40,7 @@ namespace behaviac
 
         public override bool IsValid(Agent pAgent, BehaviorTask pTask)
         {
-            if (!(pTask.GetNode() is Task))
+            if (!(pTask.GetNode() is Tasks))
             {
                 return false;
             }
@@ -44,7 +50,7 @@ namespace behaviac
 
         protected override BehaviorTask createTask()
         {
-            TaskTask pTask = new TaskTask();
+            TaskTask pTask = new TaskTask(Workspace);
 
             return pTask;
         }
@@ -66,9 +72,9 @@ namespace behaviac
         }
 #endif//
 
-        protected override void load(int version, string agentType, List<property_t> properties)
+        protected override  async Task  load(int version, string agentType, List<property_t> properties)
         {
-            base.load(version, agentType, properties);
+            await base.load(version, agentType, properties);
 
             for (int i = 0; i < properties.Count; ++i)
             {
@@ -76,7 +82,7 @@ namespace behaviac
 
                 if (p.name == "Prototype")
                 {
-                    this.m_task = AgentMeta.ParseMethod(p.value);
+                    this.m_task = AgentMeta.ParseMethod(p.value, Workspace);
                 }
                 else if (p.name == "IsHTN")
                 {
@@ -88,6 +94,9 @@ namespace behaviac
 
     internal class TaskTask : Sequence.SequenceTask
     {
+        public TaskTask(Workspace workspace) : base(workspace)
+        {
+        }
 #if BEHAVIAC_USE_HTN
         private Planner _planner = new Planner();
 #endif//
@@ -99,8 +108,8 @@ namespace behaviac
 
         public override void Init(BehaviorNode node)
         {
-            Debug.Check(node is Task, "node is not an Method");
-            Task pTaskNode = (Task)(node);
+            Debugs.Check(node is Tasks, "node is not an Method");
+            Tasks pTaskNode = (Tasks)(node);
 
             if (pTaskNode.IsHTN)
             {
@@ -115,11 +124,11 @@ namespace behaviac
             base.addChild(pBehavior);
         }
 
-        protected override bool onenter(Agent pAgent)
+        protected override Task<bool> onenter(Agent pAgent)
         {
             //reset the action child as it will be checked in the update
             this.m_activeChildIndex = CompositeTask.InvalidChildIndex;
-            Debug.Check(this.m_activeChildIndex == CompositeTask.InvalidChildIndex);
+            Debugs.Check(this.m_activeChildIndex == CompositeTask.InvalidChildIndex);
 #if BEHAVIAC_USE_HTN
             Task pMethodNode = (Task)(this.GetNode());
 
@@ -138,14 +147,14 @@ namespace behaviac
             base.onexit(pAgent, s);
         }
 
-        protected override EBTStatus update(Agent pAgent, EBTStatus childStatus)
+        protected override async Task<EBTStatus> update(Agent pAgent, EBTStatus childStatus)
         {
             EBTStatus status = childStatus;
 
             if (childStatus == EBTStatus.BT_RUNNING)
             {
-                Debug.Check(this.GetNode() is Task, "node is not an Method");
-                Task pTaskNode = (Task)(this.GetNode());
+                Debugs.Check(this.GetNode() is Tasks, "node is not an Method");
+                Tasks pTaskNode = (Tasks)(this.GetNode());
 
                 if (pTaskNode.IsHTN)
                 {
@@ -155,14 +164,14 @@ namespace behaviac
                 }
                 else
                 {
-                    Debug.Check(this.m_children.Count == 1);
+                    Debugs.Check(this.m_children.Count == 1);
                     BehaviorTask c = this.m_children[0];
-                    status = c.exec(pAgent);
+                    status =await c.exec(pAgent);
                 }
             }
             else
             {
-                Debug.Check(true);
+                Debugs.Check(true);
             }
 
             return status;

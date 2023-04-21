@@ -303,9 +303,9 @@ namespace Behaviac.Design.Exporters
                 }
             }
 
-            if (n is Task)
+            if (n is Tasks)
             {
-                Task task = n as Task;
+                Tasks task = n as Tasks;
                 file.WriteStartElement("property");
                 file.WriteAttributeString("IsHTN", task.IsHTN ? "true" : "false");
                 file.WriteEndElement();

@@ -12,12 +12,14 @@
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 using System.Collections.Generic;
+using System.IO.Compression;
+using System.Threading.Tasks;
 
 namespace behaviac
 {
     public class WaitforSignal : BehaviorNode
     {
-        public WaitforSignal()
+        public WaitforSignal(Workspace workspace) : base(workspace)
         {
         }
 
@@ -25,9 +27,9 @@ namespace behaviac
         //{
         //}
 
-        protected override void load(int version, string agentType, List<property_t> properties)
+        protected override async Task load(int version, string agentType, List<property_t> properties)
         {
-            base.load(version, agentType, properties);
+            await base.load(version, agentType, properties);
         }
 
         public override bool IsValid(Agent pAgent, BehaviorTask pTask)
@@ -40,15 +42,15 @@ namespace behaviac
             return base.IsValid(pAgent, pTask);
         }
 
-        public bool CheckIfSignaled(Agent pAgent)
+        public async Task<bool> CheckIfSignaled(Agent pAgent)
         {
-            bool ret = this.EvaluteCustomCondition(pAgent);
+            bool ret = await this.EvaluteCustomCondition(pAgent);
             return ret;
         }
 
         protected override BehaviorTask createTask()
         {
-            WaitforSignalTask pTask = new WaitforSignalTask();
+            WaitforSignalTask pTask = new WaitforSignalTask(Workspace);
 
             return pTask;
         }
@@ -57,8 +59,7 @@ namespace behaviac
     // ============================================================================
     internal class WaitforSignalTask : SingeChildTask
     {
-        public WaitforSignalTask()
-        : base()
+        public WaitforSignalTask(Workspace workspace) : base(workspace)
         {
             m_bTriggered = false;
         }
@@ -71,7 +72,7 @@ namespace behaviac
         {
             base.copyto(target);
 
-            Debug.Check(target is WaitforSignalTask);
+            Debugs.Check(target is WaitforSignalTask);
             WaitforSignalTask ttask = (WaitforSignalTask)target;
 
             ttask.m_bTriggered = this.m_bTriggered;
@@ -85,11 +86,11 @@ namespace behaviac
             node.setAttr(triggeredId, this.m_bTriggered);
         }
 
-        protected override bool onenter(Agent pAgent)
+        protected override Task<bool> onenter(Agent pAgent)
         {
             this.m_bTriggered = false;
 
-            return true;
+            return Task.FromResult(true);
         }
 
         protected override void onexit(Agent pAgent, EBTStatus s)
@@ -97,7 +98,7 @@ namespace behaviac
             base.onexit(pAgent, s);
         }
 
-        protected override EBTStatus update(Agent pAgent, EBTStatus childStatus)
+        protected override async Task<EBTStatus> update(Agent pAgent, EBTStatus childStatus)
         {
             if (childStatus != EBTStatus.BT_RUNNING)
             {
@@ -107,7 +108,7 @@ namespace behaviac
             if (!this.m_bTriggered)
             {
                 WaitforSignal node = this.m_node as WaitforSignal;
-                this.m_bTriggered = node.CheckIfSignaled(pAgent);
+                this.m_bTriggered = await node.CheckIfSignaled(pAgent);
             }
 
             if (this.m_bTriggered)
@@ -117,7 +118,7 @@ namespace behaviac
                     return EBTStatus.BT_SUCCESS;
                 }
 
-                EBTStatus status = base.update(pAgent, childStatus);
+                EBTStatus status = await base.update(pAgent, childStatus);
 
                 return status;
             }

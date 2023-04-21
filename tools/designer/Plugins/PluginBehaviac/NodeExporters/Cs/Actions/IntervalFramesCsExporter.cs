@@ -72,7 +72,7 @@ namespace PluginBehaviac.NodeExporters
 
             if (intervalFrames.Count != null)
             {
-                stream.WriteLine("{0}\t\tprotected override int GetCount(Agent pAgent)", indent);
+                stream.WriteLine("{0}\t\tprotected override Task<int> GetCount(Agent pAgent)", indent);
                 stream.WriteLine("{0}\t\t{{", indent);
 
                 string retStr = RightValueCsExporter.GenerateCode(node, intervalFrames.Count, stream, indent + "\t\t\t", string.Empty, string.Empty, "Count");
@@ -87,7 +87,7 @@ namespace PluginBehaviac.NodeExporters
             }
             if (intervalFrames.Front != null)
             {
-                stream.WriteLine("{0}\t\tprotected override bool GetFront(Agent pAgent)", indent);
+                stream.WriteLine("{0}\t\tprotected override Task<bool> GetFront(Agent pAgent)", indent);
                 stream.WriteLine("{0}\t\t{{", indent);
 
                 string retStr = RightValueCsExporter.GenerateCode(node, intervalFrames.Front, stream, indent + "\t\t\t", string.Empty, string.Empty, "Front");

@@ -12,6 +12,7 @@
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace behaviac
 {
@@ -26,9 +27,13 @@ namespace behaviac
 
     public class SelectorStochastic : CompositeStochastic
     {
-        protected override void load(int version, string agentType, List<property_t> properties)
+        public SelectorStochastic(Workspace workspace) : base(workspace)
         {
-            base.load(version, agentType, properties);
+        }
+
+        protected override async Task load(int version, string agentType, List<property_t> properties)
+        {
+            await base.load(version, agentType, properties);
         }
 
         public override bool IsValid(Agent pAgent, BehaviorTask pTask)
@@ -43,13 +48,17 @@ namespace behaviac
 
         protected override BehaviorTask createTask()
         {
-            SelectorStochasticTask pTask = new SelectorStochasticTask();
+            SelectorStochasticTask pTask = new SelectorStochasticTask(Workspace);
 
             return pTask;
         }
 
         private class SelectorStochasticTask : CompositeStochasticTask
         {
+            public SelectorStochasticTask(Workspace workspace) : base(workspace)
+            {
+            }
+
             protected override void addChild(BehaviorTask pBehavior)
             {
                 base.addChild(pBehavior);
@@ -70,9 +79,9 @@ namespace behaviac
                 base.load(node);
             }
 
-            protected override bool onenter(Agent pAgent)
+            protected override async Task<bool> onenter(Agent pAgent)
             {
-                base.onenter(pAgent);
+                await base.onenter(pAgent);
 
                 return true;
             }
@@ -83,27 +92,27 @@ namespace behaviac
                 base.onexit(pAgent, s);
             }
 
-            protected override EBTStatus update(Agent pAgent, EBTStatus childStatus)
+            protected override async Task<EBTStatus> update(Agent pAgent, EBTStatus childStatus)
             {
                 EBTStatus s = childStatus;
-                Debug.Check(this.m_activeChildIndex < this.m_children.Count);
+                Debugs.Check(this.m_activeChildIndex < this.m_children.Count);
 
                 SelectorStochastic node = this.m_node as SelectorStochastic;
 
                 // Keep going until a child behavior says its running.
-                for (; ;)
+                for (; ; )
                 {
                     if (s == EBTStatus.BT_RUNNING)
                     {
                         int childIndex = this.m_set[this.m_activeChildIndex];
                         BehaviorTask pBehavior = this.m_children[childIndex];
 
-                        if (node.CheckIfInterrupted(pAgent))
+                        if (await node.CheckIfInterrupted(pAgent))
                         {
                             return EBTStatus.BT_FAILURE;
                         }
 
-                        s = pBehavior.exec(pAgent);
+                        s = await pBehavior.exec(pAgent);
                     }
 
                     // If the child succeeds, or keeps running, do the same.

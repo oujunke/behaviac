@@ -68,7 +68,7 @@ namespace Behaviac.Design
             Settings.Default.ConcurrentProcessBehaviors = concurrentProcessBehaviorsCheckBox.Checked;
 
             Nodes.Node.ColorTheme = (Nodes.Node.ColorThemes)Settings.Default.ColorTheme;
-            Behaviac.Design.Nodes.Action.NoResultTreatAsError = Settings.Default.NoResultTreatAsError;
+            Behaviac.Design.Nodes.Actions.NoResultTreatAsError = Settings.Default.NoResultTreatAsError;
 
             if (Settings.Default.ShowProfilingInfo != showProfileCheckBox.Checked)
             {

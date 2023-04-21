@@ -12,14 +12,15 @@
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace behaviac
 {
     public class Assignment : BehaviorNode
     {
-        protected override void load(int version, string agentType, List<property_t> properties)
+        protected override async Task load(int version, string agentType, List<property_t> properties)
         {
-            base.load(version, agentType, properties);
+            await base.load(version, agentType, properties);
 
             for (int i = 0; i < properties.Count; ++i)
             {
@@ -31,7 +32,7 @@ namespace behaviac
                 }
                 else if (p.name == "Opl")
                 {
-                    this.m_opl = AgentMeta.ParseProperty(p.value);
+                    this.m_opl = AgentMeta.ParseProperty(p.value, Workspace);
                 }
                 else if (p.name == "Opr")
                 {
@@ -39,11 +40,11 @@ namespace behaviac
 
                     if (pParenthesis == -1)
                     {
-                        this.m_opr = AgentMeta.ParseProperty(p.value);
+                        this.m_opr = AgentMeta.ParseProperty(p.value, Workspace);
                     }
                     else
                     {
-                        this.m_opr = AgentMeta.ParseMethod(p.value);
+                        this.m_opr = AgentMeta.ParseMethod(p.value, Workspace);
                     }
                 }
             }
@@ -61,15 +62,23 @@ namespace behaviac
 
         protected override BehaviorTask createTask()
         {
-            return new AssignmentTask();
+            return new AssignmentTask(Workspace);
         }
 
         protected IInstanceMember m_opl;
         protected IInstanceMember m_opr;
         protected bool m_bCast = false;
 
+        public Assignment(Workspace workspace) : base(workspace)
+        {
+        }
+
         private class AssignmentTask : LeafTask
         {
+            public AssignmentTask(Workspace workspace) : base(workspace)
+            {
+            }
+
             public override void copyto(BehaviorTask target)
             {
                 base.copyto(target);
@@ -85,20 +94,20 @@ namespace behaviac
                 base.load(node);
             }
 
-            protected override bool onenter(Agent pAgent)
+            protected override Task<bool> onenter(Agent pAgent)
             {
-                return true;
+                return Task.FromResult(true);
             }
 
             protected override void onexit(Agent pAgent, EBTStatus s)
             {
             }
 
-            protected override EBTStatus update(Agent pAgent, EBTStatus childStatus)
+            protected override async Task<EBTStatus> update(Agent pAgent, EBTStatus childStatus)
             {
-                Debug.Check(childStatus == EBTStatus.BT_RUNNING);
+                Debugs.Check(childStatus == EBTStatus.BT_RUNNING);
 
-                Debug.Check(this.GetNode() is Assignment);
+                Debugs.Check(this.GetNode() is Assignment);
                 Assignment pAssignmentNode = (Assignment)(this.GetNode());
 
                 EBTStatus result = EBTStatus.BT_SUCCESS;
@@ -107,16 +116,16 @@ namespace behaviac
                 {
                     if (pAssignmentNode.m_bCast)
                     {
-                        pAssignmentNode.m_opl.SetValueAs(pAgent, pAssignmentNode.m_opr);
+                        await pAssignmentNode.m_opl.SetValueAs(pAgent, pAssignmentNode.m_opr);
                     }
                     else
                     {
-                        pAssignmentNode.m_opl.SetValue(pAgent, pAssignmentNode.m_opr);
+                        await pAssignmentNode.m_opl.SetValue(pAgent, pAssignmentNode.m_opr);
                     }
                 }
                 else
                 {
-                    result = pAssignmentNode.update_impl(pAgent, childStatus);
+                    result = await pAssignmentNode.update_impl(pAgent, childStatus);
                 }
 
                 return result;

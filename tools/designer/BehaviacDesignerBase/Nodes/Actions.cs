@@ -44,9 +44,9 @@ namespace Behaviac.Design.Nodes
     /// <summary>
     /// This node represents an action which can be attached to the behaviour tree.
     /// </summary>
-    public class Action : Node
+    public class Actions : Node
     {
-        public Action(string label, string description)
+        public Actions(string label, string description)
         : base(label, description)
         {
         }
@@ -208,7 +208,7 @@ namespace Behaviac.Design.Nodes
         {
             base.CloneProperties(newnode);
 
-            Action right = (Action)newnode;
+            Actions right = (Actions)newnode;
 
             if (_method != null)
             {

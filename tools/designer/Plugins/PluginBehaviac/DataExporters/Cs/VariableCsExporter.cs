@@ -108,6 +108,7 @@ namespace PluginBehaviac.DataExporters
                 if (shouldGenerate)
                 {
                     retStr = DataCsExporter.GenerateCode(variable.Value, defaultObj, stream, indent, typename, var, caller, setValue);
+                    retStr = $"Task.FromResult({retStr})";
                 }
             }
             else if (variable.Property != null)

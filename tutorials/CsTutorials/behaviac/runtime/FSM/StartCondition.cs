@@ -14,6 +14,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace behaviac
 {
@@ -21,6 +22,10 @@ namespace behaviac
     {
         protected List<Effector.EffectorConfig> m_effectors = new List<Effector.EffectorConfig>();
         protected int m_targetId = -1;
+
+        public StartCondition(Workspace workspace) : base(workspace)
+        {
+        }
 
         public int TargetStateId
         {
@@ -34,13 +39,13 @@ namespace behaviac
             }
         }
 
-        public override void ApplyEffects(Agent pAgent, Effector.EPhase phase)
+        public override async Task ApplyEffects(Agent pAgent, Effector.EPhase phase)
         {
             for (int i = 0; i < this.m_effectors.Count; ++i)
             {
                 Effector.EffectorConfig effector = this.m_effectors[i];
 
-                effector.Execute(pAgent);
+                await effector.Execute(pAgent);
             }
         }
 
@@ -61,15 +66,15 @@ namespace behaviac
 
         protected override BehaviorTask createTask()
         {
-            Debug.Check(false);
+            Debugs.Check(false);
             return null;
         }
 
-        protected override void load(int version, string agentType, List<property_t> properties)
+        protected override async Task load(int version, string agentType, List<property_t> properties)
         {
             if (this.m_loadAttachment)
             {
-                Effector.EffectorConfig effectorConfig = new Effector.EffectorConfig();
+                Effector.EffectorConfig effectorConfig = new Effector.EffectorConfig(Workspace);
 
                 if (effectorConfig.load(properties))
                 {
@@ -79,7 +84,7 @@ namespace behaviac
                 return;
             }
 
-            base.load(version, agentType, properties);
+            await base.load(version, agentType, properties);
 
             for (int i = 0; i < properties.Count; ++i)
             {

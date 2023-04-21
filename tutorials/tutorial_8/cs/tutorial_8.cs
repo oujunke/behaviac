@@ -10,12 +10,13 @@ namespace tutorial_8
     {
         static FirstAgent g_FirstAgent;
 
+        static behaviac.Workspace Instance;
         static bool InitBehavic()
         {
             Console.WriteLine("InitBehavic");
-
-            behaviac.Workspace.Instance.FilePath = "../../exported";
-            behaviac.Workspace.Instance.FileFormat = behaviac.Workspace.EFileFormat.EFF_xml;
+            Instance = behaviac.Workspace.CreatWorkspace();
+            Instance.FilePath = "../../exported";
+            Instance.FileFormat = behaviac.Workspace.EFileFormat.EFF_xml;
 
             return true;
         }
@@ -24,7 +25,9 @@ namespace tutorial_8
         {
             Console.WriteLine("InitPlayer");
 
-            g_FirstAgent = new FirstAgent();
+            FirstAgentImp agentImp = new FirstAgentImp();
+            g_FirstAgent = new FirstAgent(agentImp, Instance);
+            agentImp.FirstAgent = g_FirstAgent;
             bool bRet = g_FirstAgent.btload("StructBT");
             Debug.Assert(bRet);
             g_FirstAgent.btsetcurrent("StructBT");
@@ -43,7 +46,7 @@ namespace tutorial_8
             {
                 Console.WriteLine("frame {0}", ++frames);
 
-                status = g_FirstAgent.btexec();
+                status = g_FirstAgent.btexec().Result;
             }
         }
 
@@ -58,7 +61,7 @@ namespace tutorial_8
         {
             Console.WriteLine("CleanupBehaviac");
 
-            behaviac.Workspace.Instance.Cleanup();
+            Instance.Cleanup();
         }
 
         static void Main(string[] args)

@@ -12,12 +12,14 @@
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace behaviac
 {
     public class Sequence : BehaviorNode
     {
-        public Sequence()
+
+        public Sequence(Workspace workspace) : base(workspace)
         {
         }
 
@@ -44,7 +46,7 @@ namespace behaviac
                 }
 
                 //clear the log cache so that the next node can log all properites
-                LogManager.Instance.PLanningClearCache();
+                Workspace.LogManagers.PLanningClearCache();
                 seqTask.AddChild(childTask);
             }
 
@@ -57,9 +59,9 @@ namespace behaviac
         }
 #endif//
 
-        protected override void load(int version, string agentType, List<property_t> properties)
+        protected override  async Task  load(int version, string agentType, List<property_t> properties)
         {
-            base.load(version, agentType, properties);
+            await base.load(version, agentType, properties);
         }
         public override bool IsValid(Agent pAgent, BehaviorTask pTask)
         {
@@ -71,14 +73,14 @@ namespace behaviac
             return base.IsValid(pAgent, pTask);
         }
 
-        public override bool Evaluate(Agent pAgent)
+        public override async Task<bool> Evaluate(Agent pAgent)
         {
             bool ret = true;
 
             for (int i = 0; i < this.m_children.Count; ++i)
             {
                 BehaviorNode c = this.m_children[i];
-                ret = c.Evaluate(pAgent);
+                ret =await c.Evaluate(pAgent);
 
                 if (!ret)
                 {
@@ -89,30 +91,30 @@ namespace behaviac
             return ret;
         }
 
-        public EBTStatus SequenceUpdate(Agent pAgent, EBTStatus childStatus, ref int activeChildIndex, List<BehaviorTask> children)
+        public async Task<(EBTStatus, int)> SequenceUpdate(Agent pAgent, EBTStatus childStatus, int activeChildIndex, List<BehaviorTask> children)
         {
             EBTStatus s = childStatus;
 
             for (; ;)
             {
-                Debug.Check(activeChildIndex < children.Count);
+                Debugs.Check(activeChildIndex < children.Count);
 
                 if (s == EBTStatus.BT_RUNNING)
                 {
                     BehaviorTask pBehavior = children[activeChildIndex];
 
-                    if (this.CheckIfInterrupted(pAgent))
+                    if (await this.CheckIfInterrupted(pAgent))
                     {
-                        return EBTStatus.BT_FAILURE;
+                        return (EBTStatus.BT_FAILURE, activeChildIndex);
                     }
 
-                    s = pBehavior.exec(pAgent);
+                    s =await pBehavior.exec(pAgent);
                 }
 
                 // If the child fails, or keeps running, do the same.
                 if (s != EBTStatus.BT_SUCCESS)
                 {
-                    return s;
+                    return (s, activeChildIndex);
                 }
 
                 // Hit the end of the array, job done!
@@ -120,28 +122,28 @@ namespace behaviac
 
                 if (activeChildIndex >= children.Count)
                 {
-                    return EBTStatus.BT_SUCCESS;
+                    return (EBTStatus.BT_SUCCESS, activeChildIndex);
                 }
 
                 s = EBTStatus.BT_RUNNING;
             }
         }
 
-        public bool CheckIfInterrupted(Agent pAgent)
+        public async Task<bool> CheckIfInterrupted(Agent pAgent)
         {
-            bool bInterrupted = this.EvaluteCustomCondition(pAgent);
+            bool bInterrupted =await this.EvaluteCustomCondition(pAgent);
 
             return bInterrupted;
         }
 
         protected override BehaviorTask createTask()
         {
-            return new SequenceTask();
+            return new SequenceTask(Workspace);
         }
 
         public class SequenceTask : CompositeTask
         {
-            public SequenceTask()
+            public SequenceTask(Workspace workspace) : base(workspace)
             {
             }
 
@@ -164,11 +166,11 @@ namespace behaviac
                 base.load(node);
             }
 
-            protected override bool onenter(Agent pAgent)
+            protected override Task<bool> onenter(Agent pAgent)
             {
                 this.m_activeChildIndex = 0;
 
-                return true;
+                return Task.FromResult(true);
             }
 
             protected override void onexit(Agent pAgent, EBTStatus s)
@@ -176,13 +178,16 @@ namespace behaviac
                 base.onexit(pAgent, s);
             }
 
-            protected override EBTStatus update(Agent pAgent, EBTStatus childStatus)
+            protected override async Task<EBTStatus> update(Agent pAgent, EBTStatus childStatus)
             {
-                Debug.Check(this.m_activeChildIndex < this.m_children.Count);
+                Debugs.Check(this.m_activeChildIndex < this.m_children.Count);
 
                 Sequence node = this.m_node as Sequence;
 
-                return node.SequenceUpdate(pAgent, childStatus, ref this.m_activeChildIndex, this.m_children);
+                var (res, maci) =await node.SequenceUpdate(pAgent, childStatus, this.m_activeChildIndex, this.m_children);
+
+                this.m_activeChildIndex = maci;
+                return res;
             }
         }
     }

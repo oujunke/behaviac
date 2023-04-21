@@ -11,11 +11,13 @@
 // See the License for the specific language governing permissions and limitations under the License.
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+using System.Threading.Tasks;
+
 namespace behaviac
 {
     public abstract class ConditionBase : BehaviorNode
     {
-        public ConditionBase()
+        public ConditionBase(Workspace workspace):base(workspace)
         {
         }
 
@@ -37,7 +39,7 @@ namespace behaviac
     // ============================================================================
     internal class ConditionBaseTask : LeafTask
     {
-        public ConditionBaseTask()
+        public ConditionBaseTask(Workspace workspace) : base(workspace)
         {
         }
 
@@ -45,20 +47,20 @@ namespace behaviac
         //{
         //}
 
-        protected override bool onenter(Agent pAgent)
+        protected override Task<bool> onenter(Agent pAgent)
         {
-            return true;
+            return Task.FromResult(true);
         }
 
         protected override void onexit(Agent pAgent, EBTStatus s)
         {
         }
 
-        protected override EBTStatus update(Agent pAgent, EBTStatus childStatus)
+        protected override Task<EBTStatus> update(Agent pAgent, EBTStatus childStatus)
         {
-            Debug.Check(childStatus == EBTStatus.BT_RUNNING);
+            Debugs.Check(childStatus == EBTStatus.BT_RUNNING);
 
-            return EBTStatus.BT_SUCCESS;
+            return Task.FromResult(EBTStatus.BT_SUCCESS);
         }
     }
 }

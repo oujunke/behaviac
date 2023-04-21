@@ -12,12 +12,13 @@
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace behaviac
 {
     public class DecoratorLog : DecoratorNode
     {
-        public DecoratorLog()
+        public DecoratorLog(Workspace workspace) : base(workspace)
         {
         }
 
@@ -25,9 +26,9 @@ namespace behaviac
         //{
         //}
 
-        protected override void load(int version, string agentType, List<property_t> properties)
+        protected override  async Task  load(int version, string agentType, List<property_t> properties)
         {
-            base.load(version, agentType, properties);
+            await base.load(version, agentType, properties);
 
             for (int i = 0; i < properties.Count; ++i)
             {
@@ -52,7 +53,7 @@ namespace behaviac
 
         protected override BehaviorTask createTask()
         {
-            DecoratorLogTask pTask = new DecoratorLogTask();
+            DecoratorLogTask pTask = new DecoratorLogTask(Workspace);
 
             return pTask;
         }
@@ -61,8 +62,7 @@ namespace behaviac
 
         private class DecoratorLogTask : DecoratorTask
         {
-            public DecoratorLogTask()
-            : base()
+            public DecoratorLogTask(Workspace workspace) : base(workspace)
             {
             }
 
@@ -83,9 +83,9 @@ namespace behaviac
 
             protected override EBTStatus decorate(EBTStatus status)
             {
-                Debug.Check(this.GetNode() is DecoratorLog);
+                Debugs.Check(this.GetNode() is DecoratorLog);
                 DecoratorLog pDecoratorLogNode = (DecoratorLog)(this.GetNode());
-                behaviac.Debug.Log(string.Format("DecoratorLogTask:{0}\n", pDecoratorLogNode.m_message));
+                Debugs.Log(string.Format("DecoratorLogTask:{0}\n", pDecoratorLogNode.m_message));
 
                 return status;
             }

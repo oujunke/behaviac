@@ -12,14 +12,19 @@
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace behaviac
 {
     public class DecoratorFrames : DecoratorNode
     {
-        protected override void load(int version, string agentType, List<property_t> properties)
+
+        public DecoratorFrames(Workspace workspace):base(workspace)
         {
-            base.load(version, agentType, properties);
+        }
+        protected override  async Task  load(int version, string agentType, List<property_t> properties)
+        {
+            await base.load(version, agentType, properties);
 
             for (int i = 0; i < properties.Count; ++i)
             {
@@ -31,22 +36,22 @@ namespace behaviac
 
                     if (pParenthesis == -1)
                     {
-                        this.m_frames = AgentMeta.ParseProperty(p.value);
+                        this.m_frames = AgentMeta.ParseProperty(p.value,Workspace);
                     }
                     else
                     {
-                        this.m_frames = AgentMeta.ParseMethod(p.value);
+                        this.m_frames = AgentMeta.ParseMethod(p.value, Workspace);
                     }
                 }
             }
         }
 
-        protected virtual int GetFrames(Agent pAgent)
+        protected virtual async Task<int> GetFrames(Agent pAgent)
         {
             if (this.m_frames != null)
             {
-                Debug.Check(this.m_frames is CInstanceMember<int>);
-                return ((CInstanceMember<int>)this.m_frames).GetValue(pAgent);
+                Debugs.Check(this.m_frames is CInstanceMember<int>);
+                return await((CInstanceMember<int>)this.m_frames).GetValue(pAgent);
             }
 
             return 0;
@@ -54,7 +59,7 @@ namespace behaviac
 
         protected override BehaviorTask createTask()
         {
-            DecoratorFramesTask pTask = new DecoratorFramesTask();
+            DecoratorFramesTask pTask = new DecoratorFramesTask(Workspace);
 
             return pTask;
         }
@@ -67,7 +72,7 @@ namespace behaviac
             {
                 base.copyto(target);
 
-                Debug.Check(target is DecoratorFramesTask);
+                Debugs.Check(target is DecoratorFramesTask);
                 DecoratorFramesTask ttask = (DecoratorFramesTask)target;
 
                 ttask.m_start = this.m_start;
@@ -90,19 +95,19 @@ namespace behaviac
                 base.load(node);
             }
 
-            protected override bool onenter(Agent pAgent)
+            protected override async Task<bool> onenter(Agent pAgent)
             {
-                base.onenter(pAgent);
+                await base.onenter(pAgent);
 
-                this.m_start = Workspace.Instance.FrameSinceStartup;
-                this.m_frames = this.GetFrames(pAgent);
+                this.m_start = Workspace.FrameSinceStartup;
+                this.m_frames =await this.GetFrames(pAgent);
 
-                return (this.m_frames >= 0);
+                return this.m_frames >= 0;
             }
 
             protected override EBTStatus decorate(EBTStatus status)
             {
-                if (Workspace.Instance.FrameSinceStartup - this.m_start + 1 >= this.m_frames)
+                if (Workspace.FrameSinceStartup - this.m_start + 1 >= this.m_frames)
                 {
                     return EBTStatus.BT_SUCCESS;
                 }
@@ -110,16 +115,20 @@ namespace behaviac
                 return EBTStatus.BT_RUNNING;
             }
 
-            private int GetFrames(Agent pAgent)
+            private async Task<int> GetFrames(Agent pAgent)
             {
-                Debug.Check(this.GetNode() is DecoratorFrames);
+                Debugs.Check(this.GetNode() is DecoratorFrames);
                 DecoratorFrames pNode = (DecoratorFrames)(this.GetNode());
 
-                return pNode != null ? pNode.GetFrames(pAgent) : 0;
+                return pNode != null ?await pNode.GetFrames(pAgent) : 0;
             }
 
             private int m_start = 0;
             private int m_frames = 0;
+
+            public DecoratorFramesTask(Workspace workspace) : base(workspace)
+            {
+            }
         }
     }
 }

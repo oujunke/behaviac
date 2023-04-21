@@ -23,6 +23,7 @@ using System.IO;
 using System.Xml;
 #else
 using System.Security;
+using System.Threading.Tasks;
 using MiniXml;
 #endif
 
@@ -82,7 +83,15 @@ namespace behaviac
             BT_Custom = 34,
             BT_ParameterElement = 35
         }
-
+        public Workspace Workspace { get; private set; }
+        public Config Configs { set; get; }
+        public Debug Debugs { set; get; }
+        public BsonDeserizer(Workspace workspace)
+        {
+            Workspace = workspace;
+            Configs = workspace.Configs;
+            Debugs = workspace.Debugs;
+        }
         public bool Init(byte[] pBuffer)
         {
             try
@@ -101,16 +110,16 @@ namespace behaviac
             }
             catch (Exception e)
             {
-                Debug.Check(false, e.Message);
+                Debugs.Check(false, e.Message);
             }
 
-            Debug.Check(false);
+            Debugs.Check(false);
             return false;
         }
 
         private int GetCurrentIndex()
         {
-            Debug.Check(this.m_BinaryReader != null);
+            Debugs.Check(this.m_BinaryReader != null);
             return (int)this.m_BinaryReader.BaseStream.Position;
         }
 
@@ -126,7 +135,7 @@ namespace behaviac
             }
             else
             {
-                Debug.Check(false);
+                Debugs.Check(false);
                 return false;
             }
         }
@@ -146,7 +155,7 @@ namespace behaviac
                 endLast--;
             }
 
-            Debug.Check(this.m_pBuffer[endLast] == 0);
+            Debugs.Check(this.m_pBuffer[endLast] == 0);
         }
 
         public BsonTypes ReadType()
@@ -161,7 +170,7 @@ namespace behaviac
             int i = m_BinaryReader.ReadInt32();
 
 #if LITTLE_ENDIAN_ONLY
-            Debug.Check(BitConverter.IsLittleEndian);
+            Debugs.Check(BitConverter.IsLittleEndian);
             return i;
 #else
 
@@ -185,7 +194,7 @@ namespace behaviac
             ushort us = m_BinaryReader.ReadUInt16();
 
 #if LITTLE_ENDIAN_ONLY
-            Debug.Check(BitConverter.IsLittleEndian);
+            Debugs.Check(BitConverter.IsLittleEndian);
             return us;
 #else
 
@@ -209,7 +218,7 @@ namespace behaviac
             float f = m_BinaryReader.ReadSingle();
 
 #if LITTLE_ENDIAN_ONLY
-            Debug.Check(BitConverter.IsLittleEndian);
+            Debugs.Check(BitConverter.IsLittleEndian);
             return f;
 #else
 
@@ -245,7 +254,7 @@ namespace behaviac
             // The exporter uses UTF8 to export strings, so the same encoding type is used here.
             string str = System.Text.Encoding.UTF8.GetString(bytes, 0, count - 1);
 
-            Debug.Check(this.m_pBuffer[this.GetCurrentIndex() - 1] == 0);
+            Debugs.Check(this.m_pBuffer[this.GetCurrentIndex() - 1] == 0);
             return str;
 #else
             List<byte> bytes = new List<byte>();
@@ -283,21 +292,29 @@ namespace behaviac
     * Base class for BehaviorTree Nodes. This is the static part
     */
 
-    public abstract class BehaviorNode
+    public abstract  class BehaviorNode
     {
 #if BEHAVIAC_USE_HTN
         public virtual bool decompose(BehaviorNode node, PlannerTaskComplex seqTask, int depth, Planner planner)
         {
-            Debug.Check(false, "Can't step into this line");
+            Debugs.Check(false, "Can't step into this line");
             return false;
         }
 #endif//
-
+        public Workspace Workspace { get; private set; }
+        public Config Configs { set; get; }
+        public Debug Debugs { set; get; }
+        public BehaviorNode(Workspace workspace)
+        {
+            Workspace = workspace;
+            Configs = workspace.Configs;
+            Debugs = workspace.Debugs;
+        }
         public BehaviorTask CreateAndInitTask()
         {
             BehaviorTask pTask = this.createTask();
 
-            Debug.Check(pTask != null);
+            Debugs.Check(pTask != null);
             pTask.Init(this);
 
             return pTask;
@@ -351,10 +368,6 @@ namespace behaviac
             return null;
         }
 
-        protected BehaviorNode()
-        {
-        }
-
         //~BehaviorNode()
         //{
         //    this.Clear();
@@ -390,7 +403,7 @@ namespace behaviac
         public virtual bool IsValid(Agent pAgent, BehaviorTask pTask)
         {
 #if !BEHAVIAC_RELEASE
-            Debug.Check(!string.IsNullOrEmpty(this.m_agentType));
+            Debugs.Check(!string.IsNullOrEmpty(this.m_agentType));
 
             return Agent.IsDerived(pAgent, this.m_agentType);
 #else
@@ -406,22 +419,35 @@ namespace behaviac
         }
 
         #region Load
-
-        protected static BehaviorNode Create(string className)
+        public static string ConvertClassName(string className)
         {
-            return Workspace.Instance.CreateBehaviorNode(className);
+            switch (className)
+            {
+                case "Action":
+                    return "Actions";
+                case "Task":
+                    return "Tasks";
+                case "Method":
+                    return "Methods";
+            }
+            return className;
+        }
+        protected BehaviorNode Create(string className)
+        {
+            return Workspace.CreateBehaviorNode(ConvertClassName(className));
         }
 
-        protected virtual void load(int version, string agentType, List<property_t> properties)
+        protected virtual Task load(int version, string agentType, List<property_t> properties)
         {
             string nodeType = this.GetClassNameString().Replace(".", "::");
-            Workspace.Instance.OnBehaviorNodeLoaded(nodeType, properties);
+            Workspace.OnBehaviorNodeLoaded(nodeType, properties);
+            return Task.CompletedTask;
         }
 
 #if BEHAVIAC_USE_SYSTEM_XML
         protected virtual void load_local(int version, string agentType, XmlNode node)
         {
-            Debug.Check(false);
+            Debugs.Check(false);
         }
 
         protected void load_properties_pars_attachments_children(bool bNode, int version, string agentType, XmlNode node)
@@ -445,7 +471,7 @@ namespace behaviac
                         }
                         else if (c.Name == "custom")
                         {
-                            Debug.Check(c.ChildNodes.Count == 1);
+                            Debugs.Check(c.ChildNodes.Count == 1);
                             XmlNode customNode = c.ChildNodes[0];
                             BehaviorNode pChildNode = BehaviorNode.load(agentType, customNode, version);
                             this.m_customCondition = pChildNode;
@@ -499,7 +525,7 @@ namespace behaviac
 
                 BehaviorNode pAttachment = BehaviorNode.Create(pAttachClassName);
 
-                Debug.Check(pAttachment != null);
+                Debugs.Check(pAttachment != null);
 
                 if (pAttachment != null)
                 {
@@ -536,7 +562,7 @@ namespace behaviac
             }
             catch (Exception ex)
             {
-                Debug.Check(false, ex.Message);
+                Debugs.Check(false, ex.Message);
             }
 
             return bHasEvents;
@@ -548,7 +574,7 @@ namespace behaviac
             {
                 if (node.Name == "property")
                 {
-                    Debug.Check(node.Attributes.Count == 1);
+                    Debugs.Check(node.Attributes.Count == 1);
 
                     if (node.Attributes.Count == 1)
                     {
@@ -575,7 +601,7 @@ namespace behaviac
             }
             catch (Exception ex)
             {
-                Debug.Check(false, ex.Message);
+                Debugs.Check(false, ex.Message);
             }
 
             return false;
@@ -583,12 +609,12 @@ namespace behaviac
 
         protected static BehaviorNode load(string agentType, XmlNode node, int version)
         {
-            Debug.Check(node.Name == "node");
+            Debugs.Check(node.Name == "node");
 
             string pClassName = node.Attributes["class"].Value;
             BehaviorNode pNode = BehaviorNode.Create(pClassName);
 
-            Debug.Check(pNode != null, "unsupported class {0}", pClassName);
+            Debugs.Check(pNode != null, "unsupported class {0}", pClassName);
 
             if (pNode != null)
             {
@@ -605,7 +631,7 @@ namespace behaviac
 
         protected virtual void load_local(int version, string agentType, SecurityElement node)
         {
-            Debug.Check(false);
+            Debugs.Check(false);
         }
 
         protected void load_properties_pars_attachments_children(bool bNode, int version, string agentType, SecurityElement node)
@@ -632,21 +658,21 @@ namespace behaviac
                             }
                             else if (c.Tag == "custom")
                             {
-                                Debug.Check(c.Children.Count == 1);
+                                Debugs.Check(c.Children.Count == 1);
                                 SecurityElement customNode = (SecurityElement)c.Children[0];
-                                BehaviorNode pChildNode = BehaviorNode.load(agentType, customNode, version);
+                                BehaviorNode pChildNode = load(agentType, customNode, version);
                                 this.m_customCondition = pChildNode;
                             }
                             else if (c.Tag == "node")
                             {
-                                BehaviorNode pChildNode = BehaviorNode.load(agentType, c, version);
+                                BehaviorNode pChildNode = load(agentType, c, version);
                                 bHasEvents |= pChildNode.m_bHasEvents;
 
                                 this.AddChild(pChildNode);
                             }
                             else
                             {
-                                Debug.Check(false);
+                                Debugs.Check(false);
                             }
                         }
                         else
@@ -689,9 +715,9 @@ namespace behaviac
                     return true;
                 }
 
-                BehaviorNode pAttachment = BehaviorNode.Create(pAttachClassName);
+                BehaviorNode pAttachment = Create(pAttachClassName);
 
-                Debug.Check(pAttachment != null);
+                Debugs.Check(pAttachment != null);
 
                 if (pAttachment != null)
                 {
@@ -728,7 +754,7 @@ namespace behaviac
             }
             catch (Exception ex)
             {
-                Debug.Check(false, ex.Message);
+                Debugs.Check(false, ex.Message);
             }
 
             return bHasEvents;
@@ -740,7 +766,7 @@ namespace behaviac
             {
                 if (c.Tag == "property")
                 {
-                    Debug.Check(c.Attributes.Count == 1);
+                    Debugs.Check(c.Attributes.Count == 1);
 
                     foreach (string propName in c.Attributes.Keys)
                     {
@@ -770,20 +796,20 @@ namespace behaviac
             }
             catch (Exception ex)
             {
-                Debug.Check(false, ex.Message);
+                Debugs.Check(false, ex.Message);
             }
 
             return false;
         }
 
-        protected static BehaviorNode load(string agentType, SecurityElement node, int version)
+        protected BehaviorNode load(string agentType, SecurityElement node, int version)
         {
-            Debug.Check(node.Tag == "node");
+            Debugs.Check(node.Tag == "node");
 
             string pClassName = node.Attribute("class");
-            BehaviorNode pNode = BehaviorNode.Create(pClassName);
+            BehaviorNode pNode = Create(pClassName);
 
-            Debug.Check(pNode != null, "unsupported class {0}", pClassName);
+            Debugs.Check(pNode != null, "unsupported class {0}", pClassName);
 
             if (pNode != null)
             {
@@ -829,7 +855,7 @@ namespace behaviac
                 this.load(version, agentType, properties);
             }
 
-            Debug.Check(type == BsonDeserizer.BsonTypes.BT_None);
+            Debugs.Check(type == BsonDeserizer.BsonTypes.BT_None);
             d.CloseDocument(false);
         }
 
@@ -846,7 +872,7 @@ namespace behaviac
                 type = d.ReadType();
             }
 
-            Debug.Check(type == BsonDeserizer.BsonTypes.BT_None);
+            Debugs.Check(type == BsonDeserizer.BsonTypes.BT_None);
             d.CloseDocument(false);
         }
 
@@ -869,7 +895,7 @@ namespace behaviac
             d.OpenDocument();
 
             BsonDeserizer.BsonTypes type = d.ReadType();
-            Debug.Check(type == BsonDeserizer.BsonTypes.BT_NodeElement);
+            Debugs.Check(type == BsonDeserizer.BsonTypes.BT_NodeElement);
 
             d.OpenDocument();
 
@@ -881,7 +907,7 @@ namespace behaviac
             d.CloseDocument(false);
 
             type = d.ReadType();
-            Debug.Check(type == BsonDeserizer.BsonTypes.BT_None);
+            Debugs.Check(type == BsonDeserizer.BsonTypes.BT_None);
         }
 
         protected void load_properties_pars_attachments_children(int version, string agentType, BsonDeserizer d, bool bIsTransition)
@@ -898,7 +924,7 @@ namespace behaviac
                     }
                     catch (Exception e)
                     {
-                        Debug.Check(false, e.Message);
+                        Debugs.Check(false, e.Message);
                     }
                 }
                 else if (type == BsonDeserizer.BsonTypes.BT_ParsElement)
@@ -921,7 +947,7 @@ namespace behaviac
                 }
                 else
                 {
-                    Debug.Check(false);
+                    Debugs.Check(false);
                 }
 
                 type = d.ReadType();
@@ -931,8 +957,8 @@ namespace behaviac
         protected BehaviorNode load(string agentType, BsonDeserizer d, int version)
         {
             string pClassName = d.ReadString();
-            BehaviorNode pNode = BehaviorNode.Create(pClassName);
-            Debug.Check(pNode != null, pClassName);
+            BehaviorNode pNode = Create(pClassName);
+            Debugs.Check(pNode != null, pClassName);
 
             if (pNode != null)
             {
@@ -948,7 +974,7 @@ namespace behaviac
 
         protected virtual void load_local(int version, string agentType, BsonDeserizer d)
         {
-            Debug.Check(false);
+            Debugs.Check(false);
         }
 
         protected void load_attachments(int version, string agentType, BsonDeserizer d, bool bIsTransition)
@@ -971,8 +997,8 @@ namespace behaviac
                 {
                     string attachClassName = d.ReadString();
 
-                    BehaviorNode pAttachment = BehaviorNode.Create(attachClassName);
-                    Debug.Check(pAttachment != null, attachClassName);
+                    BehaviorNode pAttachment = Create(attachClassName);
+                    Debugs.Check(pAttachment != null, attachClassName);
 
                     if (pAttachment != null)
                     {
@@ -1012,13 +1038,13 @@ namespace behaviac
                 }
                 else
                 {
-                    Debug.Check(false);
+                    Debugs.Check(false);
                 }
 
                 type = d.ReadType();
             }
 
-            Debug.Check(type == BsonDeserizer.BsonTypes.BT_None);
+            Debugs.Check(type == BsonDeserizer.BsonTypes.BT_None);
             d.CloseDocument(false);
         }
 
@@ -1027,14 +1053,14 @@ namespace behaviac
             d.OpenDocument();
 
             BsonDeserizer.BsonTypes type = d.ReadType();
-            Debug.Check(type == BsonDeserizer.BsonTypes.BT_NodeElement);
+            Debugs.Check(type == BsonDeserizer.BsonTypes.BT_NodeElement);
 
             d.OpenDocument();
             BehaviorNode node = this.load(agentType, d, version);
             d.CloseDocument(false);
 
             type = d.ReadType();
-            Debug.Check(type == BsonDeserizer.BsonTypes.BT_None);
+            Debugs.Check(type == BsonDeserizer.BsonTypes.BT_None);
             d.CloseDocument(false);
 
             return node;
@@ -1051,11 +1077,11 @@ namespace behaviac
 
         public virtual void Attach(BehaviorNode pAttachment, bool bIsPrecondition, bool bIsEffector, bool bIsTransition)
         {
-            Debug.Check(bIsTransition == false);
+            Debugs.Check(bIsTransition == false);
 
             if (bIsPrecondition)
             {
-                Debug.Check(!bIsEffector);
+                Debugs.Check(!bIsEffector);
 
                 if (this.m_preconditions == null)
                 {
@@ -1063,7 +1089,7 @@ namespace behaviac
                 }
 
                 Precondition predicate = pAttachment as Precondition;
-                Debug.Check(predicate != null);
+                Debugs.Check(predicate != null);
                 this.m_preconditions.Add(predicate);
 
                 Precondition.EPhase phase = predicate.Phase;
@@ -1082,12 +1108,12 @@ namespace behaviac
                 }
                 else
                 {
-                    Debug.Check(false);
+                    Debugs.Check(false);
                 }
             }
             else if (bIsEffector)
             {
-                Debug.Check(!bIsPrecondition);
+                Debugs.Check(!bIsPrecondition);
 
                 if (this.m_effectors == null)
                 {
@@ -1095,7 +1121,7 @@ namespace behaviac
                 }
 
                 Effector effector = pAttachment as Effector;
-                Debug.Check(effector != null);
+                Debugs.Check(effector != null);
                 this.m_effectors.Add(effector);
 
                 Effector.EPhase phase = effector.Phase;
@@ -1114,7 +1140,7 @@ namespace behaviac
                 }
                 else
                 {
-                    Debug.Check(false);
+                    Debugs.Check(false);
                 }
             }
             else
@@ -1140,14 +1166,14 @@ namespace behaviac
             this.m_children.Add(pChild);
         }
 
-        protected virtual EBTStatus update_impl(Agent pAgent, EBTStatus childStatus)
+        protected virtual Task<EBTStatus> update_impl(Agent pAgent, EBTStatus childStatus)
         {
-            return EBTStatus.BT_FAILURE;
+            return Task.FromResult(EBTStatus.BT_FAILURE);
         }
 
         public void SetClassNameString(string className)
         {
-            this.m_className = className;
+            this.m_className = ConvertClassName(className);
         }
 
         public string GetClassNameString()
@@ -1191,7 +1217,7 @@ namespace behaviac
             }
         }
 
-        public bool CheckPreconditions(Agent pAgent, bool bIsAlive)
+        public async Task<bool> CheckPreconditions(Agent pAgent, bool bIsAlive)
         {
             Precondition.EPhase phase = bIsAlive ? Precondition.EPhase.E_UPDATE : Precondition.EPhase.E_ENTER;
 
@@ -1227,7 +1253,7 @@ namespace behaviac
 
                     if (phase == Precondition.EPhase.E_BOTH || ph == Precondition.EPhase.E_BOTH || ph == phase)
                     {
-                        bool taskBoolean = pPrecond.Evaluate(pAgent);
+                        bool taskBoolean = await pPrecond.Evaluate(pAgent);
 
                         CombineResults(ref firstValidPrecond, ref lastCombineValue, pPrecond, taskBoolean);
                     }
@@ -1260,7 +1286,7 @@ namespace behaviac
             }
         }
 
-        public virtual void ApplyEffects(Agent pAgent, Effector.EPhase phase)
+        public virtual async Task ApplyEffects(Agent pAgent, Effector.EPhase phase)
         {
             if (this.m_effectors == null || this.m_effectors.Count == 0)
             {
@@ -1290,7 +1316,7 @@ namespace behaviac
 
                     if (phase == Effector.EPhase.E_BOTH || ph == Effector.EPhase.E_BOTH || ph == phase)
                     {
-                        pEffector.Evaluate(pAgent);
+                        await pEffector.Evaluate(pAgent);
                     }
                 }
             }
@@ -1298,7 +1324,7 @@ namespace behaviac
             return;
         }
 
-        public bool CheckEvents(string eventName, Agent pAgent, Dictionary<uint, IInstantiatedVariable> eventParams)
+        public async Task<bool> CheckEvents(string eventName, Agent pAgent, Dictionary<uint, IInstantiatedVariable> eventParams)
         {
             if (this.m_events != null)
             {
@@ -1315,7 +1341,7 @@ namespace behaviac
 
                         if (!string.IsNullOrEmpty(pEventName) && pEventName == eventName)
                         {
-                            pE.switchTo(pAgent, eventParams);
+                            await pE.switchTo(pAgent, eventParams);
 
                             if (pE.TriggeredOnce())
                             {
@@ -1329,19 +1355,19 @@ namespace behaviac
             return true;
         }
 
-        public virtual bool Evaluate(Agent pAgent)
+        public virtual Task<bool> Evaluate(Agent pAgent)
         {
-            Debug.Check(false, "only Condition/Sequence/And/Or allowed");
-            return false;
+            Debugs.Check(false, "only Condition/Sequence/And/Or allowed");
+            return Task.FromResult(false);
         }
 
 
 
-        protected bool EvaluteCustomCondition(Agent pAgent)
+        protected async Task<bool> EvaluteCustomCondition(Agent pAgent)
         {
             if (this.m_customCondition != null)
             {
-                return m_customCondition.Evaluate(pAgent);
+                return await m_customCondition.Evaluate(pAgent);
             }
 
             return false;
@@ -1357,7 +1383,7 @@ namespace behaviac
 
         public void SetAgentType(string agentType)
         {
-            Debug.Check(agentType.IndexOf("::") == -1);
+            Debugs.Check(agentType.IndexOf("::") == -1);
 
             this.m_agentType = agentType;
         }
@@ -1404,14 +1430,14 @@ namespace behaviac
 
     public abstract class DecoratorNode : BehaviorNode
     {
-        public DecoratorNode()
+        public DecoratorNode(Workspace workspace) : base(workspace)
         {
             m_bDecorateWhenChildEnds = false;
         }
 
-        protected override void load(int version, string agentType, List<property_t> properties)
+        protected override async Task load(int version, string agentType, List<property_t> properties)
         {
-            base.load(version, agentType, properties);
+            await base.load(version, agentType, properties);
 
             for (int i = 0; i < properties.Count; ++i)
             {
@@ -1452,7 +1478,9 @@ namespace behaviac
     {
         //keep this version equal to designers' NewVersion
         private const int SupportedVersion = 5;
-
+        public BehaviorTree(Workspace workspace) : base(workspace)
+        {
+        }
         private Dictionary<uint, ICustomizedProperty> m_localProps;
         public Dictionary<uint, ICustomizedProperty> LocalProps
         {
@@ -1476,15 +1504,15 @@ namespace behaviac
             }
 
             uint varId = Utils.MakeVariableId(name);
-            ICustomizedProperty prop = AgentMeta.CreateProperty(typeName, varId, name, valueStr);
+            ICustomizedProperty prop = AgentMeta.CreateProperty(typeName, varId, name, valueStr, Workspace);
             this.m_localProps[varId] = prop;
 
-            Type type = Utils.GetElementTypeFromName(typeName);
+            Type type = Utils.GetElementTypeFromName(typeName, Workspace);
 
             if (type != null)
             {
-                typeName = Utils.GetNativeTypeName(type);
-                prop = AgentMeta.CreateArrayItemProperty(typeName, varId, name);
+                typeName = Utils.GetNativeTypeName(type, Workspace);
+                prop = AgentMeta.CreateArrayItemProperty(typeName, varId, name, Workspace);
                 varId = Utils.MakeVariableId(name + "[]");
                 this.m_localProps[varId] = prop;
             }
@@ -1519,11 +1547,11 @@ namespace behaviac
         }
 
 #if BEHAVIAC_USE_SYSTEM_XML
-        protected override void load_local(int version, string agentType, XmlNode node)
+        protected override  async Task  load_local(int version, string agentType, XmlNode node)
         {
             if (node.Name != "par")
             {
-                Debug.Check(false);
+                Debugs.Check(false);
                 return;
             }
 
@@ -1538,7 +1566,7 @@ namespace behaviac
         {
             if (node.Tag != "par")
             {
-                Debug.Check(false);
+                Debugs.Check(false);
                 return;
             }
 
@@ -1566,7 +1594,7 @@ namespace behaviac
         {
             try
             {
-                Debug.Check(pBuffer != null);
+                Debugs.Check(pBuffer != null);
                 string xml = System.Text.Encoding.UTF8.GetString(pBuffer);
 
 #if BEHAVIAC_USE_SYSTEM_XML
@@ -1604,7 +1632,7 @@ namespace behaviac
 
                 if (version != SupportedVersion)
                 {
-                    Debug.LogError(string.Format("'{0}' Version({1}), while Version({2}) is supported, please update runtime or rexport data using the latest designer", this.m_name, version, SupportedVersion));
+                    Debugs.LogError(string.Format("'{0}' Version({1}), while Version({2}) is supported, please update runtime or rexport data using the latest designer", this.m_name, version, SupportedVersion));
                 }
 
                 this.SetClassNameString("BehaviorTree");
@@ -1621,10 +1649,10 @@ namespace behaviac
             }
             catch (Exception e)
             {
-                Debug.Check(false, e.Message);
+                Debugs.Check(false, e.Message);
             }
 
-            Debug.Check(false);
+            Debugs.Check(false);
             return false;
         }
 
@@ -1632,7 +1660,7 @@ namespace behaviac
         {
             try
             {
-                BsonDeserizer d = new BsonDeserizer();
+                BsonDeserizer d = new BsonDeserizer(Workspace);
 
                 if (d.Init(pBuffer))
                 {
@@ -1641,7 +1669,7 @@ namespace behaviac
                     if (type == BsonDeserizer.BsonTypes.BT_BehaviorElement)
                     {
                         bool bOk = d.OpenDocument();
-                        Debug.Check(bOk);
+                        Debugs.Check(bOk);
 
                         this.m_name = d.ReadString();
                         string agentTypeTmp = d.ReadString();
@@ -1652,7 +1680,7 @@ namespace behaviac
 
                         if (version != SupportedVersion)
                         {
-                            Debug.LogError(string.Format("'{0}' Version({1}), while Version({2}) is supported, please update runtime or rexport data using the latest designer", this.m_name, version, SupportedVersion));
+                            Debugs.LogError(string.Format("'{0}' Version({1}), while Version({2}) is supported, please update runtime or rexport data using the latest designer", this.m_name, version, SupportedVersion));
                         }
 
                         this.SetClassNameString("BehaviorTree");
@@ -1670,11 +1698,11 @@ namespace behaviac
             }
             catch (Exception e)
             {
-                Debug.LogError(string.Format("load_bson failed: {0} {1}", e.Message, pBuffer.Length));
-                Debug.Check(false, e.Message);
+                Debugs.LogError(string.Format("load_bson failed: {0} {1}", e.Message, pBuffer.Length));
+                Debugs.Check(false, e.Message);
             }
 
-            Debug.Check(false);
+            Debugs.Check(false);
             return false;
         }
 
@@ -1709,7 +1737,7 @@ namespace behaviac
 
         protected override BehaviorTask createTask()
         {
-            BehaviorTreeTask pTask = new BehaviorTreeTask();
+            BehaviorTreeTask pTask = new BehaviorTreeTask(Workspace);
             return pTask;
         }
     }

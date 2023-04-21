@@ -96,7 +96,7 @@ namespace PluginBehaviac.Nodes
                 // check if there is a Method node on the parent path
                 while (parent != null)
                 {
-                    if (parent is Nodes.Method)
+                    if (parent is Nodes.Methods)
                     {
                         return true;
                     }
@@ -108,7 +108,7 @@ namespace PluginBehaviac.Nodes
 
                 while (parent != null)
                 {
-                    if (parent is Nodes.Method)
+                    if (parent is Nodes.Methods)
                     {
                         return true;
                     }

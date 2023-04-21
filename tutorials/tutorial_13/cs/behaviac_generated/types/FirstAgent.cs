@@ -7,6 +7,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 
 ///<<< BEGIN WRITING YOUR CODE FILE_INIT
 
@@ -16,12 +17,14 @@ public class FirstAgent : behaviac.Agent
 ///<<< BEGIN WRITING YOUR CODE FirstAgent
 ///<<< END WRITING YOUR CODE
 {
-	public void Say(string value)
+	private IFirstAgentImp _methodImp;
+	public FirstAgent(IFirstAgentImp methodImp,behaviac.Workspace workspace):base(workspace)
 	{
-///<<< BEGIN WRITING YOUR CODE Say
-        Console.WriteLine();
-        Console.WriteLine("{0}", value);
-///<<< END WRITING YOUR CODE
+	    _methodImp=methodImp;
+	}
+	public async Task Say(string value)
+	{
+		 await _methodImp.Say(value);
 	}
 
 ///<<< BEGIN WRITING YOUR CODE CLASS_PART

@@ -12,21 +12,22 @@
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace behaviac
 {
     public class Event : ConditionBase
     {
-        public Event()
+        public Event(Workspace workspace):base(workspace)
         {
             m_eventName = null;
             m_bTriggeredOnce = false;
             m_triggerMode = TriggerMode.TM_Transfer;
         }
 
-        protected override void load(int version, string agentType, List<property_t> properties)
+        protected override  async Task  load(int version, string agentType, List<property_t> properties)
         {
-            base.load(version, agentType, properties);
+            await base.load(version, agentType, properties);
 
             for (int i = 0; i < properties.Count; ++i)
             {
@@ -34,16 +35,16 @@ namespace behaviac
 
                 if (p.name == "Task")
                 {
-                    this.m_event = AgentMeta.ParseMethod(p.value, ref this.m_eventName);
+                    this.m_event = AgentMeta.ParseMethod(p.value, ref this.m_eventName, Workspace);
                 }
                 else if (p.name == "ReferenceFilename")
                 {
                     this.m_referencedBehaviorPath = p.value;
 
-                    if (Config.PreloadBehaviors)
+                    if (Configs.PreloadBehaviors)
                     {
-                        BehaviorTree behaviorTree = Workspace.Instance.LoadBehaviorTree(this.m_referencedBehaviorPath);
-                        Debug.Check(behaviorTree != null);
+                        BehaviorTree behaviorTree = Workspace.LoadBehaviorTree(this.m_referencedBehaviorPath);
+                        Debugs.Check(behaviorTree != null);
                     }
                 }
                 else if (p.name == "TriggeredOnce")
@@ -62,7 +63,7 @@ namespace behaviac
                     }
                     else
                     {
-                        Debug.Check(false, string.Format("unrecognised trigger mode {0}", p.value));
+                        Debugs.Check(false, string.Format("unrecognised trigger mode {0}", p.value));
                     }
                 }
             }
@@ -83,7 +84,7 @@ namespace behaviac
             return this.m_triggerMode;
         }
 
-        public void switchTo(Agent pAgent, Dictionary<uint, IInstantiatedVariable> eventParams)
+        public async Task switchTo(Agent pAgent, Dictionary<uint, IInstantiatedVariable> eventParams)
         {
             if (!string.IsNullOrEmpty(this.m_referencedBehaviorPath))
             {
@@ -93,10 +94,10 @@ namespace behaviac
 
                     pAgent.bteventtree(pAgent, this.m_referencedBehaviorPath, tm);
 
-                    Debug.Check(pAgent.CurrentTreeTask != null);
+                    Debugs.Check(pAgent.CurrentTreeTask != null);
                     pAgent.CurrentTreeTask.AddVariables(eventParams);
 
-                    pAgent.btexec();
+                    await pAgent.btexec();
                 }
             }
         }
@@ -113,7 +114,7 @@ namespace behaviac
 
         protected override BehaviorTask createTask()
         {
-            Debug.Check(false);
+            Debugs.Check(false);
             return null;
         }
 

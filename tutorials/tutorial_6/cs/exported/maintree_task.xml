@@ -9,7 +9,7 @@
       <property TriggeredOnce="false" />
       <property TriggerMode="Transfer" />
     </attachment>
-    <node class="Action" id="4">
+    <node class="Actions" id="4">
       <property Method="Self.FirstAgent::Say(&quot;Wait subtree...&quot;)" />
       <property ResultOption="BT_RUNNING" />
     </node>
@@ -23,7 +23,7 @@
       <property Opl="int Self.FirstAgent::p1" />
       <property Opr="const int 1" />
     </node>
-    <node class="Action" id="5">
+    <node class="Actions" id="5">
       <property Method="Self.FirstAgent::Say(&quot;Hello maintree!&quot;)" />
       <property ResultOption="BT_SUCCESS" />
     </node>

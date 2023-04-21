@@ -12,12 +12,13 @@
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace behaviac
 {
     public class DecoratorLoop : DecoratorCount
     {
-        public DecoratorLoop()
+        public DecoratorLoop(Workspace workspace) : base(workspace)
         {
         }
 
@@ -45,9 +46,9 @@ namespace behaviac
         }
 #endif//
 
-        protected override void load(int version, string agentType, List<property_t> properties)
+        protected override  async Task  load(int version, string agentType, List<property_t> properties)
         {
-            base.load(version, agentType, properties);
+            await base.load(version, agentType, properties);
 
             for (int i = 0; i < properties.Count; ++i)
             {
@@ -63,9 +64,9 @@ namespace behaviac
             }
         }
 
-        public int Count(Agent pAgent)
+        public async Task<int> Count(Agent pAgent)
         {
-            return base.GetCount(pAgent);
+            return await base.GetCount(pAgent);
         }
 
         public override bool IsValid(Agent pAgent, BehaviorTask pTask)
@@ -82,7 +83,7 @@ namespace behaviac
 
         protected override BehaviorTask createTask()
         {
-            DecoratorLoopTask pTask = new DecoratorLoopTask();
+            DecoratorLoopTask pTask = new DecoratorLoopTask(Workspace);
 
             return pTask;
         }
@@ -90,7 +91,7 @@ namespace behaviac
         ///Returns EBTStatus.BT_FAILURE for the specified number of iterations, then returns EBTStatus.BT_SUCCESS after that
         private class DecoratorLoopTask : DecoratorCountTask
         {
-            public DecoratorLoopTask()
+            public DecoratorLoopTask(Workspace workspace) : base(workspace)
             {
             }
 
@@ -132,32 +133,32 @@ namespace behaviac
                     return EBTStatus.BT_RUNNING;
                 }
 
-                Debug.Check(this.m_n == 0);
+                Debugs.Check(this.m_n == 0);
 
                 return EBTStatus.BT_SUCCESS;
             }
 
-            protected override EBTStatus update(Agent pAgent, EBTStatus childStatus)
+            protected override async Task<EBTStatus> update(Agent pAgent, EBTStatus childStatus)
             {
-                Debug.Check(this.m_node is DecoratorLoop);
+                Debugs.Check(this.m_node is DecoratorLoop);
                 DecoratorLoop node = (DecoratorLoop)this.m_node;
 
                 if (node.m_bDoneWithinFrame)
                 {
-                    Debug.Check(this.m_n >= 0);
-                    Debug.Check(this.m_root != null);
+                    Debugs.Check(this.m_n >= 0);
+                    Debugs.Check(this.m_root != null);
 
                     EBTStatus status = EBTStatus.BT_INVALID;
 
                     for (int i = 0; i < this.m_n; ++i)
                     {
-                        status = this.m_root.exec(pAgent, childStatus);
+                        status =await this.m_root.exec(pAgent, childStatus);
 
                         if (node.m_bDecorateWhenChildEnds)
                         {
                             while (status == EBTStatus.BT_RUNNING)
                             {
-                                status = base.update(pAgent, childStatus);
+                                status =await base.update(pAgent, childStatus);
                             }
                         }
 
@@ -170,7 +171,7 @@ namespace behaviac
                     return EBTStatus.BT_SUCCESS;
                 }
 
-                return base.update(pAgent, childStatus);
+                return await base.update(pAgent, childStatus);
             }
 
         }

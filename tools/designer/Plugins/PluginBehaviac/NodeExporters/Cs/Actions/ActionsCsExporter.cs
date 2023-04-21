@@ -18,11 +18,11 @@ using System.IO;
 using Behaviac.Design;
 using Behaviac.Design.Nodes;
 using PluginBehaviac.DataExporters;
-using Action = Behaviac.Design.Nodes.Action;
+using Actions = Behaviac.Design.Nodes.Actions;
 
 namespace PluginBehaviac.NodeExporters
 {
-    public class ActionCsExporter : NodeCsExporter
+    public class ActionsCsExporter : NodeCsExporter
     {
         private bool isNullMethod(MethodDef method)
         {
@@ -48,7 +48,7 @@ namespace PluginBehaviac.NodeExporters
 
         protected override bool ShouldGenerateClass(Node node)
         {
-            Action action = node as Action;
+            Actions action = node as Actions;
             return (action != null);
         }
 
@@ -56,7 +56,7 @@ namespace PluginBehaviac.NodeExporters
         {
             base.GenerateConstructor(node, stream, indent, className);
 
-            Action action = node as Action;
+            Actions action = node as Actions;
 
             if (action == null)
             {
@@ -75,7 +75,7 @@ namespace PluginBehaviac.NodeExporters
         {
             base.GenerateMember(node, stream, indent);
 
-            Action action = node as Action;
+            Actions action = node as Actions;
 
             if (action == null)
             {
@@ -92,14 +92,14 @@ namespace PluginBehaviac.NodeExporters
         {
             base.GenerateMethod(node, stream, indent);
 
-            Action action = node as Action;
+            Actions action = node as Actions;
 
             if (action == null)
             {
                 return;
             }
 
-            stream.WriteLine("{0}\t\tprotected override EBTStatus update_impl(behaviac.Agent pAgent, behaviac.EBTStatus childStatus)", indent);
+            stream.WriteLine("{0}\t\tprotected override async Task<EBTStatus> update_impl(behaviac.Agent pAgent, behaviac.EBTStatus childStatus)", indent);
             stream.WriteLine("{0}\t\t{{", indent);
 
             string resultStatus = getResultOptionStr(action.ResultOption);

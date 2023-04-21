@@ -12,6 +12,7 @@
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace behaviac
 {
@@ -23,9 +24,14 @@ namespace behaviac
             protected IInstanceMember m_opr1;
             protected IInstanceMember m_opr2;
             public EOperatorType m_operator = EOperatorType.E_INVALID;
-
-            protected ActionConfig()
+            public Workspace Workspace { get; private set; }
+            public Config Configs { set; get; }
+            public Debug Debugs { set; get; }
+            protected ActionConfig(Workspace workspace)
             {
+                Workspace = workspace;
+                Configs = workspace.Configs;
+                Debugs = workspace.Debugs;
             }
 
             public virtual bool load(List<property_t> properties)
@@ -42,11 +48,11 @@ namespace behaviac
 
                             if (pParenthesis == -1)
                             {
-                                this.m_opl = AgentMeta.ParseProperty(p.value);
+                                this.m_opl = AgentMeta.ParseProperty(p.value, Workspace);
                             }
                             else
                             {
-                                this.m_opl = AgentMeta.ParseMethod(p.value);
+                                this.m_opl = AgentMeta.ParseMethod(p.value, Workspace);
                             }
                         }
                     }
@@ -58,17 +64,17 @@ namespace behaviac
 
                             if (pParenthesis == -1)
                             {
-                                this.m_opr1 = AgentMeta.ParseProperty(p.value);
+                                this.m_opr1 = AgentMeta.ParseProperty(p.value, Workspace);
                             }
                             else
                             {
-                                this.m_opr1 = AgentMeta.ParseMethod(p.value);
+                                this.m_opr1 = AgentMeta.ParseMethod(p.value, Workspace);
                             }
                         }
                     }
                     else if (p.name == "Operator")
                     {
-                        this.m_operator = OperationUtils.ParseOperatorType(p.value);
+                        this.m_operator = OperationUtils.ParseOperatorType(p.value, Workspace);
                     }
                     else if (p.name == "Opr2")
                     {
@@ -78,11 +84,11 @@ namespace behaviac
 
                             if (pParenthesis == -1)
                             {
-                                this.m_opr2 = AgentMeta.ParseProperty(p.value);
+                                this.m_opr2 = AgentMeta.ParseProperty(p.value, Workspace);
                             }
                             else
                             {
-                                this.m_opr2 = AgentMeta.ParseMethod(p.value);
+                                this.m_opr2 = AgentMeta.ParseMethod(p.value, Workspace);
                             }
                         }
                     }
@@ -91,7 +97,7 @@ namespace behaviac
                 return this.m_opl != null;
             }
 
-            public bool Execute(Agent pAgent)
+            public async Task<bool> Execute(Agent pAgent)
             {
                 bool bValid = false;
 
@@ -100,12 +106,12 @@ namespace behaviac
                 {
                     if (this.m_opl != null)
                     {
-                        Debug.Check(this.m_opl is IMethod);
+                        Debugs.Check(this.m_opl is IMethod);
                         IMethod method = this.m_opl as IMethod;
 
                         if (method != null)
                         {
-                            method.Run(pAgent);
+                            await method.Run(pAgent);
 
                             bValid = true;
                         }
@@ -117,7 +123,7 @@ namespace behaviac
                 {
                     if (this.m_opl != null)
                     {
-                        this.m_opl.SetValue(pAgent, this.m_opr2);
+                        await this.m_opl.SetValue(pAgent, this.m_opr2);
 
                         bValid = true;
                     }
@@ -128,7 +134,7 @@ namespace behaviac
                 {
                     if (this.m_opl != null)
                     {
-                        this.m_opl.Compute(pAgent, this.m_opr1, this.m_opr2, m_operator);
+                        await this.m_opl.Compute(pAgent, this.m_opr1, this.m_opr2, m_operator);
 
                         bValid = true;
                     }
@@ -139,7 +145,7 @@ namespace behaviac
                 {
                     if (this.m_opl != null)
                     {
-                        bValid = this.m_opl.Compare(pAgent, this.m_opr2, m_operator);
+                        bValid = await this.m_opl.Compare(pAgent, this.m_opr2, m_operator);
                     }
                 }
 
@@ -151,34 +157,38 @@ namespace behaviac
 
         protected ActionConfig m_ActionConfig;
 
-        protected override void load(int version, string agentType, List<property_t> properties)
+        public AttachAction(Workspace workspace) : base(workspace)
         {
-            base.load(version, agentType, properties);
+        }
+
+        protected override async Task load(int version, string agentType, List<property_t> properties)
+        {
+            await base.load(version, agentType, properties);
 
             this.m_ActionConfig.load(properties);
         }
 
-        public override bool Evaluate(Agent pAgent)
+        public override async Task<bool> Evaluate(Agent pAgent)
         {
-            bool bValid = this.m_ActionConfig.Execute(pAgent);
+            bool bValid =await this.m_ActionConfig.Execute(pAgent);
 
             if (!bValid)
             {
                 EBTStatus childStatus = EBTStatus.BT_INVALID;
-                bValid = (EBTStatus.BT_SUCCESS == this.update_impl(pAgent, childStatus));
+                bValid = (EBTStatus.BT_SUCCESS == await this.update_impl(pAgent, childStatus));
             }
 
             return bValid;
         }
 
-        public virtual bool Evaluate(Agent pAgent, EBTStatus status)
+        public virtual async Task<bool> Evaluate(Agent pAgent, EBTStatus status)
         {
-            bool bValid = this.m_ActionConfig.Execute(pAgent);
+            bool bValid =await this.m_ActionConfig.Execute(pAgent);
 
             if (!bValid)
             {
                 EBTStatus childStatus = EBTStatus.BT_INVALID;
-                bValid = (EBTStatus.BT_SUCCESS == this.update_impl(pAgent, childStatus));
+                bValid = (EBTStatus.BT_SUCCESS == await this.update_impl(pAgent, childStatus));
             }
 
             return bValid;
@@ -186,7 +196,7 @@ namespace behaviac
 
         protected override BehaviorTask createTask()
         {
-            Debug.Check(false);
+            Debugs.Check(false);
             return null;
         }
     }

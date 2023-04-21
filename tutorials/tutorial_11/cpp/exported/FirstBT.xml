@@ -2,7 +2,7 @@
 <!--EXPORTED BY TOOL, DON'T MODIFY IT!-->
 <!--Source File: FirstBT.xml-->
 <behavior name="FirstBT" agenttype="FirstAgent" version="5">
-  <node class="Action" id="0">
+  <node class="Actions" id="0">
     <property Method="Self.FirstAgent::SayHello()" />
     <property ResultOption="BT_SUCCESS" />
   </node>

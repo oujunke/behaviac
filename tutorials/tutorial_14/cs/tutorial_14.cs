@@ -3,19 +3,20 @@ using System.Collections.Generic;
 using System.Text;
 using System.IO;
 using System.Diagnostics;
+using tutorial_14;
 
-namespace tutorial_1_1
+namespace tutorial_1_14
 {
     class Program
     {
         static FirstAgent g_FirstAgent;
-
+        static behaviac.Workspace Instance;
         static bool InitBehavic()
         {
             Console.WriteLine("InitBehavic");
-
-            behaviac.Workspace.Instance.FilePath = "../../exported";
-            behaviac.Workspace.Instance.FileFormat = behaviac.Workspace.EFileFormat.EFF_xml;
+            Instance = behaviac.Workspace.CreatWorkspace();
+            Instance.FilePath = "../../exported";
+            Instance.FileFormat = behaviac.Workspace.EFileFormat.EFF_xml;
 
             return true;
         }
@@ -24,7 +25,7 @@ namespace tutorial_1_1
         {
             Console.WriteLine("InitPlayer : {0}", btName);
 
-            g_FirstAgent = new FirstAgent();
+            g_FirstAgent = new FirstAgent(new FirstAgentImp(),Instance);
 
             bool bRet = g_FirstAgent.btload(btName);
             Debug.Assert(bRet);
@@ -36,7 +37,7 @@ namespace tutorial_1_1
 
         static void ExecuteBT()
         {
-            behaviac.EBTStatus status = g_FirstAgent.btexec();
+            behaviac.EBTStatus status = g_FirstAgent.btexec().Result;
 
             Console.WriteLine("ExecuteBT : {0}", status);
         }
@@ -52,7 +53,7 @@ namespace tutorial_1_1
         {
             Console.WriteLine("CleanupBehaviac");
 
-            behaviac.Workspace.Instance.Cleanup();
+            Instance.Cleanup();
         }
 
         static void Main(string[] args)

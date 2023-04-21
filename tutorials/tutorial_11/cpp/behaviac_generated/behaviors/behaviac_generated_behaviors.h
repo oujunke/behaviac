@@ -11,23 +11,6 @@ namespace behaviac
 {
 	// Source file: FirstBT
 
-	class Action_bt_FirstBT_node0 : public Action
-	{
-	public:
-		BEHAVIAC_DECLARE_DYNAMIC_TYPE(Action_bt_FirstBT_node0, Action);
-		Action_bt_FirstBT_node0()
-		{
-		}
-	protected:
-		virtual EBTStatus update_impl(Agent* pAgent, EBTStatus childStatus)
-		{
-			BEHAVIAC_UNUSED_VAR(pAgent);
-			BEHAVIAC_UNUSED_VAR(childStatus);
-			((FirstAgent*)pAgent)->SayHello();
-			return BT_SUCCESS;
-		}
-	};
-
 	class bt_FirstBT
 	{
 	public:
@@ -42,8 +25,8 @@ namespace behaviac
 #endif
 			// children
 			{
-				Action_bt_FirstBT_node0* node0 = BEHAVIAC_NEW Action_bt_FirstBT_node0;
-				node0->SetClassNameString("Action");
+				Actions* node0 = BEHAVIAC_NEW Actions;
+				node0->SetClassNameString("Actions");
 				node0->SetId(0);
 #if !BEHAVIAC_RELEASE
 				node0->SetAgentType("FirstAgent");

@@ -7,6 +7,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 
 ///<<< BEGIN WRITING YOUR CODE FILE_INIT
 
@@ -16,6 +17,11 @@ public class FirstAgent : behaviac.Agent
 ///<<< BEGIN WRITING YOUR CODE FirstAgent
 ///<<< END WRITING YOUR CODE
 {
+	private IFirstAgentImp _methodImp;
+	public FirstAgent(IFirstAgentImp methodImp,behaviac.Workspace workspace):base(workspace)
+	{
+	    _methodImp=methodImp;
+	}
 	private FirstEnum p1 = FirstEnum.e1;
 	public void _set_p1(FirstEnum value)
 	{
@@ -26,13 +32,9 @@ public class FirstAgent : behaviac.Agent
 		return p1;
 	}
 
-	public void SayHello()
+	public async Task SayHello()
 	{
-///<<< BEGIN WRITING YOUR CODE SayHello
-        Console.WriteLine();
-        Console.WriteLine("Hello Behaviac!");
-        Console.WriteLine();
-///<<< END WRITING YOUR CODE
+		 await _methodImp.SayHello();
 	}
 
 ///<<< BEGIN WRITING YOUR CODE CLASS_PART

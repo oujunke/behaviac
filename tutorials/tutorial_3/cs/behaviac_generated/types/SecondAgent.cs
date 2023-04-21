@@ -7,6 +7,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 
 ///<<< BEGIN WRITING YOUR CODE FILE_INIT
 
@@ -16,6 +17,11 @@ public class SecondAgent : behaviac.Agent
 ///<<< BEGIN WRITING YOUR CODE SecondAgent
 ///<<< END WRITING YOUR CODE
 {
+	private ISecondAgentImp _methodImp;
+	public SecondAgent(ISecondAgentImp methodImp,behaviac.Workspace workspace):base(workspace)
+	{
+	    _methodImp=methodImp;
+	}
 	private int p2 = 0;
 	public void _set_p2(int value)
 	{

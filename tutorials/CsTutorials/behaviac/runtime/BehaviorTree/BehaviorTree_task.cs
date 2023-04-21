@@ -20,6 +20,7 @@ using UnityEngine;
 #endif//!BEHAVIAC_NOT_USE_UNITY
 
 using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace behaviac
 {
@@ -47,7 +48,7 @@ namespace behaviac
     }
 
     ///return false to stop traversing
-    public delegate bool NodeHandler_t(BehaviorTask task, Agent agent, object user_data);
+    public delegate Task<bool> NodeHandler_t(BehaviorTask task, Agent agent, object user_data);
 
     /**
     Base class for the BehaviorTreeTask's runtime execution management.
@@ -55,13 +56,26 @@ namespace behaviac
 
     public abstract class BehaviorTask
     {
+        public Workspace Workspace { get; private set; }
+        public Config Configs { set; get; }
+        public Debug Debugs { set; get; }
+        public BehaviorTask(Workspace workspace)
+        {
+            Workspace = workspace;
+            Configs = workspace.Configs;
+            Debugs = workspace.Debugs;
+            m_status = EBTStatus.BT_INVALID;
+            m_node = null;
+            m_parent = null;
+            m_bHasManagingParent = false;
+        }
         public static void DestroyTask(BehaviorTask task)
         {
         }
 
         public virtual void Init(BehaviorNode node)
         {
-            Debug.Check(node != null);
+            Debugs.Check(node != null);
 
             this.m_node = node;
             this.m_id = this.m_node.GetId();
@@ -106,7 +120,7 @@ namespace behaviac
                     task = task.m_parent;
                 }
 
-                Debug.Check(task is BehaviorTreeTask);
+                Debugs.Check(task is BehaviorTreeTask);
                 BehaviorTreeTask tree = (BehaviorTreeTask)task;
 
                 return tree;
@@ -157,7 +171,7 @@ namespace behaviac
 #endif
             }
 
-            public void Close()
+            public void Close(Workspace workspace)
             {
 #if !BEHAVIAC_NOT_USE_UNITY
                 float endTime = UnityEngine.Time.realtimeSinceStartup;
@@ -168,22 +182,22 @@ namespace behaviac
                 //micro second
                 long duration = (long)(float)((endTime - this.time_) * 1000000.0f);
 
-                LogManager.Instance.Log(this.agent_, this.classId_, duration);
+                workspace.LogManagers.Log(this.agent_, this.classId_, duration);
             }
         }
 #endif
 
-        public EBTStatus exec(Agent pAgent)
+        public Task<EBTStatus> exec(Agent pAgent)
         {
             EBTStatus childStatus = EBTStatus.BT_RUNNING;
 
             return this.exec(pAgent, childStatus);
         }
 
-        public EBTStatus exec(Agent pAgent, EBTStatus childStatus)
+        public async Task<EBTStatus> exec(Agent pAgent, EBTStatus childStatus)
         {
 #if !BEHAVIAC_RELEASE
-            Debug.Check(this.m_node == null || this.m_node.IsValid(pAgent, this),
+            Debugs.Check(this.m_node == null || this.m_node.IsValid(pAgent, this),
                         string.Format("Agent In BT:{0} while the Agent used for: {1}", this.m_node.GetAgentType(), pAgent.GetClassTypeName()));
 
             string classStr = (this.m_node != null ? this.m_node.GetClassNameString() : "BT");
@@ -202,30 +216,30 @@ namespace behaviac
             {
                 //reset it to invalid when it was success/failure
                 this.m_status = EBTStatus.BT_INVALID;
-                bEnterResult = this.onenter_action(pAgent);
+                bEnterResult = await this.onenter_action(pAgent);
             }
 
             if (bEnterResult)
             {
 #if !BEHAVIAC_RELEASE
 
-                if (Config.IsLoggingOrSocketing)
+                if (Configs.IsLoggingOrSocketing)
                 {
-                    string btStr = BehaviorTask.GetTickInfo(pAgent, this, "update");
+                    string btStr = await BehaviorTask.GetTickInfo(pAgent, this, "update");
 
                     //empty btStr is for internal BehaviorTreeTask
                     if (!string.IsNullOrEmpty(btStr))
                     {
-                        LogManager.Instance.Log(pAgent, btStr, EActionResult.EAR_none, LogMode.ELM_tick);
+                        Workspace.LogManagers.Log(pAgent, btStr, EActionResult.EAR_none, LogMode.ELM_tick);
                     }
                 }
 
 #endif
-                bool bValid = this.CheckParentUpdatePreconditions(pAgent);
+                bool bValid = await this.CheckParentUpdatePreconditions(pAgent);
 
                 if (bValid)
                 {
-                    this.m_status = this.update_current(pAgent, childStatus);
+                    this.m_status = await this.update_current(pAgent, childStatus);
                 }
                 else
                 {
@@ -233,7 +247,7 @@ namespace behaviac
 
                     if (this.GetCurrentTask() != null)
                     {
-                        this.update_current(pAgent, EBTStatus.BT_FAILURE);
+                        await this.update_current(pAgent, EBTStatus.BT_FAILURE);
                     }
                 }
 
@@ -241,7 +255,7 @@ namespace behaviac
                 {
                     //clear it
 
-                    this.onexit_action(pAgent, this.m_status);
+                    await this.onexit_action(pAgent, this.m_status);
 
                     //this node is possibly ticked by its parent or by the topBranch who records it as currrent node
                     //so, we can't here reset the topBranch's current node
@@ -262,7 +276,7 @@ namespace behaviac
             }
 
 #if !BEHAVIAC_RELEASE
-            profiler_block.Close();
+            profiler_block.Close(Workspace);
 #endif
 
             return this.m_status;
@@ -270,7 +284,7 @@ namespace behaviac
 
         private const int kMaxParentsCount = 512;
         private static BehaviorTask[] ms_parents = new BehaviorTask[kMaxParentsCount];
-        private bool CheckParentUpdatePreconditions(Agent pAgent)
+        private async Task<bool> CheckParentUpdatePreconditions(Agent pAgent)
         {
             bool bValid = true;
 
@@ -286,13 +300,13 @@ namespace behaviac
                 //back track the parents until the managing branch
                 while (parentBranch != null)
                 {
-                    Debug.Check(parentsCount < kMaxParentsCount, "weird tree!");
+                    Debugs.Check(parentsCount < kMaxParentsCount, "weird tree!");
 
                     ms_parents[parentsCount++] = parentBranch;
 
                     if (parentBranch.GetCurrentTask() == this)
                     {
-                        //Debug.Check(parentBranch->GetNode()->IsManagingChildrenAsSubTrees());
+                        //Debugs.Check(parentBranch->GetNode()->IsManagingChildrenAsSubTrees());
 
                         bHasManagingParent = true;
                         break;
@@ -307,7 +321,7 @@ namespace behaviac
                     {
                         BehaviorTask pb = ms_parents[i];
 
-                        bValid = pb.CheckPreconditions(pAgent, true);
+                        bValid = await pb.CheckPreconditions(pAgent, true);
 
                         if (!bValid)
                         {
@@ -318,7 +332,7 @@ namespace behaviac
             }
             else
             {
-                bValid = this.CheckPreconditions(pAgent, true);
+                bValid = await this.CheckPreconditions(pAgent, true);
             }
 
             return bValid;
@@ -349,7 +363,7 @@ namespace behaviac
                 }
                 else
                 {
-                    Debug.Check(false);
+                    Debugs.Check(false);
                 }
 
                 task = task.m_parent;
@@ -358,23 +372,23 @@ namespace behaviac
             return tree;
         }
 
-        private static bool getRunningNodes_handler(BehaviorTask node, Agent pAgent, object user_data)
+        private static Task<bool> getRunningNodes_handler(BehaviorTask node, Agent pAgent, object user_data)
         {
             if (node.m_status == EBTStatus.BT_RUNNING)
             {
                 ((List<BehaviorTask>)user_data).Add(node);
             }
 
-            return true;
+            return Task.FromResult(true);
         }
 
-        private static bool end_handler(BehaviorTask node, Agent pAgent, object user_data)
+        private static async Task<bool> end_handler(BehaviorTask node, Agent pAgent, object user_data)
         {
             if (node.m_status == EBTStatus.BT_RUNNING || node.m_status == EBTStatus.BT_INVALID)
             {
                 EBTStatus status = (EBTStatus)user_data;
 
-                node.onexit_action(pAgent, status);
+                await node.onexit_action(pAgent, status);
 
                 node.m_status = status;
 
@@ -384,11 +398,11 @@ namespace behaviac
             return true;
         }
 
-        private static bool abort_handler(BehaviorTask node, Agent pAgent, object user_data)
+        private static async Task<bool> abort_handler(BehaviorTask node, Agent pAgent, object user_data)
         {
             if (node.m_status == EBTStatus.BT_RUNNING)
             {
-                node.onexit_action(pAgent, EBTStatus.BT_FAILURE);
+                await node.onexit_action(pAgent, EBTStatus.BT_FAILURE);
 
                 node.m_status = EBTStatus.BT_FAILURE;
 
@@ -398,14 +412,14 @@ namespace behaviac
             return true;
         }
 
-        private static bool reset_handler(BehaviorTask node, Agent pAgent, object user_data)
+        private static Task<bool> reset_handler(BehaviorTask node, Agent pAgent, object user_data)
         {
             node.m_status = EBTStatus.BT_INVALID;
 
             node.onreset(pAgent);
             node.SetCurrentTask(null);
 
-            return true;
+            return Task.FromResult(true);
         }
 
         protected static NodeHandler_t getRunningNodes_handler_ = getRunningNodes_handler;
@@ -474,7 +488,7 @@ namespace behaviac
             return this.m_parent;
         }
 
-        public abstract void traverse(bool childFirst, NodeHandler_t handler, Agent pAgent, object user_data);
+        public abstract Task traverse(bool childFirst, NodeHandler_t handler, Agent pAgent, object user_data);
 
         /**
         return false if the event handling needs to be stopped
@@ -482,7 +496,7 @@ namespace behaviac
         an event can be configured to stop being checked if triggered
         */
 
-        public bool CheckEvents(string eventName, Agent pAgent, Dictionary<uint, IInstantiatedVariable> eventParams)
+        public Task<bool> CheckEvents(string eventName, Agent pAgent, Dictionary<uint, IInstantiatedVariable> eventParams)
         {
             return this.m_node.CheckEvents(eventName, pAgent, eventParams);
         }
@@ -496,11 +510,11 @@ namespace behaviac
         return true, the event hanlding will be checked furtherly
         */
 
-        public virtual bool onevent(Agent pAgent, string eventName, Dictionary<uint, IInstantiatedVariable> eventParams)
+        public virtual async Task<bool> onevent(Agent pAgent, string eventName, Dictionary<uint, IInstantiatedVariable> eventParams)
         {
             if (this.m_status == EBTStatus.BT_RUNNING && this.m_node.HasEvents())
             {
-                if (!this.CheckEvents(eventName, pAgent, eventParams))
+                if (!await this.CheckEvents(eventName, pAgent, eventParams))
                 {
                     return false;
                 }
@@ -509,47 +523,37 @@ namespace behaviac
             return true;
         }
 
-        protected BehaviorTask()
+        protected virtual Task<EBTStatus> update_current(Agent pAgent, EBTStatus childStatus)
         {
-            m_status = EBTStatus.BT_INVALID;
-            m_node = null;
-            m_parent = null;
-            m_bHasManagingParent = false;
+            return this.update(pAgent, childStatus);
         }
 
-        protected virtual EBTStatus update_current(Agent pAgent, EBTStatus childStatus)
+        protected virtual Task<EBTStatus> update(Agent pAgent, EBTStatus childStatus)
         {
-            EBTStatus s = this.update(pAgent, childStatus);
-
-            return s;
+            return Task.FromResult(EBTStatus.BT_SUCCESS);
         }
 
-        protected virtual EBTStatus update(Agent pAgent, EBTStatus childStatus)
+        protected virtual Task<bool> onenter(Agent pAgent)
         {
-            return EBTStatus.BT_SUCCESS;
-        }
-
-        protected virtual bool onenter(Agent pAgent)
-        {
-            return true;
+            return Task.FromResult(true);
         }
 
         protected virtual void onexit(Agent pAgent, EBTStatus status)
         {
         }
 
-        public static string GetTickInfo(Agent pAgent, BehaviorTask bt, string action)
+        public static async Task<string> GetTickInfo(Agent pAgent, BehaviorTask bt, string action)
         {
-            string result = GetTickInfo(pAgent, bt.GetNode(), action);
+            string result = await GetTickInfo(pAgent, bt.GetNode(), action);
 
             return result;
         }
 
-        public static string GetTickInfo(Agent pAgent, BehaviorNode n, string action)
+        public static async Task<string> GetTickInfo(Agent pAgent, BehaviorNode n, string action)
         {
 #if !BEHAVIAC_RELEASE
 
-            if (Config.IsLoggingOrSocketing)
+            if (pAgent.Workspace.Configs.IsLoggingOrSocketing)
             {
                 if (!System.Object.ReferenceEquals(pAgent, null) && pAgent.IsMasked())
                 {
@@ -560,7 +564,7 @@ namespace behaviac
                     //filter out intermediate bt, whose class name is empty
                     if (!string.IsNullOrEmpty(bClassName))
                     {
-                        string btName = GetParentTreeName(pAgent, n);
+                        string btName = await GetParentTreeName(pAgent, n);
 
                         string bpstr = "";
 
@@ -586,7 +590,7 @@ namespace behaviac
             return string.Empty;
         }
 
-        public static string GetParentTreeName(Agent pAgent, BehaviorNode n)
+        public static async Task<string> GetParentTreeName(Agent pAgent, BehaviorNode n)
         {
             string btName = null;
 
@@ -619,21 +623,21 @@ namespace behaviac
             else if (bIsRefTree)
             {
                 ReferencedBehavior refTree = n as ReferencedBehavior;
-                btName = refTree.GetReferencedTree(pAgent);
+                btName = await refTree.GetReferencedTree(pAgent);
             }
             else
             {
-                Debug.Check(false);
+                pAgent.Workspace.Debugs.Check(false);
             }
 
             return btName;
         }
 
-        private static string GetActionResultStr(EActionResult actionResult)
+        private static string GetActionResultStr(EActionResult actionResult,Workspace workspace)
         {
 #if !BEHAVIAC_RELEASE
 
-            if (Config.IsLoggingOrSocketing)
+            if (workspace.Configs.IsLoggingOrSocketing)
             {
                 string actionResultStr = "";
 
@@ -653,7 +657,7 @@ namespace behaviac
                 {
                     //although actionResult can be EAR_none or EAR_all, but, as this is the real result of an action
                     //it can only be success or failure
-                    Debug.Check(false);
+                    workspace.Debugs.Check(false);
                 }
 
                 return actionResultStr;
@@ -667,43 +671,43 @@ namespace behaviac
         {
 #if !BEHAVIAC_RELEASE
 
-            if (Config.IsLoggingOrSocketing)
+            if (pAgent.Configs.IsLoggingOrSocketing)
             {
-                string actionResultStr = GetActionResultStr(actionResult);
+                string actionResultStr = BehaviorTask.GetActionResultStr(actionResult,pAgent.Workspace);
                 string msg = string.Format("BehaviorTreeTask Breakpoints at: '{0}{1}'\n\nOk to continue.", btMsg, actionResultStr);
 
-                Workspace.Instance.RespondToBreak(msg, "BehaviorTreeTask Breakpoints");
+                pAgent.Workspace.RespondToBreak(msg, "BehaviorTreeTask Breakpoints");
             }
 
 #endif
         }
 
         //CheckBreakpoint should be after log of onenter/onexit/update, as it needs to flush msg to the client
-        public static void CHECK_BREAKPOINT(Agent pAgent, BehaviorNode b, string action, EActionResult actionResult)
+        public static async Task CHECK_BREAKPOINT(Agent pAgent, BehaviorNode b, string action, EActionResult actionResult)
         {
 #if !BEHAVIAC_RELEASE
 
-            if (Config.IsLoggingOrSocketing)
+            if (pAgent.Configs.IsLoggingOrSocketing)
             {
-                string bpstr = GetTickInfo(pAgent, b, action);
-
+                string bpstr = await GetTickInfo(pAgent, b, action);
+                var workspace = pAgent.Workspace;
                 if (!string.IsNullOrEmpty(bpstr))
                 {
-                    LogManager.Instance.Log(pAgent, bpstr, actionResult, LogMode.ELM_tick);
+                    pAgent.Workspace.LogManagers.Log(pAgent, bpstr, actionResult, LogMode.ELM_tick);
 
-                    if (Workspace.Instance.CheckBreakpoint(pAgent, b, action, actionResult))
+                    if (await workspace.CheckBreakpoint(pAgent, b, action, actionResult))
                     {
                         //log the current variables, otherwise, its value is not the latest
                         pAgent.LogVariables(false);
-                        LogManager.Instance.Log(pAgent, bpstr, actionResult, LogMode.ELM_breaked);
-                        LogManager.Instance.Flush(pAgent);
-                        SocketUtils.Flush();
+                        workspace.LogManagers.Log(pAgent, bpstr, actionResult, LogMode.ELM_breaked);
+                        workspace.LogManagers.Flush(pAgent);
+                        workspace.SocketUtil.Flush();
 
                         _MY_BREAKPOINT_BREAK_(pAgent, bpstr, actionResult);
 
-                        LogManager.Instance.Log(pAgent, bpstr, actionResult, LogMode.ELM_continue);
-                        LogManager.Instance.Flush(pAgent);
-                        SocketUtils.Flush();
+                        workspace.LogManagers.Log(pAgent, bpstr, actionResult, LogMode.ELM_continue);
+                        workspace.LogManagers.Flush(pAgent);
+                        workspace.SocketUtil.Flush();
                     }
                 }
             }
@@ -711,7 +715,7 @@ namespace behaviac
 #endif
         }
 
-        protected virtual bool CheckPreconditions(Agent pAgent, bool bIsAlive)
+        protected virtual async Task<bool> CheckPreconditions(Agent pAgent, bool bIsAlive)
         {
             bool bResult = true;
 
@@ -719,23 +723,23 @@ namespace behaviac
             {
                 if (this.m_node.PreconditionsCount > 0)
                 {
-                    bResult = this.m_node.CheckPreconditions(pAgent, bIsAlive);
+                    bResult = await this.m_node.CheckPreconditions(pAgent, bIsAlive);
                 }
             }
 
             return bResult;
         }
 
-        public bool onenter_action(Agent pAgent)
+        public async Task<bool> onenter_action(Agent pAgent)
         {
-            bool bResult = this.CheckPreconditions(pAgent, false);
+            bool bResult = await this.CheckPreconditions(pAgent, false);
 
             if (bResult)
             {
                 this.m_bHasManagingParent = false;
                 this.SetCurrentTask(null);
 
-                bResult = this.onenter(pAgent);
+                bResult = await this.onenter(pAgent);
 
                 if (!bResult)
                 {
@@ -744,9 +748,9 @@ namespace behaviac
                 else
                 {
 #if !BEHAVIAC_RELEASE
-                    //BEHAVIAC_PROFILE_DEBUGBLOCK("Debug", true);
+                    //BEHAVIAC_PROFILE_DEBUGBLOCK("Debugs", true);
 
-                    BehaviorTask.CHECK_BREAKPOINT(pAgent, this.m_node, "enter", bResult ? EActionResult.EAR_success : EActionResult.EAR_failure);
+                    await CHECK_BREAKPOINT(pAgent, this.m_node, "enter", bResult ? EActionResult.EAR_success : EActionResult.EAR_failure);
 #endif
                 }
             }
@@ -754,7 +758,7 @@ namespace behaviac
             return bResult;
         }
 
-        public void onexit_action(Agent pAgent, EBTStatus status)
+        public async Task onexit_action(Agent pAgent, EBTStatus status)
         {
             this.onexit(pAgent, status);
 
@@ -768,24 +772,24 @@ namespace behaviac
                 }
                 else
                 {
-                    Debug.Check(status == EBTStatus.BT_SUCCESS);
+                    Debugs.Check(status == EBTStatus.BT_SUCCESS);
                 }
 
-                this.m_node.ApplyEffects(pAgent, phase);
+                await this.m_node.ApplyEffects(pAgent, phase);
             }
 
 #if !BEHAVIAC_RELEASE
 
-            if (Config.IsLoggingOrSocketing)
+            if (Configs.IsLoggingOrSocketing)
             {
-                //BEHAVIAC_PROFILE_DEBUGBLOCK("Debug", true);
+                //BEHAVIAC_PROFILE_DEBUGBLOCK("Debugs", true);
                 if (status == EBTStatus.BT_SUCCESS)
                 {
-                    BehaviorTask.CHECK_BREAKPOINT(pAgent, this.m_node, "exit", EActionResult.EAR_success);
+                    await CHECK_BREAKPOINT(pAgent, this.m_node, "exit", EActionResult.EAR_success);
                 }
                 else
                 {
-                    BehaviorTask.CHECK_BREAKPOINT(pAgent, this.m_node, "exit", EActionResult.EAR_failure);
+                    await CHECK_BREAKPOINT(pAgent, this.m_node, "exit", EActionResult.EAR_failure);
                 }
             }
 
@@ -811,25 +815,26 @@ namespace behaviac
     // ============================================================================
     public class AttachmentTask : BehaviorTask
     {
-        protected AttachmentTask()
+        public AttachmentTask(Workspace workspace) : base(workspace)
         {
         }
-
-        public override void traverse(bool childFirst, NodeHandler_t handler, Agent pAgent, object user_data)
+        public override Task traverse(bool childFirst, NodeHandler_t handler, Agent pAgent, object user_data)
         {
             handler(this, pAgent, user_data);
+            return Task.CompletedTask;
         }
     }
 
     // ============================================================================
     public class LeafTask : BehaviorTask
     {
-        public override void traverse(bool childFirst, NodeHandler_t handler, Agent pAgent, object user_data)
+        public override Task traverse(bool childFirst, NodeHandler_t handler, Agent pAgent, object user_data)
         {
             handler(this, pAgent, user_data);
+            return Task.CompletedTask;
         }
 
-        protected LeafTask()
+        public LeafTask(Workspace workspace) : base(workspace)
         {
         }
     }
@@ -837,10 +842,11 @@ namespace behaviac
     // ============================================================================
     public abstract class BranchTask : BehaviorTask
     {
-        protected BranchTask()
+       
+        public BranchTask(Workspace workspace):base(workspace)
         {
-        }
 
+        }
         public override void Clear()
         {
             base.Clear();
@@ -848,9 +854,9 @@ namespace behaviac
             this.m_currentTask = null;
         }
 
-        protected override bool onenter(Agent pAgent)
+        protected override Task<bool> onenter(Agent pAgent)
         {
-            return true;
+            return Task.FromResult(true);
         }
 
         protected override void onexit(Agent pAgent, EBTStatus status)
@@ -863,17 +869,17 @@ namespace behaviac
             //this.m_currentTask = null;
         }
 
-        private bool oneventCurrentNode(Agent pAgent, string eventName, Dictionary<uint, IInstantiatedVariable> eventParams)
+        private async Task<bool> oneventCurrentNode(Agent pAgent, string eventName, Dictionary<uint, IInstantiatedVariable> eventParams)
         {
-            Debug.Check(this.m_currentTask != null);
+            Debugs.Check(this.m_currentTask != null);
 
             if (this.m_currentTask != null)
             {
                 EBTStatus s = this.m_currentTask.GetStatus();
 
-                Debug.Check(s == EBTStatus.BT_RUNNING && this.m_node.HasEvents());
+                Debugs.Check(s == EBTStatus.BT_RUNNING && this.m_node.HasEvents());
 
-                bool bGoOn = this.m_currentTask.onevent(pAgent, eventName, eventParams);
+                bool bGoOn = await this.m_currentTask.onevent(pAgent, eventName, eventParams);
 
                 //give the handling back to parents
                 if (bGoOn && this.m_currentTask != null)
@@ -883,9 +889,9 @@ namespace behaviac
                     //back track the parents until the branch
                     while (parentBranch != null && parentBranch != this)
                     {
-                        Debug.Check(parentBranch.GetStatus() == EBTStatus.BT_RUNNING);
+                        Debugs.Check(parentBranch.GetStatus() == EBTStatus.BT_RUNNING);
 
-                        bGoOn = parentBranch.onevent(pAgent, eventName, eventParams);
+                        bGoOn = await parentBranch.onevent(pAgent, eventName, eventParams);
 
                         if (!bGoOn)
                         {
@@ -904,7 +910,7 @@ namespace behaviac
 
         // return false if the event handling needs to be stopped return true, the event hanlding
         // will be checked furtherly
-        public override bool onevent(Agent pAgent, string eventName, Dictionary<uint, IInstantiatedVariable> eventParams)
+        public override async Task<bool> onevent(Agent pAgent, string eventName, Dictionary<uint, IInstantiatedVariable> eventParams)
         {
             if (this.m_node.HasEvents())
             {
@@ -912,12 +918,12 @@ namespace behaviac
 
                 if (this.m_currentTask != null)
                 {
-                    bGoOn = this.oneventCurrentNode(pAgent, eventName, eventParams);
+                    bGoOn = await this.oneventCurrentNode(pAgent, eventName, eventParams);
                 }
 
                 if (bGoOn)
                 {
-                    bGoOn = base.onevent(pAgent, eventName, eventParams);
+                    bGoOn = await base.onevent(pAgent, eventName, eventParams);
                 }
 
                 return bGoOn;
@@ -926,18 +932,18 @@ namespace behaviac
             return true;
         }
 
-        private EBTStatus execCurrentTask(Agent pAgent, EBTStatus childStatus)
+        private async Task<EBTStatus> execCurrentTask(Agent pAgent, EBTStatus childStatus)
         {
-            Debug.Check(this.m_currentTask != null && this.m_currentTask.GetStatus() == EBTStatus.BT_RUNNING);
+            Debugs.Check(this.m_currentTask != null && this.m_currentTask.GetStatus() == EBTStatus.BT_RUNNING);
 
             //this.m_currentTask could be cleared in ::tick, to remember it
-            EBTStatus status = this.m_currentTask.exec(pAgent, childStatus);
+            EBTStatus status = await this.m_currentTask.exec(pAgent, childStatus);
 
             //give the handling back to parents
             if (status != EBTStatus.BT_RUNNING)
             {
-                Debug.Check(status == EBTStatus.BT_SUCCESS || status == EBTStatus.BT_FAILURE);
-                Debug.Check(this.m_currentTask.m_status == status);
+                Debugs.Check(status == EBTStatus.BT_SUCCESS || status == EBTStatus.BT_FAILURE);
+                Debugs.Check(this.m_currentTask.m_status == status);
 
                 BranchTask parentBranch = this.m_currentTask.GetParent();
 
@@ -948,11 +954,11 @@ namespace behaviac
                 {
                     if (parentBranch == this)
                     {
-                        status = parentBranch.update(pAgent, status);
+                        status = await parentBranch.update(pAgent, status);
                     }
                     else
                     {
-                        status = parentBranch.exec(pAgent, status);
+                        status = await parentBranch.exec(pAgent, status);
                     }
 
                     if (status == EBTStatus.BT_RUNNING)
@@ -960,7 +966,7 @@ namespace behaviac
                         return EBTStatus.BT_RUNNING;
                     }
 
-                    Debug.Check(parentBranch == this || parentBranch.m_status == status);
+                    Debugs.Check(parentBranch == this || parentBranch.m_status == status);
 
                     if (parentBranch == this)
                     {
@@ -974,28 +980,28 @@ namespace behaviac
             return status;
         }
 
-        protected override EBTStatus update_current(Agent pAgent, EBTStatus childStatus)
+        protected override async Task<EBTStatus> update_current(Agent pAgent, EBTStatus childStatus)
         {
             EBTStatus status = EBTStatus.BT_INVALID;
 
             if (this.m_currentTask != null)
             {
-                status = this.execCurrentTask(pAgent, childStatus);
-                Debug.Check(status == EBTStatus.BT_RUNNING ||
+                status = await this.execCurrentTask(pAgent, childStatus);
+                Debugs.Check(status == EBTStatus.BT_RUNNING ||
                             (status != EBTStatus.BT_RUNNING && this.m_currentTask == null));
             }
             else
             {
-                status = this.update(pAgent, childStatus);
+                status = await this.update(pAgent, childStatus);
             }
 
             return status;
         }
 
-        protected EBTStatus resume_branch(Agent pAgent, EBTStatus status)
+        protected async Task<EBTStatus> resume_branch(Agent pAgent, EBTStatus status)
         {
-            Debug.Check(this.m_currentTask != null);
-            Debug.Check(status == EBTStatus.BT_SUCCESS || status == EBTStatus.BT_FAILURE);
+            Debugs.Check(this.m_currentTask != null);
+            Debugs.Check(status == EBTStatus.BT_SUCCESS || status == EBTStatus.BT_FAILURE);
 
             BranchTask parent = null;
 
@@ -1013,7 +1019,7 @@ namespace behaviac
 
             if (parent != null)
             {
-                EBTStatus s = parent.exec(pAgent, status);
+                EBTStatus s = await parent.exec(pAgent, status);
 
                 return s;
             }
@@ -1025,6 +1031,7 @@ namespace behaviac
 
         //bookmark the current running node, it is different from m_activeChildIndex
         private BehaviorTask m_currentTask;
+
 
         public override BehaviorTask GetCurrentTask()
         {
@@ -1039,7 +1046,7 @@ namespace behaviac
                 //the leaf is set as the tree's current task instead of its parent
                 if (this.m_currentTask == null)
                 {
-                    Debug.Check(this.m_currentTask != this);
+                    Debugs.Check(this.m_currentTask != this);
                     this.m_currentTask = task;
                     task.SetHasManagingParent(true);
                 }
@@ -1057,32 +1064,32 @@ namespace behaviac
     // ============================================================================
     public class CompositeTask : BranchTask
     {
-        public override void traverse(bool childFirst, NodeHandler_t handler, Agent pAgent, object user_data)
+        public override async Task traverse(bool childFirst, NodeHandler_t handler, Agent pAgent, object user_data)
         {
             if (childFirst)
             {
                 for (int i = 0; i < this.m_children.Count; ++i)
                 {
                     BehaviorTask task = this.m_children[i];
-                    task.traverse(childFirst, handler, pAgent, user_data);
+                    await task.traverse(childFirst, handler, pAgent, user_data);
                 }
 
-                handler(this, pAgent, user_data);
+                await handler(this, pAgent, user_data);
             }
             else
             {
-                if (handler(this, pAgent, user_data))
+                if (await handler(this, pAgent, user_data))
                 {
                     for (int i = 0; i < this.m_children.Count; ++i)
                     {
                         BehaviorTask task = this.m_children[i];
-                        task.traverse(childFirst, handler, pAgent, user_data);
+                        await task.traverse(childFirst, handler, pAgent, user_data);
                     }
                 }
             }
         }
 
-        protected CompositeTask()
+        protected CompositeTask(Workspace workspace):base(workspace)
         {
             m_activeChildIndex = InvalidChildIndex;
         }
@@ -1100,7 +1107,7 @@ namespace behaviac
 
             if (!this.m_bIgnoreChildren)
             {
-                Debug.Check(node.GetChildrenCount() > 0);
+                Debugs.Check(node.GetChildrenCount() > 0);
 
                 int childrenCount = node.GetChildrenCount();
 
@@ -1118,13 +1125,13 @@ namespace behaviac
         {
             base.copyto(target);
 
-            Debug.Check(target is CompositeTask);
+            Debugs.Check(target is CompositeTask);
             CompositeTask ttask = target as CompositeTask;
 
             ttask.m_activeChildIndex = this.m_activeChildIndex;
 
-            Debug.Check(this.m_children.Count > 0);
-            Debug.Check(this.m_children.Count == ttask.m_children.Count);
+            Debugs.Check(this.m_children.Count > 0);
+            Debugs.Check(this.m_children.Count == ttask.m_children.Count);
 
             int count = this.m_children.Count;
 
@@ -1194,30 +1201,30 @@ namespace behaviac
     // ============================================================================
     public class SingeChildTask : BranchTask
     {
-        public override void traverse(bool childFirst, NodeHandler_t handler, Agent pAgent, object user_data)
+        public override async Task traverse(bool childFirst, NodeHandler_t handler, Agent pAgent, object user_data)
         {
             if (childFirst)
             {
                 if (this.m_root != null)
                 {
-                    this.m_root.traverse(childFirst, handler, pAgent, user_data);
+                    await this.m_root.traverse(childFirst, handler, pAgent, user_data);
                 }
 
-                handler(this, pAgent, user_data);
+                await handler(this, pAgent, user_data);
             }
             else
             {
-                if (handler(this, pAgent, user_data))
+                if (await handler(this, pAgent, user_data))
                 {
                     if (this.m_root != null)
                     {
-                        this.m_root.traverse(childFirst, handler, pAgent, user_data);
+                        await this.m_root.traverse(childFirst, handler, pAgent, user_data);
                     }
                 }
             }
         }
 
-        protected SingeChildTask()
+        protected SingeChildTask(Workspace workspace) : base(workspace)
         {
             m_root = null;
         }
@@ -1226,12 +1233,12 @@ namespace behaviac
         {
             base.Init(node);
 
-            Debug.Check(node.GetChildrenCount() <= 1);
+            Debugs.Check(node.GetChildrenCount() <= 1);
 
             if (node.GetChildrenCount() == 1)
             {
                 BehaviorNode childNode = node.GetChild(0);
-                Debug.Check(childNode != null);
+                Debugs.Check(childNode != null);
 
                 if (childNode != null)
                 {
@@ -1242,7 +1249,7 @@ namespace behaviac
             }
             else
             {
-                Debug.Check(true);
+                Debugs.Check(true);
             }
         }
 
@@ -1250,7 +1257,7 @@ namespace behaviac
         {
             base.copyto(target);
 
-            Debug.Check(target is SingeChildTask);
+            Debugs.Check(target is SingeChildTask);
             SingeChildTask ttask = target as SingeChildTask;
 
             if (this.m_root != null && ttask != null)
@@ -1259,18 +1266,18 @@ namespace behaviac
                 if (ttask.m_root == null)
                 {
                     BehaviorNode pNode = this.m_root.GetNode();
-                    Debug.Check(pNode is BehaviorTree);
+                    Debugs.Check(pNode is BehaviorTree);
                     if (pNode != null)
                     {
                         ttask.m_root = pNode.CreateAndInitTask();
                     }
 
-                    //Debug.Check(ttask.m_root is BehaviorTreeTask);
+                    //Debugs.Check(ttask.m_root is BehaviorTreeTask);
                     //BehaviorTreeTask btt = ttask.m_root as BehaviorTreeTask;
                     //btt.ModifyId(ttask);
                 }
 
-                Debug.Check(ttask.m_root != null);
+                Debugs.Check(ttask.m_root != null);
                 if (ttask.m_root != null)
                 {
                     this.m_root.copyto(ttask.m_root);
@@ -1295,11 +1302,11 @@ namespace behaviac
             base.load(node);
         }
 
-        protected override EBTStatus update(Agent pAgent, EBTStatus childStatus)
+        protected override async Task<EBTStatus> update(Agent pAgent, EBTStatus childStatus)
         {
             if (this.m_root != null)
             {
-                EBTStatus s = this.m_root.exec(pAgent, childStatus);
+                EBTStatus s = await this.m_root.exec(pAgent, childStatus);
                 return s;
             }
 
@@ -1319,18 +1326,18 @@ namespace behaviac
     // ============================================================================
     public abstract class DecoratorTask : SingeChildTask
     {
-        protected DecoratorTask()
+        protected DecoratorTask(Workspace workspace) : base(workspace)
         {
         }
 
-        protected override EBTStatus update_current(Agent pAgent, EBTStatus childStatus)
+        protected override Task<EBTStatus> update_current(Agent pAgent, EBTStatus childStatus)
         {
             return base.update_current(pAgent, childStatus);
         }
 
-        protected override EBTStatus update(Agent pAgent, EBTStatus childStatus)
+        protected override async Task<EBTStatus> update(Agent pAgent, EBTStatus childStatus)
         {
-            Debug.Check(this.m_node is DecoratorNode);
+            Debugs.Check(this.m_node is DecoratorNode);
             DecoratorNode node = (DecoratorNode)this.m_node;
 
             EBTStatus status = EBTStatus.BT_INVALID;
@@ -1352,7 +1359,7 @@ namespace behaviac
                 }
             }
 
-            status = base.update(pAgent, childStatus);
+            status = await base.update(pAgent, childStatus);
 
             if (!node.m_bDecorateWhenChildEnds || status != EBTStatus.BT_RUNNING)
             {
@@ -1401,7 +1408,7 @@ namespace behaviac
                 }
             }
 
-            Debug.Check(false, string.Format("The variable \"{0}\" with type \"{1}\" can not be found!", variableName, typeof(VariableType).Name));
+            Debugs.Check(false, string.Format("The variable \"{0}\" with type \"{1}\" can not be found!", variableName, typeof(VariableType).Name));
         }
 
         internal void AddVariables(Dictionary<uint, IInstantiatedVariable> vars)
@@ -1424,7 +1431,7 @@ namespace behaviac
 
             if (this.m_node != null)
             {
-                Debug.Check(this.m_node is BehaviorTree);
+                Debugs.Check(this.m_node is BehaviorTree);
                 ((BehaviorTree)this.m_node).InstantiatePars(this.LocalVars);
             }
         }
@@ -1435,7 +1442,7 @@ namespace behaviac
 
             if (this.m_node != null)
             {
-                Debug.Check(this.m_node is BehaviorTree);
+                Debugs.Check(this.m_node is BehaviorTree);
                 ((BehaviorTree)this.m_node).UnInstantiatePars(this.LocalVars);
             }
 
@@ -1457,7 +1464,7 @@ namespace behaviac
             //CSerializationID  btId = new CSerializationID("BehaviorTree");
             //ISerializableNode btNodeRoot = node.newChild(btId);
 
-            //Debug.Check(this.GetNode() is BehaviorTree);
+            //Debugs.Check(this.GetNode() is BehaviorTree);
             //BehaviorTree bt = (BehaviorTree)this.GetNode();
 
             //CSerializationID  sourceId = new CSerializationID("source");
@@ -1480,9 +1487,9 @@ namespace behaviac
 
         public string GetName()
         {
-            Debug.Check(this.m_node is BehaviorTree);
+            Debugs.Check(this.m_node is BehaviorTree);
             BehaviorTree bt = this.m_node as BehaviorTree;
-            Debug.Check(bt != null);
+            Debugs.Check(bt != null);
             return bt.GetName();
         }
 
@@ -1492,18 +1499,16 @@ namespace behaviac
             this.m_endStatus = status;
         }
 
-        public EBTStatus resume(Agent pAgent, EBTStatus status)
+        public Task<EBTStatus> resume(Agent pAgent, EBTStatus status)
         {
-            EBTStatus s = base.resume_branch(pAgent, status);
-
-            return s;
+            return base.resume_branch(pAgent, status);
         }
 
-        protected override bool onenter(Agent pAgent)
+        protected override Task<bool> onenter(Agent pAgent)
         {
             pAgent.LogJumpTree(this.GetName());
 
-            return true;
+            return Task.FromResult(true);
         }
 
         protected override void onexit(Agent pAgent, EBTStatus s)
@@ -1516,6 +1521,10 @@ namespace behaviac
 
         #region FSM
         private List<BehaviorTask> m_states = null;
+
+        public BehaviorTreeTask(Workspace workspace) : base(workspace)
+        {
+        }
 
         public BehaviorTask GetChildById(int nodeId)
         {
@@ -1536,10 +1545,10 @@ namespace behaviac
         }
         #endregion FSM
 
-        protected override EBTStatus update_current(Agent pAgent, EBTStatus childStatus)
+        protected override async Task<EBTStatus> update_current(Agent pAgent, EBTStatus childStatus)
         {
-            Debug.Check(this.m_node != null);
-            Debug.Check(this.m_node is BehaviorTree);
+            Debugs.Check(this.m_node != null);
+            Debugs.Check(this.m_node is BehaviorTree);
 
             this.m_excutingTreeTask = pAgent.ExcutingTreeTask;
             pAgent.ExcutingTreeTask = this;
@@ -1549,11 +1558,11 @@ namespace behaviac
 
             if (tree.IsFSM)
             {
-                status = this.update(pAgent, childStatus);
+                status = await this.update(pAgent, childStatus);
             }
             else
             {
-                status = base.update_current(pAgent, childStatus);
+                status = await base.update_current(pAgent, childStatus);
                 if ((status == EBTStatus.BT_RUNNING) && (this.m_endStatus != EBTStatus.BT_INVALID))
                 {
                     this.end(pAgent, this.m_endStatus);
@@ -1566,15 +1575,15 @@ namespace behaviac
             return status;
         }
 
-        private void end(Agent pAgent, EBTStatus status)
+        private async Task end(Agent pAgent, EBTStatus status)
         {
-            this.traverse(true, end_handler_, pAgent, status);
+            await this.traverse(true, end_handler_, pAgent, status);
         }
 
-        protected override EBTStatus update(Agent pAgent, EBTStatus childStatus)
+        protected override async Task<EBTStatus> update(Agent pAgent, EBTStatus childStatus)
         {
-            Debug.Check(this.m_node != null);
-            Debug.Check(this.m_root != null);
+            Debugs.Check(this.m_node != null);
+            Debugs.Check(this.m_root != null);
 
             if (childStatus != EBTStatus.BT_RUNNING)
             {
@@ -1583,15 +1592,15 @@ namespace behaviac
 
             EBTStatus status = EBTStatus.BT_INVALID;
 
-            status = base.update(pAgent, childStatus);
+            status = await base.update(pAgent, childStatus);
 
-            Debug.Check(status != EBTStatus.BT_INVALID);
+            Debugs.Check(status != EBTStatus.BT_INVALID);
 
             // When the End node takes effect, it always returns BT_RUNNING
             // and m_endStatus should always be BT_SUCCESS or BT_FAILURE
             if ((status == EBTStatus.BT_RUNNING) && (this.m_endStatus != EBTStatus.BT_INVALID))
             {
-                this.end(pAgent, this.m_endStatus);
+                await this.end(pAgent, this.m_endStatus);
                 var es = this.m_endStatus;
                 this.m_endStatus = EBTStatus.BT_INVALID;
                 return es;

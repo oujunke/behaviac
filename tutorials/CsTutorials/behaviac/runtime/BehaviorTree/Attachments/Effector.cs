@@ -29,6 +29,10 @@ namespace behaviac
         {
             public EPhase m_phase = EPhase.E_SUCCESS;
 
+            public EffectorConfig(Workspace workspace) : base(workspace)
+            {
+            }
+
             public override bool load(List<property_t> properties)
             {
                 bool loaded = base.load(properties);
@@ -55,7 +59,7 @@ namespace behaviac
                             }
                             else
                             {
-                                Debug.Check(false);
+                                Debugs.Check(false);
                             }
 
                             break;
@@ -64,7 +68,7 @@ namespace behaviac
                 }
                 catch (Exception ex)
                 {
-                    Debug.Check(false, ex.Message);
+                    Debugs.Check(false, ex.Message);
                     loaded = false;
                 }
 
@@ -72,9 +76,9 @@ namespace behaviac
             }
         }
 
-        public Effector()
+        public Effector(Workspace workspace):base(workspace)
         {
-            m_ActionConfig = new EffectorConfig();
+            m_ActionConfig = new EffectorConfig(workspace);
         }
 
         //~Effector()

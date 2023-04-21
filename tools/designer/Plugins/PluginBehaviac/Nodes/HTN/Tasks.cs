@@ -22,9 +22,9 @@ using Behaviac.Design.Attributes;
 namespace PluginBehaviac.Nodes
 {
     [NodeDesc("Composites:Task", "task_icon")]
-    public class Task : Behaviac.Design.Nodes.Task
+    public class Tasks : Behaviac.Design.Nodes.Tasks
     {
-        public Task()
+        public Tasks()
         : base(Resources.Task, Resources.TaskDesc)
         {
         }
@@ -33,7 +33,7 @@ namespace PluginBehaviac.Nodes
         {
             get
             {
-                return "Task";
+                return "Tasks";
             }
         }
 

@@ -189,8 +189,8 @@
     <Compile Include="Network\MsgReceiver.cs" />
     <Compile Include="Network\NetworkManager.cs" />
     <Compile Include="Nodes\BaseNode.cs" />
-    <Compile Include="Nodes\Method.cs" />
-    <Compile Include="Nodes\Task.cs" />
+    <Compile Include="Nodes\Methods.cs" />
+    <Compile Include="Nodes\Tasks.cs" />
     <Compile Include="NodeUI\ActionUIPolicy.cs" />
     <Compile Include="NodeUI\BehaviorUIPolicy.cs" />
     <Compile Include="NodeUI\AttachActionUIPolicy.cs" />
@@ -206,7 +206,7 @@
     <Compile Include="External\ExtendedGraphics.cs" />
     <Compile Include="FileManagers\FileManager.cs" />
     <Compile Include="FileManagers\FileManagerXML.cs" />
-    <Compile Include="Nodes\Action.cs" />
+    <Compile Include="Nodes\Actions.cs" />
     <Compile Include="Nodes\ReferencedBehavior.cs" />
     <Compile Include="Nodes\Behavior.cs" />
     <Compile Include="Nodes\Condition.cs" />

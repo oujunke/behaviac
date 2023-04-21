@@ -139,7 +139,7 @@ namespace Behaviac.Design.Attributes
                 //tableLayoutPanel.SetRowSpan(propertyGrid, tableLayoutPanel.RowCount - 1);
                 //tableLayoutPanel.SetColumnSpan(propertyGrid, tableLayoutPanel.ColumnCount);
 
-                Nodes.Action action = this._object as Nodes.Action;
+                Nodes.Actions action = this._object as Nodes.Actions;
 
                 if (action == null)
                 {
@@ -158,7 +158,7 @@ namespace Behaviac.Design.Attributes
             }
         }
 
-        void createParamEditor(DesignerStructPropertyInfo structParam, Nodes.Action action)
+        void createParamEditor(DesignerStructPropertyInfo structParam, Nodes.Actions action)
         {
             MethodDef method = action.Method;
 

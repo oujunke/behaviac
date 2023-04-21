@@ -9,16 +9,14 @@ namespace tutorial_7
     class Program
     {
         static FirstAgent g_FirstAgent;
-
+        static behaviac.Workspace Instance;
         static bool InitBehavic()
         {
             Console.WriteLine("InitBehavic");
-
-            behaviac.Config.IsSocketBlocking = true;
-            //behaviac.Config.SocketPort = 60636;
-
-            behaviac.Workspace.Instance.FilePath = "../../exported";
-            behaviac.Workspace.Instance.FileFormat = behaviac.Workspace.EFileFormat.EFF_xml;
+            Instance = behaviac.Workspace.CreatWorkspace();
+            Instance.Configs.IsSocketBlocking = true;
+            Instance.FilePath = "../../exported";
+            Instance.FileFormat = behaviac.Workspace.EFileFormat.EFF_xml;
 
             return true;
         }
@@ -26,9 +24,9 @@ namespace tutorial_7
         static bool InitPlayer(string btName)
         {
             Console.WriteLine("InitPlayer : {0}", btName);
-
-            g_FirstAgent = new FirstAgent();
-
+            FirstAgentImp agentImp = new FirstAgentImp();
+            g_FirstAgent = new FirstAgent(agentImp,Instance);
+            agentImp.FirstAgent = g_FirstAgent;
             bool bRet = g_FirstAgent.btload(btName);
             Debug.Assert(bRet);
 
@@ -48,9 +46,9 @@ namespace tutorial_7
             {
                 Console.WriteLine("frame {0}", ++frames);
 
-                behaviac.Workspace.Instance.DebugUpdate();
+                Instance.DebugUpdate();
 
-                status = g_FirstAgent.btexec();
+                status = g_FirstAgent.btexec().Result;
             }
         }
 
@@ -65,7 +63,7 @@ namespace tutorial_7
         {
             Console.WriteLine("CleanupBehaviac");
 
-            behaviac.Workspace.Instance.Cleanup();
+            Instance.Cleanup();
         }
 
         static void Main(string[] args)

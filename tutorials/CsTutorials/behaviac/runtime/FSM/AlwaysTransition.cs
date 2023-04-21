@@ -12,6 +12,7 @@
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace behaviac
 {
@@ -25,15 +26,16 @@ namespace behaviac
             ETP_Exit,
         }
 
-        public AlwaysTransition()
-        {
-        }
 
         //~AlwaysTransition()
         //{
         //}
 
         protected ETransitionPhase m_transitionPhase = ETransitionPhase.ETP_Always;
+
+        public AlwaysTransition(Workspace workspace) : base(workspace)
+        {
+        }
 
         public ETransitionPhase TransitionPhase
         {
@@ -48,9 +50,9 @@ namespace behaviac
         }
 
 
-        protected override void load(int version, string agentType, List<property_t> properties)
+        protected override  async Task  load(int version, string agentType, List<property_t> properties)
         {
-            base.load(version, agentType, properties);
+            await base.load(version, agentType, properties);
 
             for (int i = 0; i < properties.Count; ++i)
             {
@@ -76,7 +78,7 @@ namespace behaviac
                     }
                     else
                     {
-                        Debug.Check(false);
+                        Debugs.Check(false);
                     }
                 }
             }
@@ -96,26 +98,26 @@ namespace behaviac
         protected override BehaviorTask createTask()
         {
             //return new StartConditionTask();
-            Debug.Check(false);
+            Debugs.Check(false);
             return null;
         }
 
-        public override bool Evaluate(Agent pAgent, EBTStatus status)
+        public override Task<bool> Evaluate(Agent pAgent, EBTStatus status)
         {
             if (this.m_transitionPhase == ETransitionPhase.ETP_Always)
             {
-                return true;
+                return Task.FromResult(true);
             }
             else if (status == EBTStatus.BT_SUCCESS && (this.m_transitionPhase == ETransitionPhase.ETP_Success || this.m_transitionPhase == ETransitionPhase.ETP_Exit))
             {
-                return true;
+                return Task.FromResult(true);
             }
             else if (status == EBTStatus.BT_FAILURE && (this.m_transitionPhase == ETransitionPhase.ETP_Failure || this.m_transitionPhase == ETransitionPhase.ETP_Exit))
             {
-                return true;
+                return Task.FromResult(true);
             }
 
-            return false;
+            return Task.FromResult(false);
         }
     }
 

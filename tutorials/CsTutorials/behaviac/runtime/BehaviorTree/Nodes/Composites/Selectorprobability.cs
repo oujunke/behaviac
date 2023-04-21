@@ -12,14 +12,15 @@
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace behaviac
 {
     public class SelectorProbability : BehaviorNode
     {
-        protected override void load(int version, string agentType, List<property_t> properties)
+        protected override  async Task  load(int version, string agentType, List<property_t> properties)
         {
-            base.load(version, agentType, properties);
+            await base.load(version, agentType, properties);
 
             for (int i = 0; i < properties.Count; ++i)
             {
@@ -27,14 +28,14 @@ namespace behaviac
 
                 if (p.name == "RandomGenerator")
                 {
-                    this.m_method = AgentMeta.ParseMethod(p.value);
+                    this.m_method = AgentMeta.ParseMethod(p.value, Workspace);
                 }
             }
         }
 
         public override void AddChild(BehaviorNode pBehavior)
         {
-            Debug.Check(pBehavior is DecoratorWeight);
+            Debugs.Check(pBehavior is DecoratorWeight);
             DecoratorWeight pDW = (DecoratorWeight)(pBehavior);
 
             if (pDW != null)
@@ -43,7 +44,7 @@ namespace behaviac
             }
             else
             {
-                Debug.Check(false, "only DecoratorWeightTask can be children");
+                Debugs.Check(false, "only DecoratorWeightTask can be children");
             }
         }
 
@@ -59,12 +60,16 @@ namespace behaviac
 
         protected override BehaviorTask createTask()
         {
-            SelectorProbabilityTask pTask = new SelectorProbabilityTask();
+            SelectorProbabilityTask pTask = new SelectorProbabilityTask(Workspace);
 
             return pTask;
         }
 
         protected IMethod m_method;
+
+        public SelectorProbability(Workspace workspace) : base(workspace)
+        {
+        }
 
         ///Executes behaviors randomly, based on a given set of weights.
         /** The weights are not percentages, but rather simple ratios.
@@ -90,9 +95,9 @@ namespace behaviac
                 base.load(node);
             }
 
-            protected override bool onenter(Agent pAgent)
+            protected override async Task<bool> onenter(Agent pAgent)
             {
-                Debug.Check(this.m_children.Count > 0);
+                Debugs.Check(this.m_children.Count > 0);
 				
 				//if the following assert failed, just comment it out
                 //Debug.Check(this.m_activeChildIndex == CompositeTask.InvalidChildIndex);
@@ -109,15 +114,15 @@ namespace behaviac
                 {
                     BehaviorTask task = this.m_children[i];
 
-                    Debug.Check(task is DecoratorWeight.DecoratorWeightTask);
+                    Debugs.Check(task is DecoratorWeight.DecoratorWeightTask);
                     DecoratorWeight.DecoratorWeightTask pWT = (DecoratorWeight.DecoratorWeightTask)task;
 
-                    int weight = pWT.GetWeight(pAgent);
+                    int weight =await pWT.GetWeight(pAgent);
                     this.m_weightingMap.Add(weight);
                     this.m_totalSum += weight;
                 }
 
-                Debug.Check(this.m_weightingMap.Count == this.m_children.Count);
+                Debugs.Check(this.m_weightingMap.Count == this.m_children.Count);
 
                 return true;
             }
@@ -128,9 +133,9 @@ namespace behaviac
                 base.onexit(pAgent, s);
             }
 
-            protected override EBTStatus update(Agent pAgent, EBTStatus childStatus)
+            protected override async Task<EBTStatus> update(Agent pAgent, EBTStatus childStatus)
             {
-                Debug.Check(this.GetNode() is SelectorProbability);
+                Debugs.Check(this.GetNode() is SelectorProbability);
                 SelectorProbability pSelectorProbabilityNode = (SelectorProbability)(this.GetNode());
 
                 if (childStatus != EBTStatus.BT_RUNNING)
@@ -143,15 +148,15 @@ namespace behaviac
                 {
                     BehaviorTask pNode = this.m_children[this.m_activeChildIndex];
 
-                    EBTStatus status = pNode.exec(pAgent);
+                    EBTStatus status =await pNode.exec(pAgent);
 
                     return status;
                 }
 
-                Debug.Check(this.m_weightingMap.Count == this.m_children.Count);
+                Debugs.Check(this.m_weightingMap.Count == this.m_children.Count);
 
                 //generate a number between 0 and the sum of the weights
-                float chosen = this.m_totalSum * CompositeStochastic.CompositeStochasticTask.GetRandomValue(pSelectorProbabilityNode.m_method, pAgent);
+                float chosen = this.m_totalSum * await CompositeStochastic.CompositeStochasticTask.GetRandomValue(pSelectorProbabilityNode.m_method, pAgent);
 
                 float sum = 0;
 
@@ -165,7 +170,7 @@ namespace behaviac
                     {
                         BehaviorTask pChild = this.m_children[i];
 
-                        EBTStatus status = pChild.exec(pAgent);
+                        EBTStatus status =await pChild.exec(pAgent);
 
                         if (status == EBTStatus.BT_RUNNING)
                         {
@@ -185,6 +190,10 @@ namespace behaviac
 
             private List<int> m_weightingMap = new List<int>();
             private int m_totalSum;
+
+            public SelectorProbabilityTask(Workspace workspace) : base(workspace)
+            {
+            }
         }
     }
 }

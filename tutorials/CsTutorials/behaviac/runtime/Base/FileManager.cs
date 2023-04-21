@@ -28,33 +28,19 @@ namespace behaviac
     {
         #region Singleton
 
-        private static FileManager ms_instance = null;
-
-        public FileManager()
+        public Workspace Workspace { get; private set; }
+        public Config Configs { set; get; }
+        public FileManager(Workspace workspace)
         {
-            Debug.Check(ms_instance == null);
-            ms_instance = this;
+            Workspace = workspace;
+            Configs = workspace.Configs;
         }
-
         //~FileManager()
         //{
         //    ms_instance = null;
         //}
 
         #endregion Singleton
-
-        public static FileManager Instance
-        {
-            get
-            {
-                if (ms_instance == null)
-                {
-                    ms_instance = new FileManager();
-                }
-
-                return ms_instance;
-            }
-        }
 
         /// <summary>
         /// open the specified file, this function should be consistent with
@@ -131,7 +117,7 @@ namespace behaviac
             catch (System.Exception e)
             {
                 string msg = string.Format("FileManager::FileOpen exception:'{0}'", filePath);
-                behaviac.Debug.LogWarning(msg + e.Message + e.StackTrace);
+                Workspace.Debugs.LogWarning(msg + e.Message + e.StackTrace);
             }
 
             return null;
@@ -210,7 +196,7 @@ namespace behaviac
             catch (System.Exception e)
             {
                 string msg = string.Format("FileManager::DirOpen exception:'{0}'", szDir);
-                behaviac.Debug.LogWarning(msg + e.Message + e.StackTrace);
+                Workspace.Debugs.LogWarning(msg + e.Message + e.StackTrace);
             }
 
             return null;

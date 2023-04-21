@@ -42,6 +42,7 @@
     <Compile Include="runtime\Agent\Agent.cs" />
     <Compile Include="runtime\Agent\Context.cs" />
     <Compile Include="runtime\Base\Attributs.cs" />
+    <Compile Include="runtime\Base\CompareValueString.cs" />
     <Compile Include="runtime\Base\CRC32.cs" />
     <Compile Include="runtime\Base\FileManager.cs" />
     <Compile Include="runtime\Base\LogManager.cs" />
@@ -54,13 +55,14 @@
     <Compile Include="runtime\Base\socketconnect.cs" />
     <Compile Include="runtime\Base\socketconnect_base.cs" />
     <Compile Include="runtime\Base\Utils.cs" />
+    <Compile Include="runtime\Base\WorkspaceGlobalData.cs" />
     <Compile Include="runtime\BehaviorTree\Attachments\AttachAction.cs" />
     <Compile Include="runtime\BehaviorTree\Attachments\Effector.cs" />
     <Compile Include="runtime\BehaviorTree\Attachments\Event.cs" />
     <Compile Include="runtime\BehaviorTree\Attachments\Precondition.cs" />
     <Compile Include="runtime\BehaviorTree\BehaviorTree.cs" />
     <Compile Include="runtime\BehaviorTree\BehaviorTree_task.cs" />
-    <Compile Include="runtime\BehaviorTree\Nodes\Actions\Action.cs" />
+    <Compile Include="runtime\BehaviorTree\Nodes\Actions\Actions.cs" />
     <Compile Include="runtime\BehaviorTree\Nodes\Actions\Assignment.cs" />
     <Compile Include="runtime\BehaviorTree\Nodes\Actions\Compute.cs" />
     <Compile Include="runtime\BehaviorTree\Nodes\Actions\End.cs" />
@@ -112,10 +114,10 @@
     <Compile Include="runtime\FSM\WaitState.cs" />
     <Compile Include="runtime\FSM\WaitTransition.cs" />
     <Compile Include="runtime\HTN\AgentState.cs" />
-    <Compile Include="runtime\HTN\Method.cs" />
+    <Compile Include="runtime\HTN\Methods.cs" />
     <Compile Include="runtime\HTN\Planner.cs" />
     <Compile Include="runtime\HTN\PlannerTask.cs" />
-    <Compile Include="runtime\HTN\Task.cs" />
+    <Compile Include="runtime\HTN\Tasks.cs" />
     <Compile Include="runtime\Workspace.cs" />
   </ItemGroup>
   <ItemGroup>

@@ -7,6 +7,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 
 ///<<< BEGIN WRITING YOUR CODE FILE_INIT
 
@@ -16,6 +17,11 @@ public class FirstAgent : behaviac.Agent
 ///<<< BEGIN WRITING YOUR CODE FirstAgent
 ///<<< END WRITING YOUR CODE
 {
+	private IFirstAgentImp _methodImp;
+	public FirstAgent(IFirstAgentImp methodImp,behaviac.Workspace workspace):base(workspace)
+	{
+	    _methodImp=methodImp;
+	}
 	private int p1 = 0;
 	public void _set_p1(int value)
 	{
@@ -26,20 +32,9 @@ public class FirstAgent : behaviac.Agent
 		return p1;
 	}
 
-	public behaviac.EBTStatus Say(string value, bool isLatent)
+	public async Task<behaviac.EBTStatus> Say(string value, bool isLatent)
 	{
-///<<< BEGIN WRITING YOUR CODE Say
-        if (isLatent && behaviac.Workspace.Instance.FrameSinceStartup < 3)
-        {
-            Console.WriteLine("\n{0} [Running]\n", value);
-
-            return behaviac.EBTStatus.BT_RUNNING;
-        }
-
-        Console.WriteLine("\n{0} [Success]\n", value);
-
-        return behaviac.EBTStatus.BT_SUCCESS;
-///<<< END WRITING YOUR CODE
+		return await _methodImp.Say(value, isLatent);
 	}
 
 ///<<< BEGIN WRITING YOUR CODE CLASS_PART

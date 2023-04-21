@@ -12,12 +12,13 @@
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace behaviac
 {
     public class DecoratorLoopUntil : DecoratorCount
     {
-        public DecoratorLoopUntil()
+        public DecoratorLoopUntil(Workspace workspace) : base(workspace)
         {
             m_until = true;
         }
@@ -26,9 +27,9 @@ namespace behaviac
         //{
         //}
 
-        protected override void load(int version, string agentType, List<property_t> properties)
+        protected override  async Task  load(int version, string agentType, List<property_t> properties)
         {
-            base.load(version, agentType, properties);
+            await base.load(version, agentType, properties);
 
             for (int i = 0; i < properties.Count; ++i)
             {
@@ -50,7 +51,7 @@ namespace behaviac
 
         protected override BehaviorTask createTask()
         {
-            DecoratorLoopUntilTask pTask = new DecoratorLoopUntilTask();
+            DecoratorLoopUntilTask pTask = new DecoratorLoopUntilTask(Workspace);
 
             return pTask;
         }
@@ -65,8 +66,7 @@ namespace behaviac
 
         private class DecoratorLoopUntilTask : DecoratorCountTask
         {
-            public DecoratorLoopUntilTask()
-            : base()
+            public DecoratorLoopUntilTask(Workspace workspace) : base(workspace)
             {
             }
 
@@ -97,7 +97,7 @@ namespace behaviac
                     return EBTStatus.BT_SUCCESS;
                 }
 
-                Debug.Check(this.GetNode() is DecoratorLoopUntil);
+                Debugs.Check(this.GetNode() is DecoratorLoopUntil);
                 DecoratorLoopUntil pDecoratorLoopUntil = (DecoratorLoopUntil)(this.GetNode());
 
                 if (pDecoratorLoopUntil.m_until)

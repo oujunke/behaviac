@@ -11,7 +11,7 @@
       <property Opl="int Self.FirstAgent::p1" />
       <property Opr="const int 1" />
     </node>
-    <node class="Action" id="2">
+    <node class="Actions" id="2">
       <property Method="Self.FirstAgent::Say(&quot;Hello subtree!&quot;)" />
       <property ResultOption="BT_SUCCESS" />
     </node>

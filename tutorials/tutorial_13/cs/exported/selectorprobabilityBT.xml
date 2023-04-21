@@ -6,7 +6,7 @@
     <node class="DecoratorWeight" id="4">
       <property DecorateWhenChildEnds="false" />
       <property Weight="const int 20" />
-      <node class="Action" id="1">
+      <node class="Actions" id="1">
         <property Method="Self.FirstAgent::Say(&quot;A&quot;)" />
         <property ResultOption="BT_SUCCESS" />
       </node>
@@ -14,7 +14,7 @@
     <node class="DecoratorWeight" id="5">
       <property DecorateWhenChildEnds="false" />
       <property Weight="const int 30" />
-      <node class="Action" id="2">
+      <node class="Actions" id="2">
         <property Method="Self.FirstAgent::Say(&quot;B&quot;)" />
         <property ResultOption="BT_SUCCESS" />
       </node>
@@ -22,7 +22,7 @@
     <node class="DecoratorWeight" id="6">
       <property DecorateWhenChildEnds="false" />
       <property Weight="const int 50" />
-      <node class="Action" id="3">
+      <node class="Actions" id="3">
         <property Method="Self.FirstAgent::Say(&quot;C&quot;)" />
         <property ResultOption="BT_SUCCESS" />
       </node>

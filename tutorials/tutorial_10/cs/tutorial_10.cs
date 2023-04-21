@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Text;
 using System.IO;
 using System.Diagnostics;
+using System.Threading.Tasks;
 
 namespace tutorial_10
 {
@@ -10,15 +11,13 @@ namespace tutorial_10
     {
         static FirstAgent g_FirstAgent;
         static MyFileManager g_MyFileManager;
-
+        static behaviac.Workspace Instance;
         static bool InitBehavic()
         {
             Console.WriteLine("InitBehavic");
-
-            g_MyFileManager = new MyFileManager();
-
-            behaviac.Workspace.Instance.FilePath = "../../exported";
-            behaviac.Workspace.Instance.FileFormat = behaviac.Workspace.EFileFormat.EFF_xml;
+            Instance = behaviac.Workspace.CreatWorkspace();
+            Instance.FilePath = "../../exported";
+            Instance.FileFormat = behaviac.Workspace.EFileFormat.EFF_xml;
 
             return true;
         }
@@ -27,7 +26,7 @@ namespace tutorial_10
         {
             Console.WriteLine("InitPlayer");
 
-            g_FirstAgent = new FirstAgent();
+            g_FirstAgent = new FirstAgent(new FirstAgentImp(), Instance);
 
             bool bRet = g_FirstAgent.btload("FirstBT");
             Debug.Assert(bRet);
@@ -37,7 +36,7 @@ namespace tutorial_10
             return bRet;
         }
 
-        static void UpdateLoop()
+        static  void UpdateLoop()
         {
             Console.WriteLine("UpdateLoop");
 
@@ -48,7 +47,7 @@ namespace tutorial_10
             {
                 Console.WriteLine("frame {0}", ++frames);
 
-                status = g_FirstAgent.btexec();
+                status =g_FirstAgent.btexec().Result;
             }
         }
 
@@ -63,7 +62,7 @@ namespace tutorial_10
         {
             Console.WriteLine("CleanupBehaviac");
 
-            behaviac.Workspace.Instance.Cleanup();
+            Instance.Cleanup();
 
             g_MyFileManager = null;
         }

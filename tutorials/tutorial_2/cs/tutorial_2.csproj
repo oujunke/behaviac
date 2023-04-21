@@ -43,6 +43,8 @@
     <Compile Include="behaviac_generated\behaviors\generated_behaviors.cs" />
     <Compile Include="behaviac_generated\types\AgentProperties.cs" />
     <Compile Include="behaviac_generated\types\FirstAgent.cs" />
+    <Compile Include="behaviac_generated\types\IFirstAgentImp.cs" />
+    <Compile Include="FirstAgentImp.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="tutorial_2.cs" />
   </ItemGroup>

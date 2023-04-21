@@ -186,10 +186,10 @@ namespace behaviac
                 agentInstanceName = agentInstanceName.Replace(".", "::");
 
                 string ni = BehaviorTask.GetTickInfo(a, root, "plan");
-                int count = Workspace.Instance.GetActionCount(ni) + 1;
+                int count = Workspace.GetActionCount(ni) + 1;
                 string buffer = string.Format("[plan_begin]{0}#{1} {2} {3}\n", agentClassName, agentInstanceName, ni, count);
 
-                LogManager.Instance.Log(buffer);
+                Workspace.LogManagers.Log(buffer);
 
                 a.LogVariables(true);
             }
@@ -212,7 +212,7 @@ namespace behaviac
                 string ni = BehaviorTask.GetTickInfo(a, root, null);
                 string buffer = string.Format("[plan_end]{0}#{1} {2}\n", agentClassName, agentInstanceName, ni);
 
-                LogManager.Instance.Log(buffer);
+                Workspace.LogManagers.Log(buffer);
             }
 
 #endif
@@ -226,7 +226,7 @@ namespace behaviac
             {
                 string ni = BehaviorTask.GetTickInfo(a, n, null);
 
-                LogManager.Instance.Log("[plan_node_begin]{0}\n", ni);
+                Workspace.LogManagers.Log("[plan_node_begin]{0}\n", ni);
                 a.LogVariables(true);
             }
 
@@ -241,7 +241,7 @@ namespace behaviac
             {
                 string ni = BehaviorTask.GetTickInfo(a, n, null);
 
-                LogManager.Instance.Log("[plan_node_pre_failed]{0}\n", ni);
+                Workspace.LogManagers.Log("[plan_node_pre_failed]{0}\n", ni);
             }
 
 #endif
@@ -255,7 +255,7 @@ namespace behaviac
             {
                 string ni = BehaviorTask.GetTickInfo(a, n, null);
 
-                LogManager.Instance.Log("[plan_node_end]{0} {1}\n", ni, result);
+                Workspace.LogManagers.Log("[plan_node_end]{0} {1}\n", ni, result);
             }
 
 #endif
@@ -268,7 +268,7 @@ namespace behaviac
             if (Config.IsLoggingOrSocketing)
             {
                 string ni = BehaviorTask.GetTickInfo(a, referencedNode, null);
-                LogManager.Instance.Log("[plan_referencetree_enter]{0} {1}.xml\n", ni, referencedNode.GetReferencedTree(a));
+                Workspace.LogManagers.Log("[plan_referencetree_enter]{0} {1}.xml\n", ni, referencedNode.GetReferencedTree(a));
             }
 
 #endif
@@ -281,7 +281,7 @@ namespace behaviac
             if (Config.IsLoggingOrSocketing)
             {
                 string ni = BehaviorTask.GetTickInfo(a, referencedNode, null);
-                LogManager.Instance.Log("[plan_referencetree_exit]{0} {1}.xml\n", ni, referencedNode.GetReferencedTree(a));
+                Workspace.LogManagers.Log("[plan_referencetree_exit]{0} {1}.xml\n", ni, referencedNode.GetReferencedTree(a));
             }
 
 #endif
@@ -294,7 +294,7 @@ namespace behaviac
             if (Config.IsLoggingOrSocketing)
             {
                 string ni = BehaviorTask.GetTickInfo(a, m, null);
-                LogManager.Instance.Log("[plan_method_begin]{0}\n", ni);
+                Workspace.LogManagers.Log("[plan_method_begin]{0}\n", ni);
 
                 a.LogVariables(true);
             }
@@ -309,7 +309,7 @@ namespace behaviac
             if (Config.IsLoggingOrSocketing)
             {
                 string ni = BehaviorTask.GetTickInfo(a, m, null);
-                LogManager.Instance.Log("[plan_method_end]{0} {1}\n", ni, result);
+                Workspace.LogManagers.Log("[plan_method_end]{0} {1}\n", ni, result);
             }
 
 #endif
@@ -322,7 +322,7 @@ namespace behaviac
             if (Config.IsLoggingOrSocketing)
             {
                 string ni = BehaviorTask.GetTickInfo(a, pForEach, null);
-                LogManager.Instance.Log("[plan_foreach_begin]{0} {1} {2}\n", ni, index, count);
+                Workspace.LogManagers.Log("[plan_foreach_begin]{0} {1} {2}\n", ni, index, count);
                 a.LogVariables(true);
             }
 
@@ -336,7 +336,7 @@ namespace behaviac
             if (Config.IsLoggingOrSocketing)
             {
                 string ni = BehaviorTask.GetTickInfo(a, pForEach, null);
-                LogManager.Instance.Log("[plan_foreach_end]{0} {1} {2} {3}\n", ni, index, count, result);
+                Workspace.LogManagers.Log("[plan_foreach_end]{0} {1} {2} {3}\n", ni, index, count, result);
             }
 
 #endif
@@ -348,7 +348,7 @@ namespace behaviac
 
         private PlannerTask BuildPlan(Task root)
         {
-            LogManager.Instance.PLanningClearCache();
+            Workspace.LogManagers.PLanningClearCache();
 
             int depth = this.agent.Variables.Depth;
 

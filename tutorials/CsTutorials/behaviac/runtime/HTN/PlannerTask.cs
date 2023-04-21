@@ -100,7 +100,7 @@ namespace behaviac
             return true;
         }
 
-        protected override EBTStatus update(Agent pAgent, EBTStatus childStatus)
+        protected override Task<EBTStatus> update(Agent pAgent, EBTStatus childStatus)
         {
             return EBTStatus.BT_SUCCESS;
         }
@@ -124,7 +124,7 @@ namespace behaviac
             //this.ParamsValue = action.GetParamsValue(pAgent);
         }
 
-        protected override bool onenter(Agent pAgent)
+        override Task<bool> onenter(Agent pAgent)
         {
             Debug.Check(true);
             return true;
@@ -136,7 +136,7 @@ namespace behaviac
             base.onexit(pAgent, s);
         }
 
-        protected override EBTStatus update(Agent pAgent, EBTStatus childStatus)
+        protected override Task<EBTStatus> update(Agent pAgent, EBTStatus childStatus)
         {
             Debug.Check(this.m_node is Action);
 
@@ -187,7 +187,7 @@ namespace behaviac
         //    this.m_children.Clear();
         //}
 
-        protected override bool onenter(Agent pAgent)
+        override Task<bool> onenter(Agent pAgent)
         {
             this.m_activeChildIndex = 0;
             return true;
@@ -198,7 +198,7 @@ namespace behaviac
             base.onexit(pAgent, s);
         }
 
-        protected override EBTStatus update(Agent pAgent, EBTStatus childStatus)
+        protected override Task<EBTStatus> update(Agent pAgent, EBTStatus childStatus)
         {
             return EBTStatus.BT_SUCCESS;
         }
@@ -211,7 +211,7 @@ namespace behaviac
         {
         }
 
-        protected override EBTStatus update(Agent pAgent, EBTStatus childStatus)
+        protected override Task<EBTStatus> update(Agent pAgent, EBTStatus childStatus)
         {
             Debug.Check(this.m_node is Sequence);
             Sequence node = this.m_node as Sequence;
@@ -229,7 +229,7 @@ namespace behaviac
         {
         }
 
-        protected override EBTStatus update(Agent pAgent, EBTStatus childStatus)
+        protected override Task<EBTStatus> update(Agent pAgent, EBTStatus childStatus)
         {
             Debug.Check(this.m_node is Selector);
             Selector node = this.m_node as Selector;
@@ -247,7 +247,7 @@ namespace behaviac
         {
         }
 
-        protected override EBTStatus update(Agent pAgent, EBTStatus childStatus)
+        protected override Task<EBTStatus> update(Agent pAgent, EBTStatus childStatus)
         {
             Debug.Check(this.m_node is Parallel);
             Parallel node = this.m_node as Parallel;
@@ -265,7 +265,7 @@ namespace behaviac
         {
         }
 
-        protected override bool onenter(Agent pAgent)
+        override Task<bool> onenter(Agent pAgent)
         {
             base.onenter(pAgent);
 
@@ -299,7 +299,7 @@ namespace behaviac
 
         protected int m_n;
 
-        protected override EBTStatus update(Agent pAgent, EBTStatus childStatus)
+        protected override Task<EBTStatus> update(Agent pAgent, EBTStatus childStatus)
         {
             Debug.Check(this.m_node is DecoratorLoop);
             //DecoratorLoop node = this.m_node as DecoratorLoop;
@@ -349,7 +349,7 @@ namespace behaviac
             }
         }
 
-        protected override bool onenter(Agent pAgent)
+        override Task<bool> onenter(Agent pAgent)
         {
             bool bOk = base.onenter(pAgent);
 
@@ -360,7 +360,7 @@ namespace behaviac
             return bOk;
         }
 
-        protected override EBTStatus update(Agent pAgent, EBTStatus childStatus)
+        protected override Task<EBTStatus> update(Agent pAgent, EBTStatus childStatus)
         {
             Debug.Check(this.m_node is DecoratorIterator);
             //DecoratorIterator pNode = this.m_node as DecoratorIterator;
@@ -418,7 +418,7 @@ namespace behaviac
             }
         }
 
-        protected override bool onenter(Agent pAgent)
+        override Task<bool> onenter(Agent pAgent)
         {
             Debug.Check(this.m_node is ReferencedBehavior);
             ReferencedBehavior pNode = this.m_node as ReferencedBehavior;
@@ -428,7 +428,7 @@ namespace behaviac
             _logged = false;
 #endif
 
-            //this.m_subTree = Workspace.Instance.CreateBehaviorTreeTask(pNode.GetReferencedTree(pAgent));
+            //this.m_subTree = Workspace.CreateBehaviorTreeTask(pNode.GetReferencedTree(pAgent));
             Debug.Check(this.m_subTree != null);
             pNode.SetTaskParams(pAgent, this.m_subTree);
 
@@ -454,7 +454,7 @@ namespace behaviac
             this.currentState.Pop();
         }
 
-        protected override EBTStatus update(Agent pAgent, EBTStatus childStatus)
+        protected override Task<EBTStatus> update(Agent pAgent, EBTStatus childStatus)
         {
             Debug.Check(this.m_node is ReferencedBehavior);
             ReferencedBehavior pNode = this.m_node as ReferencedBehavior;
@@ -499,7 +499,7 @@ namespace behaviac
         {
         }
 
-        protected override bool onenter(Agent pAgent)
+        override Task<bool> onenter(Agent pAgent)
         {
             //this.m_node.Parent.InstantiatePars(this.LocalVars);
             return true;
@@ -511,7 +511,7 @@ namespace behaviac
             base.onexit(pAgent, s);
         }
 
-        protected override EBTStatus update(Agent pAgent, EBTStatus childStatus)
+        protected override Task<EBTStatus> update(Agent pAgent, EBTStatus childStatus)
         {
             Debug.Check(this.m_node is Task);
             //Task pNode = this.m_node as Task;
@@ -532,7 +532,7 @@ namespace behaviac
         {
         }
 
-        protected override EBTStatus update(Agent pAgent, EBTStatus childStatus)
+        protected override Task<EBTStatus> update(Agent pAgent, EBTStatus childStatus)
         {
             Debug.Check(this.m_node is Method);
             //Method pNode = this.m_node as Method;

@@ -80,7 +80,7 @@ namespace PluginBehaviac.NodeExporters
                 stream.WriteLine("{0}\t[behaviac.GeneratedTypeMetaInfo()]", indent);
                 stream.WriteLine("{0}\tclass {1} : behaviac.{2}\r\n{0}\t{{", indent, className, node.ExportClass);
 
-                stream.WriteLine("{0}\t\tpublic {1}()", indent, className);
+                stream.WriteLine("{0}\t\tpublic {1}(Workspace workspace) : base(workspace)", indent, className);
                 stream.WriteLine("{0}\t\t{{", indent);
 
                 GenerateConstructor(node, stream, indent, className);
@@ -100,7 +100,7 @@ namespace PluginBehaviac.NodeExporters
             string className = GetGeneratedClassName(node, btClassName, nodeName);
 
             // create a new instance of the node
-            stream.WriteLine("{0}\t{1} {2} = new {1}();", indent, className, nodeName);
+            stream.WriteLine("{0}\t{1} {2} = new {1}(bt.Workspace);", indent, className, nodeName);
 
             // set its basic properties
             stream.WriteLine("{0}\t{1}.SetClassNameString(\"{2}\");", indent, nodeName, node.ExportClass);

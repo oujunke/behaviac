@@ -327,7 +327,7 @@ namespace behaviac
     {
         private PropertyInfo property_;
 
-        private static MethodInfo getGetMethod(PropertyInfo property)
+        private MethodInfo getGetMethod(PropertyInfo property)
         {
 #if ( !UNITY_EDITOR && UNITY_METRO )
             return property.GetMethod;
@@ -336,7 +336,7 @@ namespace behaviac
 #endif
         }
 
-        private static MethodInfo getSetMethod(PropertyInfo property)
+        private MethodInfo getSetMethod(PropertyInfo property)
         {
 #if ( !UNITY_EDITOR && UNITY_METRO )
             return property.SetMethod;
@@ -415,7 +415,7 @@ namespace behaviac
         }
     }
 
-    static public class Utils
+    public class Utils
     {
         public static bool IsNull(System.Object aObj)
         {
@@ -461,7 +461,7 @@ namespace behaviac
 
             if (!string.IsNullOrEmpty(instanceName) && instanceName != "Self")
             {
-                pParent = Agent.GetInstance(instanceName, (pParent != null) ? pParent.GetContextId() : 0);
+                pParent = Agent.GetInstance(instanceName, (pParent != null) ? pParent.GetContextId() : 0,pAgent.Workspace);
 
                 if (pAgent != null && pParent == null && !Utils.IsStaticClass(instanceName))
                 {
@@ -471,12 +471,12 @@ namespace behaviac
                     {
                         string errorInfo = string.Format("[instance] The instance \"{0}\" can not be found, so please check the Agent.BindInstance(...) method has been called for this instance.\n", instanceName);
 
-                        Debug.Check(false, errorInfo);
+                        pAgent.Workspace.Debugs.Check(false, errorInfo);
 
-                        LogManager.Instance.Log(errorInfo);
+                        pAgent.Workspace.LogManagers.Log(errorInfo);
 
 #if !BEHAVIAC_NOT_USE_UNITY
-                        UnityEngine.Debug.LogError(errorInfo);
+                        UnityEngine.Debug.LogError(errorInfo, workspace);
 #else
                         Console.WriteLine(errorInfo);
 #endif
@@ -584,7 +584,7 @@ namespace behaviac
             {"System.UInt8"     , "ubyte"},
             {"Byte"             , "ubyte"},
             {"System.Byte"      , "ubyte"},
-            {"Char"      		, "char"},
+            {"Char"             , "char"},
             {"System.Char"      , "char"},
             {"Int64"            , "long"},
             {"System.Int64"     , "long"},
@@ -610,7 +610,7 @@ namespace behaviac
             return null;
         }
 
-        public static object FromStringPrimitive(Type type, string valueStr)
+        public static object FromStringPrimitive(Type type, string valueStr, Workspace workspace)
         {
             if (valueStr != null)
             {
@@ -747,7 +747,7 @@ namespace behaviac
                     }
                     else
                     {
-                        Debug.Check(false);
+                        workspace.Debugs.Check(false);
                     }
                 }
             }
@@ -824,7 +824,7 @@ namespace behaviac
             return Utils.GetType(typeName);
         }
 
-        public static Type GetElementTypeFromName(string typeName)
+        public static Type GetElementTypeFromName(string typeName, Workspace workspace)
         {
             bool bArrayType = false;
 
@@ -841,7 +841,7 @@ namespace behaviac
                 int len = bracket1 - bracket0 - 1;
 
                 string elementTypeName = typeName.Substring(bracket0 + 1, len);
-                Type elementType = Utils.GetTypeFromName(elementTypeName);
+                Type elementType = Utils.GetTypeFromName(elementTypeName, workspace);
 
                 return elementType;
             }
@@ -849,7 +849,7 @@ namespace behaviac
             return null;
         }
 
-        public static Type GetTypeFromName(string typeName)
+        public static Type GetTypeFromName(string typeName, Workspace workspace)
         {
             if (typeName == "void*")
             {
@@ -857,7 +857,7 @@ namespace behaviac
             }
 
             //Type type = Agent.GetTypeFromName(typeName);
-            Type type = AgentMeta.GetTypeFromName(typeName);
+            Type type = AgentMeta.GetTypeFromName(typeName, workspace);
 
             if (type == null)
             {
@@ -865,7 +865,7 @@ namespace behaviac
 
                 if (type == null)
                 {
-                    Type elementType = Utils.GetElementTypeFromName(typeName);
+                    Type elementType = Utils.GetElementTypeFromName(typeName, workspace);
 
                     if (elementType != null)
                     {
@@ -884,9 +884,9 @@ namespace behaviac
         }
 
         //if it is an array, return the element type
-        public static Type GetTypeFromName(string typeName, ref bool bIsArrayType)
+        public static Type GetTypeFromName(string typeName, ref bool bIsArrayType, Workspace workspace)
         {
-            Type elementType = Utils.GetElementTypeFromName(typeName);
+            Type elementType = Utils.GetElementTypeFromName(typeName, workspace);
 
             if (elementType != null)
             {
@@ -894,7 +894,7 @@ namespace behaviac
                 return elementType;
             }
 
-            Type type = Utils.GetTypeFromName(typeName);
+            Type type = Utils.GetTypeFromName(typeName, workspace);
 
             return type;
         }
@@ -942,14 +942,14 @@ namespace behaviac
             return typeName;
         }
 
-        public static string GetNativeTypeName(Type type)
+        public static string GetNativeTypeName(Type type,Workspace workspace)
         {
-            Debug.Check(type != null);
+            workspace.Debugs.Check(type != null);
 
             if (Utils.IsArrayType(type))
             {
                 Type itemType = type.GetGenericArguments()[0];
-                return string.Format("vector<{0}>", Utils.GetNativeTypeName(itemType));
+                return string.Format("vector<{0}>", Utils.GetNativeTypeName(itemType,workspace));
             }
 
             return Utils.GetNativeTypeName(type.FullName);
@@ -980,9 +980,9 @@ namespace behaviac
             return type != null && !type.IsByRef && type.IsValueType && type != typeof(void) && !type.IsEnum && !type.IsPrimitive && !IsStringType(type) && !IsArrayType(type);
         }
 
-        public static bool IsAgentType(Type type)
+        public static bool IsAgentType(Type type, Workspace workspace)
         {
-            Debug.Check(type != null);
+            workspace.Debugs.Check(type != null);
             return (type == typeof(Agent) || type.IsSubclassOf(typeof(Agent)));
         }
 
@@ -1000,7 +1000,7 @@ namespace behaviac
             return type != null && type.IsClass && type != typeof(string);
         }
 
-        public static bool IfEquals(object l, object r)
+        public bool IfEquals(object l, object r)
         {
             if (l == r)
             {
@@ -1078,7 +1078,7 @@ namespace behaviac
             return bIsEqual;
         }
 
-        public static void Clone<T>(ref T o, T c)
+        public static void Clone<T>(ref T o, T c, Workspace workspace)
         {
             if (c == null)
             {
@@ -1119,7 +1119,7 @@ namespace behaviac
                 for (int i = 0; i < array.Length; i++)
                 {
                     object item = null;
-                    Utils.Clone(ref item, array.GetValue(i));
+                    Utils.Clone(ref item, array.GetValue(i),workspace);
                     //object item = Utils.Clone(array.GetValue(i));
 
                     copied.SetValue(item, i);
@@ -1140,12 +1140,12 @@ namespace behaviac
                 }
 
                 var array = c as IList;
-                o = (T)Activator.CreateInstance(type);
+                o = (T)Activator.CreateInstance(type, workspace);
 
                 for (int i = 0; i < array.Count; i++)
                 {
                     object item = null;
-                    Utils.Clone(ref item, array[i]);
+                    Utils.Clone(ref item, array[i], workspace);
 
                     ((IList)o).Add(item);
                 }
@@ -1160,13 +1160,13 @@ namespace behaviac
                 }
                 else
                 {
-                    Debug.Check(!type.IsPrimitive && !type.IsEnum);
+                    workspace.Debugs.Check(!type.IsPrimitive && !type.IsEnum);
 
                     bool isStruct = type.IsValueType;
 
                     if (o == null)
                     {
-                        o = (T)Activator.CreateInstance(type);
+                        o = (T)Activator.CreateInstance(type, workspace);
                     }
 
                     if (isStruct || isClass)
@@ -1181,7 +1181,7 @@ namespace behaviac
                             {
                                 object fv = f.GetValue(c);
                                 object fv2 = null;
-                                Utils.Clone(ref fv2, fv);
+                                Clone(ref fv2, fv, workspace);
 
                                 f.SetValue(o, fv2);
                             }
@@ -1196,11 +1196,16 @@ namespace behaviac
         }
     }
 
-    static public class Debug
+    public class Debug
     {
+        public Workspace Workspace { get; private set; }
+        public Debug(Workspace workspace)
+        {
+            Workspace = workspace;
+        }
         [Conditional("BEHAVIAC_DEBUG")]
         [Conditional("UNITY_EDITOR")]
-        public static void CheckEqual<T>(T l, T r)
+        public void CheckEqual<T>(T l, T r)
         {
             if (!EqualityComparer<T>.Default.Equals(l, r))
             {
@@ -1210,7 +1215,7 @@ namespace behaviac
 
         [Conditional("BEHAVIAC_DEBUG")]
         [Conditional("UNITY_EDITOR")]
-        public static void Check(bool b)
+        public void Check(bool b)
         {
             if (!b)
             {
@@ -1220,7 +1225,7 @@ namespace behaviac
 
         [Conditional("BEHAVIAC_DEBUG")]
         [Conditional("UNITY_EDITOR")]
-        public static void Check(bool b, string message)
+        public void Check(bool b, string message)
         {
             if (!b)
             {
@@ -1230,7 +1235,7 @@ namespace behaviac
 
         [Conditional("BEHAVIAC_DEBUG")]
         [Conditional("UNITY_EDITOR")]
-        public static void Check(bool b, string format, object arg0)
+        public void Check(bool b, string format, object arg0)
         {
             if (!b)
             {
@@ -1241,40 +1246,40 @@ namespace behaviac
 
         //[Conditional("BEHAVIAC_DEBUG")]
         [Conditional("UNITY_EDITOR")]
-        public static void Log(string message)
+        public void Log(string message)
         {
 #if !BEHAVIAC_NOT_USE_UNITY
-            UnityEngine.Debug.Log(message);
+            UnityEngine.Debug.Log(message, workspace);
 #else
             Console.WriteLine(message);
 #endif
         }
 
         //[Conditional("UNITY_EDITOR")]
-        public static void LogWarning(string message)
+        public void LogWarning(string message)
         {
 #if !BEHAVIAC_NOT_USE_UNITY
-            UnityEngine.Debug.LogWarning(message);
+            UnityEngine.Debug.LogWarning(message, workspace);
 #else
             Console.WriteLine(message);
 #endif
         }
 
         //[Conditional("UNITY_EDITOR")]
-        public static void LogError(string message)
+        public void LogError(string message)
         {
-            LogManager.Instance.Flush(null);
+            Workspace.LogManagers.Flush(null);
 #if !BEHAVIAC_NOT_USE_UNITY
-            UnityEngine.Debug.LogError(message);
+            UnityEngine.Debug.LogError(message, workspace);
 #else
             Console.WriteLine(message);
 #endif
         }
 
         //[Conditional("UNITY_EDITOR")]
-        public static void LogError(Exception ex)
+        public void LogError(Exception ex)
         {
-            LogManager.Instance.Flush(null);
+            Workspace.LogManagers.Flush(null);
 #if !BEHAVIAC_NOT_USE_UNITY
             UnityEngine.Debug.LogError(ex.Message);
 #else
@@ -1284,7 +1289,7 @@ namespace behaviac
 
         [Conditional("BEHAVIAC_DEBUG")]
         [Conditional("UNITY_EDITOR")]
-        public static void Break(string msg)
+        public void Break(string msg)
         {
             LogError(msg);
 
@@ -1298,9 +1303,9 @@ namespace behaviac
         }
     }
 
-    //public static class ListExtra
+    //public  class ListExtra
     //{
-    //    public static void Resize<T>(this List<T> list, int sz, T c = default(T))
+    //    public  void Resize<T>(this List<T> list, int sz, T c = default(T))
     //    {
     //        int cur = list.Count;
     //        if (sz < cur)
@@ -1317,11 +1322,11 @@ namespace behaviac
     //    }
     //}
 
-    static public class StringUtils
+    public class StringUtils
     {
         //it returns true if 'str' starts with a count followed by ':'
         //3:{....}
-        private static bool IsArrayString(string str, int posStart, ref int posEnd)
+        private static bool IsArrayString(string str, int posStart, ref int posEnd,Workspace workspace)
         {
             //begin of the count of an array?
             //int posStartOld = posStart;
@@ -1356,12 +1361,12 @@ namespace behaviac
                         }
                         else if (c1 == '{')
                         {
-                            Debug.Check(depth < 10);
+                            workspace.Debugs.Check(depth < 10);
                             depth++;
                         }
                         else if (c1 == '}')
                         {
-                            Debug.Check(depth > 0);
+                            workspace.Debugs.Check(depth > 0);
                             depth--;
                         }
                     }
@@ -1406,7 +1411,7 @@ namespace behaviac
             return -1;
         }
 
-        public static List<string> SplitTokensForStruct(string src)
+        public static List<string> SplitTokensForStruct(string src,Workspace workspace)
         {
             List<string> ret = new List<string>();
 
@@ -1419,7 +1424,7 @@ namespace behaviac
             //the first char is '{'
             //the last char is '}'
             int posCloseBrackets = SkipPairedBrackets(src, 0);
-            Debug.Check(posCloseBrackets != -1);
+            workspace.Debugs.Check(posCloseBrackets != -1);
 
             //{color=0;id=;type={bLive=false;name=0;weight=0;};}
             //{color=0;id=;type={bLive=false;name=0;weight=0;};transit_points=3:{coordX=0;coordY=0;}|{coordX=0;coordY=0;}|{coordX=0;coordY=0;};}
@@ -1428,13 +1433,13 @@ namespace behaviac
 
             while (posEnd != -1)
             {
-                Debug.Check(src[posEnd] == ';');
+                workspace.Debugs.Check(src[posEnd] == ';');
 
                 //the last one might be empty
                 if (posEnd > posBegin)
                 {
                     int posEqual = src.IndexOf('=', posBegin);
-                    Debug.Check(posEqual > posBegin);
+                    workspace.Debugs.Check(posEqual > posBegin);
 
                     int length = posEqual - posBegin;
                     string memmberName = src.Substring(posBegin, length);
@@ -1446,7 +1451,7 @@ namespace behaviac
                         length = posEnd - posEqual - 1;
 
                         //to check if it is an array
-                        IsArrayString(src, posEqual + 1, ref posEnd);
+                        IsArrayString(src, posEqual + 1, ref posEnd,workspace);
 
                         length = posEnd - posEqual - 1;
                         memberValueStr = src.Substring(posEqual + 1, length);
@@ -1481,9 +1486,9 @@ namespace behaviac
             return ret;
         }
 
-        private static object FromStringStruct(Type type, string src)
+        private static object FromStringStruct(Type type, string src,Workspace workspace)
         {
-            object objValue = Activator.CreateInstance(type);
+            object objValue = Activator.CreateInstance(type, workspace);
             Dictionary<string, FieldInfo> structMembers = new Dictionary<string, FieldInfo>();
             FieldInfo[] fields = type.GetFields(BindingFlags.DeclaredOnly | BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static);
 
@@ -1506,7 +1511,7 @@ namespace behaviac
             //the first char is '{'
             //the last char is '}'
             int posCloseBrackets = SkipPairedBrackets(src, 0);
-            Debug.Check(posCloseBrackets != -1);
+            workspace.Debugs.Check(posCloseBrackets != -1);
 
             //{color=0;id=;type={bLive=false;name=0;weight=0;};}
             //{color=0;id=;type={bLive=false;name=0;weight=0;};transit_points=3:{coordX=0;coordY=0;}|{coordX=0;coordY=0;}|{coordX=0;coordY=0;};}
@@ -1515,13 +1520,13 @@ namespace behaviac
 
             while (posEnd != -1)
             {
-                Debug.Check(src[posEnd] == ';');
+                workspace.Debugs.Check(src[posEnd] == ';');
 
                 //the last one might be empty
                 if (posEnd > posBegin)
                 {
                     int posEqual = src.IndexOf('=', posBegin);
-                    Debug.Check(posEqual > posBegin);
+                    workspace.Debugs.Check(posEqual > posBegin);
 
                     int length = posEqual - posBegin;
                     string memmberName = src.Substring(posBegin, length);
@@ -1533,7 +1538,7 @@ namespace behaviac
                         length = posEnd - posEqual - 1;
 
                         //to check if it is an array
-                        IsArrayString(src, posEqual + 1, ref posEnd);
+                        IsArrayString(src, posEqual + 1, ref posEnd, workspace);
 
                         length = posEnd - posEqual - 1;
                         memberValueStr = src.Substring(posEqual + 1, length);
@@ -1553,11 +1558,11 @@ namespace behaviac
                     if (structMembers.ContainsKey(memmberName))
                     {
                         FieldInfo memberType = structMembers[memmberName];
-                        Debug.Check(memberType != null);
+                        workspace.Debugs.Check(memberType != null);
 
                         if (memberType != null)
                         {
-                            object memberValue = FromString(memberType.FieldType, memberValueStr, false);
+                            object memberValue = FromString(memberType.FieldType, memberValueStr, false,workspace);
                             memberType.SetValue(objValue, memberValue);
                         }
                     }
@@ -1578,10 +1583,10 @@ namespace behaviac
             return objValue;
         }
 
-        private static object FromStringVector(Type type, string src)
+        private static object FromStringVector(Type type, string src,Workspace workspace)
         {
             Type vectorType = typeof(List<>).MakeGenericType(type);
-            IList objVector = (IList)Activator.CreateInstance(vectorType);
+            IList objVector = (IList)Activator.CreateInstance(vectorType, workspace);
 
             if (string.IsNullOrEmpty(src))
             {
@@ -1589,7 +1594,7 @@ namespace behaviac
             }
 
             int semiColon = src.IndexOf(':');
-            Debug.Check(semiColon != -1);
+            workspace.Debugs.Check(semiColon != -1);
             string countStr = src.Substring(0, semiColon);
             int count = int.Parse(countStr);
 
@@ -1599,7 +1604,7 @@ namespace behaviac
             if (b < src.Length && src[b] == '{')
             {
                 sep = SkipPairedBrackets(src, b);
-                Debug.Check(sep != -1);
+                workspace.Debugs.Check(sep != -1);
             }
 
             sep = src.IndexOf('|', sep);
@@ -1608,7 +1613,7 @@ namespace behaviac
             {
                 int len = sep - b;
                 string elemStr = src.Substring(b, len);
-                object elemObject = FromString(type, elemStr, false);
+                object elemObject = FromString(type, elemStr, false, workspace);
 
                 objVector.Add(elemObject);
 
@@ -1617,7 +1622,7 @@ namespace behaviac
                 if (b < src.Length && src[b] == '{')
                 {
                     sep = SkipPairedBrackets(src, b);
-                    Debug.Check(b != -1);
+                    workspace.Debugs.Check(b != -1);
                 }
                 else
                 {
@@ -1631,12 +1636,12 @@ namespace behaviac
             {
                 int len = src.Length - b;
                 string elemStr = src.Substring(b, len);
-                object elemObject = FromString(type, elemStr, false);
+                object elemObject = FromString(type, elemStr, false,workspace);
 
                 objVector.Add(elemObject);
             }
 
-            Debug.Check(objVector.Count == count);
+            workspace.Debugs.Check(objVector.Count == count);
 
             return objVector;
         }
@@ -1651,11 +1656,11 @@ namespace behaviac
             return true;
         }
 
-        public static object FromString(Type type, string valStr, bool bStrIsArrayType /*= false*/)
+        public static object FromString(Type type, string valStr, bool bStrIsArrayType /*= false*/, Workspace workspace)
         {
             if (!string.IsNullOrEmpty(valStr) && valStr == "null")
             {
-                Debug.Check(Utils.IsRefNullType(type));
+                workspace.Debugs.Check(Utils.IsRefNullType(type));
                 return null;
             }
 
@@ -1674,24 +1679,24 @@ namespace behaviac
                 if (bIsArrayType)
                 {
                     Type elemType = type.GetGenericArguments()[0];
-                    v = StringUtils.FromStringVector(elemType, valStr);
+                    v = StringUtils.FromStringVector(elemType, valStr,workspace);
                 }
                 else
                 {
-                    v = StringUtils.FromStringVector(type, valStr);
+                    v = StringUtils.FromStringVector(type, valStr, workspace);
                 }
             }
             else if (type == typeof(behaviac.IProperty))
             {
-                v = AgentMeta.ParseProperty(valStr);
+                v = AgentMeta.ParseProperty(valStr, workspace);
             }
             else if (Utils.IsCustomClassType(type))
             {
-                v = StringUtils.FromStringStruct(type, valStr);
+                v = StringUtils.FromStringStruct(type, valStr, workspace);
             }
             else
             {
-                v = Utils.FromStringPrimitive(type, valStr);
+                v = Utils.FromStringPrimitive(type, valStr, workspace);
             }
 
             return v;
@@ -1737,7 +1742,7 @@ namespace behaviac
                     else
                     {
                         valueStr = "{";
-                        //FieldInfo[] fields = type.GetFields(BindingFlags.DeclaredOnly | BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static);
+                        //FieldInfo[] fields = type.GetFields(BindingFlags.DeclaredOnly | BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance | BindingFlags.);
                         FieldInfo[] fields = type.GetFields(BindingFlags.DeclaredOnly | BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance);
 
                         for (int i = 0; i < fields.Length; ++i)
@@ -1773,7 +1778,7 @@ namespace behaviac
             return Path.GetExtension(path);
         }
 
-        //public static bool IsNullOrEmpty(this string s)
+        //public  bool IsNullOrEmpty(this string s)
         //{
         //    return string.IsNullOrEmpty(s);
         //}
@@ -1807,7 +1812,7 @@ namespace behaviac
             return ret;
         }
 
-        public static List<string> SplitTokens(ref string str)
+        public static List<string> SplitTokens(ref string str,Workspace workspace)
         {
             List<string> ret = new List<string>();
 
@@ -1867,7 +1872,7 @@ namespace behaviac
                 if (bFound)
                 {
                     string strT = ReadToken(str, pB, i);
-                    Debug.Check(strT.Length > 0);
+                    workspace.Debugs.Check(strT.Length > 0);
                     ret.Add(strT);
 
                     pB = i + 1;
@@ -1899,7 +1904,7 @@ namespace behaviac
             return strT;
         }
 
-        public static bool ParseForStruct(Type type, string str, ref string strT, Dictionary<string, IInstanceMember> props)
+        public static bool ParseForStruct(Type type, string str, ref string strT, Dictionary<string, IInstanceMember> props, Workspace workspace)
         {
             int pB = 0;
             int i = 0;
@@ -1931,7 +1936,7 @@ namespace behaviac
                     }
 
                     //skip '='
-                    Debug.Check(str[p] == '=');
+                    workspace.Debugs.Check(str[p] == '=');
                     p++;
 
                     string valueStr = str.Substring(p);
@@ -1945,10 +1950,10 @@ namespace behaviac
 
                     //bool bStatic = false;
 
-                    if (typeStr == "static")
+                    if (typeStr == "")
                     {
                         //skip ' '
-                        Debug.Check(str[p] == ' ');
+                        workspace.Debugs.Check(str[p] == ' ');
                         p++;
 
                         while (str[p] != ' ')
@@ -1962,7 +1967,7 @@ namespace behaviac
                     string parName = "";
 
                     //skip ' '
-                    Debug.Check(str[i] == ' ');
+                    workspace.Debugs.Check(str[i] == ' ');
                     i++;
 
                     while (str[i] != ';')
@@ -1970,10 +1975,10 @@ namespace behaviac
                         parName += str[i++];
                     }
 
-                    props[propName] = AgentMeta.ParseProperty(valueStr);
+                    props[propName] = AgentMeta.ParseProperty(valueStr, workspace);
 
                     //skip ';'
-                    Debug.Check(str[i] == ';');
+                    workspace.Debugs.Check(str[i] == ';');
 
                     pB = i + 1;
                 }
