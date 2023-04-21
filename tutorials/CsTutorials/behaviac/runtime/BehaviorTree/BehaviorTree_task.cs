@@ -1565,7 +1565,7 @@ namespace behaviac
                 status = await base.update_current(pAgent, childStatus);
                 if ((status == EBTStatus.BT_RUNNING) && (this.m_endStatus != EBTStatus.BT_INVALID))
                 {
-                    this.end(pAgent, this.m_endStatus);
+                    await this.end(pAgent, this.m_endStatus);
                     var es = this.m_endStatus;
                     this.m_endStatus = EBTStatus.BT_INVALID;
                     return es;
