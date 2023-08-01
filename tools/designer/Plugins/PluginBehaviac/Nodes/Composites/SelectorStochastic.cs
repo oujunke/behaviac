@@ -28,7 +28,9 @@ namespace PluginBehaviac.Nodes
         : base(Resources.SelectorStochastic, Resources.SelectorStochasticDesc)
         {
         }
-
+        /// <summary>
+        /// 随机选择节点
+        /// </summary>
         public override string DocLink
         {
             get

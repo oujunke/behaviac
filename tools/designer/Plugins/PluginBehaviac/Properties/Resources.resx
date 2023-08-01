@@ -920,4 +920,10 @@ it only returns success or failure and never returns running.
   <data name="IntervalTimesDesc" xml:space="preserve">
     <value>Interval time number execution</value>
   </data>
+  <data name="FailExit" xml:space="preserve">
+    <value>FailExit</value>
+  </data>
+  <data name="FailExitDec" xml:space="preserve">
+    <value>Whether to exit after the execution of the branch statement fails</value>
+  </data>
 </root>

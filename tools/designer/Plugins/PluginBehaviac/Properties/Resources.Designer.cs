@@ -1059,6 +1059,24 @@ namespace PluginBehaviac.Properties {
         }
         
         /// <summary>
+        ///   查找类似 FailExit 的本地化字符串。
+        /// </summary>
+        internal static string FailExit {
+            get {
+                return ResourceManager.GetString("FailExit", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   查找类似 Whether to exit after the execution of the branch statement fails 的本地化字符串。
+        /// </summary>
+        internal static string FailExitDec {
+            get {
+                return ResourceManager.GetString("FailExitDec", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   查找类似 FailurePolicy 的本地化字符串。
         /// </summary>
         internal static string FailurePolicy {

@@ -29,7 +29,9 @@ namespace PluginBehaviac.Nodes
         : base(Resources.Compute, Resources.ComputeDesc)
         {
         }
-
+        /// <summary>
+        /// ¼ÆËã½Úµã
+        /// </summary>
         public override string DocLink
         {
             get

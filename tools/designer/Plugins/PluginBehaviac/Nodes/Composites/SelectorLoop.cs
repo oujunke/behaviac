@@ -62,7 +62,19 @@ namespace PluginBehaviac.Nodes
                 _resetChildren = value;
             }
         }
-
+        protected bool _failExit = false;
+        [DesignerBoolean("FailExit", "FailExitDesc", "SelectorLoop", DesignerProperty.DisplayMode.NoDisplay, 0, DesignerProperty.DesignerFlags.NoFlags)]
+        public bool FailExit
+        {
+            get
+            {
+                return _failExit;
+            }
+            set
+            {
+                _failExit = value;
+            }
+        }
         public override bool AddChild(Connector connector, Node node)
         {
             if (node is WithPrecondition)
