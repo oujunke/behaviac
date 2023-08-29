@@ -758,7 +758,7 @@ namespace PluginBehaviac.Exporters
                 }
 
                 file.WriteLine("{0}{{", indent);
-                file.WriteLine($"\tprivate I{agent.BasicName}Imp _methodImp;\r\n\tpublic {agent.BasicName}(I{agent.BasicName}Imp methodImp,behaviac.Workspace workspace):base({(agent.Base.BasicName == "Agent" ? "" : $"methodImp,")}workspace)\r\n\t{{\r\n\t    _methodImp=methodImp;\r\n\t}}");
+                file.WriteLine($"\tprivate I{agent.BasicName}Imp _methodImp;\r\n\tpublic {agent.BasicName}(behaviac.Workspace workspace):base(workspace)\r\n\t{{\r\n\t}}");
                 IList<PropertyDef> properties = agent.GetProperties(true);
 
                 foreach (PropertyDef prop in properties)
