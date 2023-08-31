@@ -36,6 +36,7 @@ using System.Collections.Generic;
 using System.Text;
 using System.IO;
 
+
 namespace Behaviac.Design.Exporters
 {
     /// <summary>
@@ -43,6 +44,7 @@ namespace Behaviac.Design.Exporters
     /// </summary>
     public abstract class Exporter
     {
+        
         protected Nodes.BehaviorNode _node;
 
         /// <summary>

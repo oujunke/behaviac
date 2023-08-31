@@ -40,6 +40,7 @@ using System.Xml;
 using Behaviac.Design.Properties;
 using Behaviac.Design.Attributes;
 using Behaviac.Design.Exporters;
+using System.Collections.ObjectModel;
 
 namespace Behaviac.Design
 {
@@ -110,7 +111,7 @@ namespace Behaviac.Design
             }
             set
             {
-                _useIntValue = value ;
+                _useIntValue = value;
             }
         }
 
@@ -286,6 +287,18 @@ namespace Behaviac.Design
                 return _exportDatas;
             }
         }
+
+        private string _includeDir;
+        public string IncludeDir
+        {
+            set
+            {
+                _includeDir = value;
+                IncludeDirs = _includeDir?.Split(';')??new string[0];
+            }
+            get => _includeDir;
+        }
+        public string[] IncludeDirs;
 
         public void SetExportInfo(string format, bool isExported, int exportFileCount, string folder = null, List<string> includedFilenames = null)
         {
@@ -657,7 +670,7 @@ namespace Behaviac.Design
                     string defaultExportFolder = GetAttribute(root, "export");
                     string version = GetAttribute(root, "version");
                     string metaFile = GetAttribute(root, "xmlmetafolder");
-
+                    string includeDir = GetAttribute(root, "include");
                     if (string.IsNullOrEmpty(metaFile))
                     {
                         metaFile = GetAttribute(root, "metafilename");
@@ -683,7 +696,7 @@ namespace Behaviac.Design
                     ws.PromptMergingMetaFiles = (promptMergingMetaFiles == "true");
                     ws.Version = 0;
                     ws.UseRelativePath = (useRelativePath != "false");
-
+                    ws.IncludeDir = includeDir;
                     if (!string.IsNullOrEmpty(version))
                     {
                         int v = 0;
@@ -700,7 +713,7 @@ namespace Behaviac.Design
                         {
                             switch (subnode.Name)
                             {
-                                    // Load all XMLs.
+                                // Load all XMLs.
                                 case "xmlmeta":
                                     string nodeName = subnode.InnerText.Trim();
 
@@ -711,7 +724,7 @@ namespace Behaviac.Design
 
                                     break;
 
-                                    // Load export nodes.
+                                // Load export nodes.
                                 case "export":
                                     foreach (XmlNode exportNode in subnode)
                                     {
@@ -809,7 +822,7 @@ namespace Behaviac.Design
                         workspace.SetAttribute("folder", ws.RelativeSourceFolder);
                         workspace.SetAttribute("export", ws.RelativeDefaultExportFolder);
                         workspace.SetAttribute("language", ws.Language);
-
+                        workspace.SetAttribute("include", ws.IncludeDir);
                         if (ws.UseIntValue)
                         {
                             workspace.SetAttribute("useintvalue", "true");
@@ -2061,13 +2074,13 @@ namespace Behaviac.Design
                     return false;
                 }
 
-                using(StreamWriter file = new StreamWriter(metaFilename))
+                using (StreamWriter file = new StreamWriter(metaFilename))
                 {
                     XmlWriterSettings xmlWs = new XmlWriterSettings();
                     xmlWs.Indent = true;
                     //xmlWs.OmitXmlDeclaration = true;
 
-                    using(XmlWriter xmlWrtier = XmlWriter.Create(file, xmlWs))
+                    using (XmlWriter xmlWrtier = XmlWriter.Create(file, xmlWs))
                     {
                         xmlWrtier.WriteStartDocument();
 
@@ -2180,8 +2193,8 @@ namespace Behaviac.Design
                     return false;
                 }
 
-                using(var ms = new MemoryStream())
-                using(var writer = new BinaryWriter(ms))
+                using (var ms = new MemoryStream())
+                using (var writer = new BinaryWriter(ms))
                 {
                     BsonSerializer serializer = BsonSerializer.CreateSerialize(writer);
                     serializer.WriteStartDocument();
@@ -2275,9 +2288,9 @@ namespace Behaviac.Design
 
                     serializer.WriteEndDocument();
 
-                    using(FileStream fs = File.Create(metaFilename))
+                    using (FileStream fs = File.Create(metaFilename))
                     {
-                        using(BinaryWriter w = new BinaryWriter(fs))
+                        using (BinaryWriter w = new BinaryWriter(fs))
                         {
                             byte[] d = ms.ToArray();
 

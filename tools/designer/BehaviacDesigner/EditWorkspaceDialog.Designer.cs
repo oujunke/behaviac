@@ -86,6 +86,9 @@ namespace Behaviac.Design
             this.metaFileLabel = new System.Windows.Forms.Label();
             this.useIntValueCheckBox = new System.Windows.Forms.CheckBox();
             this.folderBrowserDialog = new System.Windows.Forms.FolderBrowserDialog();
+            this.includeTextBox = new System.Windows.Forms.TextBox();
+            this.includeLabel = new System.Windows.Forms.Label();
+            this.includeButton = new System.Windows.Forms.Button();
             this.SuspendLayout();
             // 
             // doneButton
@@ -221,6 +224,7 @@ namespace Behaviac.Design
             this.typesExportTextBox.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
             this.typesExportTextBox.ForeColor = System.Drawing.Color.LightGray;
             this.typesExportTextBox.Name = "typesExportTextBox";
+            this.typesExportTextBox.SizeChanged += new System.EventHandler(this.typesExportTextBox_SizeChanged);
             // 
             // generateLabel
             // 
@@ -271,6 +275,28 @@ namespace Behaviac.Design
             this.useIntValueCheckBox.MouseEnter += new System.EventHandler(this.useIntValueCheckBox_MouseEnter);
             this.useIntValueCheckBox.MouseLeave += new System.EventHandler(this.useIntValueCheckBox_MouseLeave);
             // 
+            // includeTextBox
+            // 
+            resources.ApplyResources(this.includeTextBox, "includeTextBox");
+            this.includeTextBox.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(65)))), ((int)(((byte)(65)))), ((int)(((byte)(65)))));
+            this.includeTextBox.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
+            this.includeTextBox.ForeColor = System.Drawing.Color.LightGray;
+            this.includeTextBox.Name = "includeTextBox";
+            // 
+            // includeLabel
+            // 
+            resources.ApplyResources(this.includeLabel, "includeLabel");
+            this.includeLabel.Name = "includeLabel";
+            // 
+            // includeButton
+            // 
+            resources.ApplyResources(this.includeButton, "includeButton");
+            this.includeButton.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(65)))), ((int)(((byte)(65)))), ((int)(((byte)(65)))));
+            this.includeButton.FlatAppearance.MouseDownBackColor = System.Drawing.Color.DarkGray;
+            this.includeButton.FlatAppearance.MouseOverBackColor = System.Drawing.Color.DarkGray;
+            this.includeButton.Name = "includeButton";
+            this.includeButton.UseVisualStyleBackColor = false;
+            // 
             // EditWorkspaceDialog
             // 
             this.AcceptButton = this.doneButton;
@@ -278,6 +304,9 @@ namespace Behaviac.Design
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(56)))), ((int)(((byte)(56)))), ((int)(((byte)(56)))));
             this.CancelButton = this.cancelButton;
+            this.Controls.Add(this.includeTextBox);
+            this.Controls.Add(this.includeLabel);
+            this.Controls.Add(this.includeButton);
             this.Controls.Add(this.useIntValueCheckBox);
             this.Controls.Add(this.metaFileLabel);
             this.Controls.Add(this.languageComboBox);
@@ -335,5 +364,8 @@ namespace Behaviac.Design
         private System.Windows.Forms.ComboBox languageComboBox;
         private System.Windows.Forms.Label metaFileLabel;
         private System.Windows.Forms.CheckBox useIntValueCheckBox;
+        private System.Windows.Forms.TextBox includeTextBox;
+        private System.Windows.Forms.Label includeLabel;
+        private System.Windows.Forms.Button includeButton;
     }
 }
