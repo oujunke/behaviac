@@ -23,7 +23,7 @@ namespace Behaviac.Design
 {
     public class RecentMenu
     {
-        public class RecentMenuItem : MenuItem
+        public class RecentMenuItem : ToolStripMenuItem
         {
             protected String szFileName = string.Empty;
             public String Filename
@@ -39,7 +39,7 @@ namespace Behaviac.Design
             }
 
             public RecentMenuItem(String _szFileName, String szEntryName, EventHandler eventHandler)
-            : base(szEntryName, eventHandler)
+            : base(szEntryName,null,eventHandler)
             {
                 szFileName = _szFileName;
             }

@@ -1,0 +1,96 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="Current" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup />
+  <ItemGroup>
+    <Compile Update="AboutBox.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Update="BehaviorTreeListDock.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Update="BehaviorTreeViewDock.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Update="BreakPointsDock.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Update="CallStackDock.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Update="ConnectDialog.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Update="ConsoleDock.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Update="ControlsDialog.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Update="Dialogs\EditEnumMemberDialog.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Update="EditWorkspaceDialog.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Update="ErrorCheckDialog.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Update="ErrorInfoDock.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Update="ExportDialog.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Update="ExportSettingDialog.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Update="FindDock.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Update="FindFileDialog.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Update="FindFileDock.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Update="FrequentlyUsedNodesDialog.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Update="MainWindow.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Update="MainWindowCloseDialog.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Update="MetaInstanceDialog.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Update="MetaMethodDialog.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Update="MetaPropertyDialog.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Update="MetaStoreDock.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Update="MetaTypeDialog.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Update="ParametersDock.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Update="PropertiesDock.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Update="SaveAsDialog.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Update="SettingsDialog.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Update="TimelineDock.cs">
+      <SubType>Form</SubType>
+    </Compile>
+  </ItemGroup>
+</Project>
