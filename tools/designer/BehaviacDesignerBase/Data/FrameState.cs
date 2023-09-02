@@ -1362,14 +1362,18 @@ namespace Behaviac.Design.Data
             }
         }
 
+#pragma warning disable SYSLIB0011 // 类型或成员已过时
         public static void Serialize(Stream stream, BinaryFormatter formatter)
+#pragma warning restore SYSLIB0011 // 类型或成员已过时
         {
             formatter.Serialize(stream, _frameStates);
             formatter.Serialize(stream, _nodeFrameProfiles);
             formatter.Serialize(stream, _appLogs);
         }
 
+#pragma warning disable SYSLIB0011 // 类型或成员已过时
         public static void Deserialize(Stream stream, BinaryFormatter formatter)
+#pragma warning restore SYSLIB0011 // 类型或成员已过时
         {
             Clear();
 

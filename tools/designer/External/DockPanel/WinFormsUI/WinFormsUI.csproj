@@ -87,4 +87,7 @@
   <ItemGroup>
     <EmbeddedResource Include="Docking\DockPanel.bmp" />
   </ItemGroup>
+  <ItemGroup>
+    <None Include="..\..\..\.editorconfig" Link=".editorconfig" />
+  </ItemGroup>
 </Project>

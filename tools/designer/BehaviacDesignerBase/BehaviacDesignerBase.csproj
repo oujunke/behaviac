@@ -34,11 +34,13 @@
     <OutputPath>..\out\</OutputPath>
     <DefineConstants>TRACE;DEBUG;QUERY_EANBLED</DefineConstants>
     <CodeAnalysisRuleSet>AllRules.ruleset</CodeAnalysisRuleSet>
+    <WarningsAsErrors>NU1605</WarningsAsErrors>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <OutputPath>..\out\</OutputPath>
     <DefineConstants>TRACE;QUERY_EANBLED</DefineConstants>
     <CodeAnalysisRuleSet>AllRules.ruleset</CodeAnalysisRuleSet>
+    <WarningsAsErrors>NU1605</WarningsAsErrors>
   </PropertyGroup>
   <ItemGroup>
     <Compile Update="Attributes\DesignerParamEnumEditor.cs">

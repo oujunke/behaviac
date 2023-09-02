@@ -399,7 +399,9 @@ namespace Behaviac.Design
             {
                 string filename = getTqosFile();
                 Stream stream = File.Open(filename, FileMode.Open);
+#pragma warning disable SYSLIB0011 // 类型或成员已过时
                 BinaryFormatter formatter = new BinaryFormatter();
+#pragma warning restore SYSLIB0011 // 类型或成员已过时
 
                 lock (_lockObject)
                 {
@@ -427,7 +429,9 @@ namespace Behaviac.Design
             {
                 string filename = getTqosFile();
                 Stream stream = File.Open(filename, FileMode.Create);
+#pragma warning disable SYSLIB0011 // 类型或成员已过时
                 BinaryFormatter formatter = new BinaryFormatter();
+#pragma warning restore SYSLIB0011 // 类型或成员已过时
 
                 lock (_lockObject)
                 {

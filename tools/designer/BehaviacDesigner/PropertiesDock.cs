@@ -665,33 +665,5 @@ namespace Behaviac.Design
         {
             propertyGrid.ShowDescription(displayName, description);
         }
-
-        void item_Click(object sender, EventArgs e)
-        {
-            // TODO MenuItem is no longer supported. Use ToolStripMenuItem instead. For more details see https://docs.microsoft.com/en-us/dotnet/core/compatibility/winforms#removed-controls
-            MenuItem item = (MenuItem)sender;
-
-            Type editorType = (Type)item.Tag;
-            Label label = (Label)item.Parent.Tag;
-            DesignerPropertyEditor editor = (DesignerPropertyEditor)label.Tag;
-
-            Debug.Check(_selectedObject == editor.SelectedObject);
-
-            Nodes.Node node = _selectedObject as Nodes.Node;
-
-            if (node != null)
-            {
-                node.OnPropertyValueChanged(true);
-            }
-
-            Attachments.Attachment attach = _selectedObject as Attachments.Attachment;
-
-            if (attach != null)
-            {
-                attach.OnPropertyValueChanged(true);
-            }
-
-            SelectedObject = _selectedObject;
-        }
     }
 }

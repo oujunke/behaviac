@@ -21,6 +21,7 @@ using Behaviac.Design.Network;
 
 namespace Behaviac.Design.Data
 {
+#pragma warning disable SYSLIB0011 // 类型或成员已过时
     public class HighlightBreakPoint
     {
         public const string kEnter = "enter";

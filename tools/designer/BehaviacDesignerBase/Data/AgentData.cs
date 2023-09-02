@@ -79,12 +79,16 @@ namespace Behaviac.Design.Data
             return instances;
         }
 
+#pragma warning disable SYSLIB0011 // 类型或成员已过时
         public static void Serialize(Stream stream, BinaryFormatter formatter)
+#pragma warning restore SYSLIB0011 // 类型或成员已过时
         {
             formatter.Serialize(stream, _agentInstances);
         }
 
+#pragma warning disable SYSLIB0011 // 类型或成员已过时
         public static void Deserialize(Stream stream, BinaryFormatter formatter)
+#pragma warning restore SYSLIB0011 // 类型或成员已过时
         {
             Clear();
             _agentInstances = formatter.Deserialize(stream) as Dictionary<string, List<string>>;
@@ -369,7 +373,7 @@ namespace Behaviac.Design.Data
 
             return valueSet;
         }
-
+#pragma warning disable SYSLIB0011 // 类型或成员已过时
         public static void Serialize(Stream stream, BinaryFormatter formatter)
         {
             formatter.Serialize(stream, _agentDatabase);
@@ -386,7 +390,9 @@ namespace Behaviac.Design.Data
             try
             {
                 Stream stream = File.Open(filename, FileMode.Create);
+#pragma warning disable SYSLIB0011 // 类型或成员已过时
                 BinaryFormatter formatter = new BinaryFormatter();
+#pragma warning restore SYSLIB0011 // 类型或成员已过时
 
                 // Save the workspace.
                 formatter.Serialize(stream, currentWorkspace);
@@ -462,7 +468,9 @@ namespace Behaviac.Design.Data
             try
             {
                 Stream stream = File.Open(filename, FileMode.Open);
+#pragma warning disable SYSLIB0011 // 类型或成员已过时
                 BinaryFormatter formatter = new BinaryFormatter();
+#pragma warning restore SYSLIB0011 // 类型或成员已过时
 
                 // Load the workspace.
                 currentWorkspace = formatter.Deserialize(stream) as string;

@@ -78,7 +78,7 @@ namespace Behaviac.Design.Network
                 _serverPort = value;
             }
         }
-
+#pragma warning disable SYSLIB0011 // 类型或成员已过时
         public static void Load(Stream stream, BinaryFormatter formatter)
         {
             try
