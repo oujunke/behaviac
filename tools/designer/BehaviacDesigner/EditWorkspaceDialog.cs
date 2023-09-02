@@ -33,6 +33,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Text;
 using System.Windows.Forms;
@@ -596,6 +597,13 @@ namespace Behaviac.Design
         private void useIntValueCheckBox_MouseLeave(object sender, EventArgs e)
         {
             _toolTip.Hide(this.useIntValueCheckBox);
+        }
+
+        private void typesExportTextBox_SizeChanged(object sender, EventArgs e)
+        {
+            string str= $"{typesExportTextBox.Location}-{typesExportTextBox.Size}";
+            Text = str;
+            Debugger.Log(2,"Test", str);
         }
     }
 }

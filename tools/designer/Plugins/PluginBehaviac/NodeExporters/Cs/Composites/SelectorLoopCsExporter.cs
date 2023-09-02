@@ -44,6 +44,10 @@ namespace PluginBehaviac.NodeExporters
             {
                 stream.WriteLine("{0}\t\t\tm_bResetChildren = true;", indent, selectorLoop.ResetChildren);
             }
+            if (selectorLoop.FailExit)
+            {
+                stream.WriteLine("{0}\t\t\tm_bFailExit = true;", indent, selectorLoop.FailExit);
+            }
         }
     }
 }

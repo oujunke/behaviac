@@ -863,4 +863,10 @@
   <data name="IntervalTimesDesc" xml:space="preserve">
     <value>每隔指定秒运行一次子节点(未到次数直接返回成功)</value>
   </data>
+  <data name="FailExit" xml:space="preserve">
+    <value>失败退出</value>
+  </data>
+  <data name="FailExitDesc" xml:space="preserve">
+    <value>分支语句执行失败后是否退出</value>
+  </data>
 </root>

@@ -34,7 +34,9 @@ namespace PluginBehaviac.Nodes
             _Precondition = new ConnectorSingle(_children, Resources.WithPreconditionPrecondition, "Precondition");
             _Action = new ConnectorSingle(_children, Resources.WithPreconditionAction, "Action");
         }
-
+        /// <summary>
+        /// 条件分支
+        /// </summary>
         public override string DocLink
         {
             get

@@ -705,6 +705,7 @@ namespace PluginBehaviac.Exporters
                 UpdateFile(file, filename);
             }
         }
+        
         private string ExportAgentCsFileInterface(AgentType agent, string filename, bool preview)
         {
             StringBuilder methodImpSb = new StringBuilder("using System;\r\nusing System.Collections;\r\nusing System.Collections.Generic;\r\nusing System.Threading.Tasks;\r\n");
@@ -718,6 +719,7 @@ namespace PluginBehaviac.Exporters
                 file.WriteLine("using System.Collections;");
                 file.WriteLine("using System.Collections.Generic;");
                 file.WriteLine("using System.Threading.Tasks;");
+                file.WriteLine("using System.ComponentModel;");
                 file.WriteLine();
 
                 if (!preview)
@@ -758,7 +760,7 @@ namespace PluginBehaviac.Exporters
                 }
 
                 file.WriteLine("{0}{{", indent);
-                file.WriteLine($"\tprivate I{agent.BasicName}Imp _methodImp;\r\n\tpublic {agent.BasicName}(I{agent.BasicName}Imp methodImp,behaviac.Workspace workspace):base({(agent.Base.BasicName == "Agent" ? "" : $"methodImp,")}workspace)\r\n\t{{\r\n\t    _methodImp=methodImp;\r\n\t}}");
+                file.WriteLine($"{indent}\t[Description(\"Server\")]\r\n{indent}\tprivate I{agent.BasicName}Imp _methodImp;\r\n{indent}\tpublic {agent.BasicName}(behaviac.Workspace workspace):base(workspace)\r\n\t{{\r\n\t}}");
                 IList<PropertyDef> properties = agent.GetProperties(true);
 
                 foreach (PropertyDef prop in properties)
