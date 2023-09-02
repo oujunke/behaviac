@@ -12,15 +12,23 @@
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 using System;
+using System.Linq;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Windows.Forms;
 using System.Xml;
+using Behaviac.Design.Nodes;
 using Behaviac.Design.Properties;
+using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
+using Microsoft.CodeAnalysis.Emit;
+using System.CodeDom.Compiler;
 
 namespace Behaviac.Design.Importers
 {
@@ -76,7 +84,8 @@ namespace Behaviac.Design.Importers
                 // Build all the cs file into a dll file.
                 if (needBuildDll)
                 {
-                    return buildDll(dllFilename, csDir);
+                    return buildDllNew(dllFilename, csDir);
+                    //return buildDll(dllFilename, csDir);
                 }
             }
             catch (Exception e)
@@ -174,6 +183,50 @@ namespace Behaviac.Design.Importers
             return string.Empty;
         }
 
+        private static string buildDllNew(string dllFilename, string csDir)
+        {
+            var dllfile = new FileInfo(dllFilename);
+            /*var portableExecutableReferences= typeof(ImporterXML).Assembly.GetReferencedAssemblies().Select(a=> MetadataReference.CreateFromFile(Assembly.Load(a.FullName).Location)).Append(MetadataReference.CreateFromFile(typeof(ImporterXML).Assembly.Location)).ToArray();
+            Compilation compilation = CSharpCompilation.Create(dllfile.Name.Replace(".dll", ""),options: new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary))
+                .AddReferences(
+                    portableExecutableReferences
+                    );
+            */
+            Compilation compilation = CSharpCompilation.Create(dllfile.Name.Replace(".dll", ""), options: new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary)).AddReferences(
+                MetadataReference.CreateFromFile(typeof(object).Assembly.Location),
+                MetadataReference.CreateFromFile(typeof(JsonConvert).Assembly.Location),
+                MetadataReference.CreateFromFile(typeof(GeneratedCodeAttribute).Assembly.Location),
+                MetadataReference.CreateFromFile(coreDir.FullName + Path.DirectorySeparatorChar + "System.Runtime.dll"),
+                MetadataReference.CreateFromFile(coreDir.FullName + Path.DirectorySeparatorChar + "System.Dynamic.Runtime.dll"),
+                MetadataReference.CreateFromFile(coreDir.FullName + Path.DirectorySeparatorChar + "System.IO.dll"),
+                MetadataReference.CreateFromFile(coreDir.FullName + Path.DirectorySeparatorChar + "System.Linq.dll"),
+                MetadataReference.CreateFromFile(coreDir.FullName + Path.DirectorySeparatorChar + "System.ObjectModel.dll"),
+                MetadataReference.CreateFromFile(coreDir.FullName + Path.DirectorySeparatorChar + "System.Linq.Expressions.dll"),
+                MetadataReference.CreateFromFile(coreDir.FullName + Path.DirectorySeparatorChar + "System.Runtime.Extensions.dll"));
+            string logFileName = Path.Combine(csDir, "XMLPluginCompile.txt");
+            using var sw = new StreamWriter(logFileName);
+            foreach (var fileName in Directory.GetFiles(csDir, "*.cs"))
+            {
+                SyntaxTree syntaxTree = CSharpSyntaxTree.ParseText(File.ReadAllText(fileName));
+                compilation = compilation.AddSyntaxTrees(syntaxTree);
+            }
+            using (Stream stream = dllfile.Open(FileMode.OpenOrCreate))
+            {
+                EmitResult result = compilation.Emit(stream);
+                if (!result.Success)
+                {
+                    foreach (Diagnostic diagnostic in result.Diagnostics)
+                    {
+                        sw.WriteLine("{0}: {1}", diagnostic.Id, diagnostic.GetMessage());
+                    }
+                }
+            }
+            if (File.Exists(dllFilename))
+            {
+                return dllFilename;
+            }
+            return string.Empty;
+        }
         private static string GetAttribute(XmlNode node, string att)
         {
             XmlNode value = node.Attributes.GetNamedItem(att);
@@ -210,7 +263,7 @@ namespace Behaviac.Design.Importers
                 {
                     XmlDocument xmlDoc = new XmlDocument();
                     Encoding utf8WithoutBom = new UTF8Encoding(false);
-                    using(StreamReader fileStream = new StreamReader(metaFile, utf8WithoutBom))
+                    using (StreamReader fileStream = new StreamReader(metaFile, utf8WithoutBom))
                     {
                         xmlDoc.Load(fileStream);
                     }
