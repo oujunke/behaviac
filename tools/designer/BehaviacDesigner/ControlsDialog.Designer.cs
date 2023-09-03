@@ -43,103 +43,51 @@ namespace Behaviac.Design
         private void InitializeComponent()
         {
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(ControlsDialog));
-            this.webBrowser = new System.Windows.Forms.WebBrowser();
-            this.buttonClose = new System.Windows.Forms.Button();
-            this.checkBoxNext = new System.Windows.Forms.CheckBox();
-            this.documentLabel = new System.Windows.Forms.Label();
-            this.noteLabel = new System.Windows.Forms.Label();
-            this.overviewButton = new System.Windows.Forms.Button();
-            this.tutorialsButton = new System.Windows.Forms.Button();
-            this.workspacesComboBox = new System.Windows.Forms.ComboBox();
-            this.label1 = new System.Windows.Forms.Label();
-            this.SuspendLayout();
+            webBrowser = new System.Windows.Forms.WebBrowser();
+            buttonClose = new System.Windows.Forms.Button();
+            checkBoxNext = new System.Windows.Forms.CheckBox();
+            SuspendLayout();
             // 
             // webBrowser
             // 
-            resources.ApplyResources(this.webBrowser, "webBrowser");
-            this.webBrowser.Name = "webBrowser";
-            this.webBrowser.Url = new System.Uri("", System.UriKind.Relative);
-            this.webBrowser.PreviewKeyDown += new System.Windows.Forms.PreviewKeyDownEventHandler(this.webBrowser_PreviewKeyDown);
+            resources.ApplyResources(webBrowser, "webBrowser");
+            webBrowser.Name = "webBrowser";
+            webBrowser.Url = new System.Uri("about:blank", System.UriKind.Absolute);
+            webBrowser.PreviewKeyDown += webBrowser_PreviewKeyDown;
             // 
             // buttonClose
             // 
-            resources.ApplyResources(this.buttonClose, "buttonClose");
-            this.buttonClose.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(65)))), ((int)(((byte)(65)))), ((int)(((byte)(65)))));
-            this.buttonClose.FlatAppearance.MouseDownBackColor = System.Drawing.Color.DarkGray;
-            this.buttonClose.FlatAppearance.MouseOverBackColor = System.Drawing.Color.DarkGray;
-            this.buttonClose.Name = "buttonClose";
-            this.buttonClose.UseVisualStyleBackColor = false;
-            this.buttonClose.Click += new System.EventHandler(this.buttonClose_Click);
+            resources.ApplyResources(buttonClose, "buttonClose");
+            buttonClose.BackColor = System.Drawing.Color.FromArgb(65, 65, 65);
+            buttonClose.FlatAppearance.MouseDownBackColor = System.Drawing.Color.DarkGray;
+            buttonClose.FlatAppearance.MouseOverBackColor = System.Drawing.Color.DarkGray;
+            buttonClose.Name = "buttonClose";
+            buttonClose.UseVisualStyleBackColor = false;
+            buttonClose.Click += buttonClose_Click;
             // 
             // checkBoxNext
             // 
-            resources.ApplyResources(this.checkBoxNext, "checkBoxNext");
-            this.checkBoxNext.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(65)))), ((int)(((byte)(65)))), ((int)(((byte)(65)))));
-            this.checkBoxNext.Name = "checkBoxNext";
-            this.checkBoxNext.UseVisualStyleBackColor = false;
-            // 
-            // documentLabel
-            // 
-            resources.ApplyResources(this.documentLabel, "documentLabel");
-            this.documentLabel.Name = "documentLabel";
-            // 
-            // noteLabel
-            // 
-            resources.ApplyResources(this.noteLabel, "noteLabel");
-            this.noteLabel.Name = "noteLabel";
-            // 
-            // overviewButton
-            // 
-            resources.ApplyResources(this.overviewButton, "overviewButton");
-            this.overviewButton.Name = "overviewButton";
-            this.overviewButton.UseVisualStyleBackColor = true;
-            this.overviewButton.Click += new System.EventHandler(this.overviewButton_Click);
-            // 
-            // tutorialsButton
-            // 
-            resources.ApplyResources(this.tutorialsButton, "tutorialsButton");
-            this.tutorialsButton.Name = "tutorialsButton";
-            this.tutorialsButton.UseVisualStyleBackColor = true;
-            this.tutorialsButton.Click += new System.EventHandler(this.tutorialsButton_Click);
-            // 
-            // workspacesComboBox
-            // 
-            resources.ApplyResources(this.workspacesComboBox, "workspacesComboBox");
-            this.workspacesComboBox.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(65)))), ((int)(((byte)(65)))), ((int)(((byte)(65)))));
-            this.workspacesComboBox.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
-            this.workspacesComboBox.ForeColor = System.Drawing.Color.LightGray;
-            this.workspacesComboBox.FormattingEnabled = true;
-            this.workspacesComboBox.Name = "workspacesComboBox";
-            this.workspacesComboBox.SelectedIndexChanged += new System.EventHandler(this.workspacesComboBox_SelectedIndexChanged);
-            // 
-            // label1
-            // 
-            resources.ApplyResources(this.label1, "label1");
-            this.label1.Name = "label1";
+            resources.ApplyResources(checkBoxNext, "checkBoxNext");
+            checkBoxNext.BackColor = System.Drawing.Color.FromArgb(65, 65, 65);
+            checkBoxNext.Name = "checkBoxNext";
+            checkBoxNext.UseVisualStyleBackColor = false;
             // 
             // ControlsDialog
             // 
             resources.ApplyResources(this, "$this");
-            this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(56)))), ((int)(((byte)(56)))), ((int)(((byte)(56)))));
-            this.Controls.Add(this.label1);
-            this.Controls.Add(this.workspacesComboBox);
-            this.Controls.Add(this.tutorialsButton);
-            this.Controls.Add(this.overviewButton);
-            this.Controls.Add(this.noteLabel);
-            this.Controls.Add(this.documentLabel);
-            this.Controls.Add(this.checkBoxNext);
-            this.Controls.Add(this.buttonClose);
-            this.Controls.Add(this.webBrowser);
-            this.ForeColor = System.Drawing.Color.LightGray;
-            this.KeyPreview = true;
-            this.Name = "ControlsDialog";
-            this.FormClosed += new System.Windows.Forms.FormClosedEventHandler(this.ControlsDialog_FormClosed);
-            this.Load += new System.EventHandler(this.ControlsDialog_Load);
-            this.KeyDown += new System.Windows.Forms.KeyEventHandler(this.ControlsDialog_KeyDown);
-            this.ResumeLayout(false);
-            this.PerformLayout();
-
+            AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
+            BackColor = System.Drawing.Color.FromArgb(56, 56, 56);
+            Controls.Add(checkBoxNext);
+            Controls.Add(buttonClose);
+            Controls.Add(webBrowser);
+            ForeColor = System.Drawing.Color.LightGray;
+            KeyPreview = true;
+            Name = "ControlsDialog";
+            FormClosed += ControlsDialog_FormClosed;
+            Load += ControlsDialog_Load;
+            KeyDown += ControlsDialog_KeyDown;
+            ResumeLayout(false);
+            PerformLayout();
         }
 
         #endregion
@@ -147,12 +95,6 @@ namespace Behaviac.Design
         private System.Windows.Forms.WebBrowser webBrowser;
         private System.Windows.Forms.Button buttonClose;
         private System.Windows.Forms.CheckBox checkBoxNext;
-        private System.Windows.Forms.Label documentLabel;
-        private System.Windows.Forms.Label noteLabel;
-        private System.Windows.Forms.Button overviewButton;
-        private System.Windows.Forms.Button tutorialsButton;
-        private System.Windows.Forms.ComboBox workspacesComboBox;
-        private System.Windows.Forms.Label label1;
 
 
     }

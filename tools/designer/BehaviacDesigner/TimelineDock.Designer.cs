@@ -42,319 +42,298 @@ namespace Behaviac.Design
         /// </summary>
         private void InitializeComponent()
         {
-            this.components = new System.ComponentModel.Container();
+            components = new System.ComponentModel.Container();
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(TimelineDock));
-            this.flowLayoutPanel1 = new System.Windows.Forms.FlowLayoutPanel();
-            this.startButton = new System.Windows.Forms.Button();
-            this.backwardButton = new System.Windows.Forms.Button();
-            this.playButton = new System.Windows.Forms.Button();
-            this.forwardButton = new System.Windows.Forms.Button();
-            this.endButton = new System.Windows.Forms.Button();
-            this.zoomOutButton = new System.Windows.Forms.Button();
-            this.zoomInButton = new System.Windows.Forms.Button();
-            this.comboBoxLogFilter = new System.Windows.Forms.ComboBox();
-            this.numericUpDownFPS = new System.Windows.Forms.NumericUpDown();
-            this.gotoLabel = new System.Windows.Forms.Label();
-            this.gotoNumericUpDown = new System.Windows.Forms.NumericUpDown();
-            this.promptLabel = new System.Windows.Forms.Label();
-            this.panel1 = new System.Windows.Forms.Panel();
-            this.trackBar = new System.Windows.Forms.TrackBar();
-            this.startLabel = new System.Windows.Forms.Label();
-            this.endLabel = new System.Windows.Forms.Label();
-            this.toolTip = new System.Windows.Forms.ToolTip(this.components);
-            this.effectTimer = new System.Windows.Forms.Timer(this.components);
-            this.flowLayoutPanel1.SuspendLayout();
-            ((System.ComponentModel.ISupportInitialize)(this.numericUpDownFPS)).BeginInit();
-            ((System.ComponentModel.ISupportInitialize)(this.gotoNumericUpDown)).BeginInit();
-            this.panel1.SuspendLayout();
-            ((System.ComponentModel.ISupportInitialize)(this.trackBar)).BeginInit();
-            this.SuspendLayout();
+            flowLayoutPanel1 = new System.Windows.Forms.FlowLayoutPanel();
+            startButton = new System.Windows.Forms.Button();
+            backwardButton = new System.Windows.Forms.Button();
+            playButton = new System.Windows.Forms.Button();
+            forwardButton = new System.Windows.Forms.Button();
+            endButton = new System.Windows.Forms.Button();
+            zoomOutButton = new System.Windows.Forms.Button();
+            zoomInButton = new System.Windows.Forms.Button();
+            comboBoxLogFilter = new System.Windows.Forms.ComboBox();
+            numericUpDownFPS = new System.Windows.Forms.NumericUpDown();
+            gotoLabel = new System.Windows.Forms.Label();
+            gotoNumericUpDown = new System.Windows.Forms.NumericUpDown();
+            promptLabel = new System.Windows.Forms.Label();
+            panel1 = new System.Windows.Forms.Panel();
+            trackBar = new System.Windows.Forms.TrackBar();
+            startLabel = new System.Windows.Forms.Label();
+            endLabel = new System.Windows.Forms.Label();
+            toolTip = new System.Windows.Forms.ToolTip(components);
+            effectTimer = new System.Windows.Forms.Timer(components);
+            flowLayoutPanel1.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)numericUpDownFPS).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)gotoNumericUpDown).BeginInit();
+            panel1.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)trackBar).BeginInit();
+            SuspendLayout();
             // 
             // flowLayoutPanel1
             // 
-            this.flowLayoutPanel1.AutoSize = true;
-            this.flowLayoutPanel1.AutoSizeMode = System.Windows.Forms.AutoSizeMode.GrowAndShrink;
-            this.flowLayoutPanel1.Controls.Add(this.startButton);
-            this.flowLayoutPanel1.Controls.Add(this.backwardButton);
-            this.flowLayoutPanel1.Controls.Add(this.playButton);
-            this.flowLayoutPanel1.Controls.Add(this.forwardButton);
-            this.flowLayoutPanel1.Controls.Add(this.endButton);
-            this.flowLayoutPanel1.Controls.Add(this.zoomOutButton);
-            this.flowLayoutPanel1.Controls.Add(this.zoomInButton);
-            this.flowLayoutPanel1.Controls.Add(this.comboBoxLogFilter);
-            this.flowLayoutPanel1.Controls.Add(this.numericUpDownFPS);
-            this.flowLayoutPanel1.Controls.Add(this.gotoLabel);
-            this.flowLayoutPanel1.Controls.Add(this.gotoNumericUpDown);
-            this.flowLayoutPanel1.Controls.Add(this.promptLabel);
-            this.flowLayoutPanel1.Dock = System.Windows.Forms.DockStyle.Top;
-            this.flowLayoutPanel1.Location = new System.Drawing.Point(0, 0);
-            this.flowLayoutPanel1.Name = "flowLayoutPanel1";
-            this.flowLayoutPanel1.Size = new System.Drawing.Size(1114, 31);
-            this.flowLayoutPanel1.TabIndex = 0;
+            flowLayoutPanel1.AutoSize = true;
+            flowLayoutPanel1.AutoSizeMode = System.Windows.Forms.AutoSizeMode.GrowAndShrink;
+            flowLayoutPanel1.Controls.Add(startButton);
+            flowLayoutPanel1.Controls.Add(backwardButton);
+            flowLayoutPanel1.Controls.Add(playButton);
+            flowLayoutPanel1.Controls.Add(forwardButton);
+            flowLayoutPanel1.Controls.Add(endButton);
+            flowLayoutPanel1.Controls.Add(zoomOutButton);
+            flowLayoutPanel1.Controls.Add(zoomInButton);
+            flowLayoutPanel1.Controls.Add(comboBoxLogFilter);
+            flowLayoutPanel1.Controls.Add(numericUpDownFPS);
+            flowLayoutPanel1.Controls.Add(gotoLabel);
+            flowLayoutPanel1.Controls.Add(gotoNumericUpDown);
+            flowLayoutPanel1.Controls.Add(promptLabel);
+            flowLayoutPanel1.Dock = System.Windows.Forms.DockStyle.Top;
+            flowLayoutPanel1.Location = new System.Drawing.Point(0, 0);
+            flowLayoutPanel1.Name = "flowLayoutPanel1";
+            flowLayoutPanel1.Size = new System.Drawing.Size(1114, 34);
+            flowLayoutPanel1.TabIndex = 0;
             // 
             // startButton
             // 
-            this.startButton.AutoSize = true;
-            this.startButton.Dock = System.Windows.Forms.DockStyle.Left;
-            this.startButton.Image = ((System.Drawing.Image)(resources.GetObject("startButton.Image")));
-            this.startButton.Location = new System.Drawing.Point(20, 3);
-            this.startButton.Margin = new System.Windows.Forms.Padding(20, 3, 3, 3);
-            this.startButton.Name = "startButton";
-            this.startButton.Size = new System.Drawing.Size(23, 25);
-            this.startButton.TabIndex = 1;
-            this.toolTip.SetToolTip(this.startButton, "Return to the first frame.");
-            this.startButton.UseVisualStyleBackColor = true;
-            this.startButton.Click += new System.EventHandler(this.startButton_Click);
+            startButton.AutoSize = true;
+            startButton.Dock = System.Windows.Forms.DockStyle.Left;
+            startButton.Image = (System.Drawing.Image)resources.GetObject("startButton.Image");
+            startButton.Location = new System.Drawing.Point(20, 3);
+            startButton.Margin = new System.Windows.Forms.Padding(20, 3, 3, 3);
+            startButton.Name = "startButton";
+            startButton.Size = new System.Drawing.Size(23, 28);
+            startButton.TabIndex = 1;
+            toolTip.SetToolTip(startButton, "Return to the first frame.");
+            startButton.UseVisualStyleBackColor = true;
+            startButton.Click += startButton_Click;
             // 
             // backwardButton
             // 
-            this.backwardButton.AutoSize = true;
-            this.backwardButton.Dock = System.Windows.Forms.DockStyle.Left;
-            this.backwardButton.Image = ((System.Drawing.Image)(resources.GetObject("backwardButton.Image")));
-            this.backwardButton.Location = new System.Drawing.Point(49, 3);
-            this.backwardButton.Name = "backwardButton";
-            this.backwardButton.Size = new System.Drawing.Size(22, 25);
-            this.backwardButton.TabIndex = 2;
-            this.toolTip.SetToolTip(this.backwardButton, "Return to the previous frame.");
-            this.backwardButton.UseVisualStyleBackColor = true;
-            this.backwardButton.Click += new System.EventHandler(this.backwardButton_Click);
+            backwardButton.AutoSize = true;
+            backwardButton.Dock = System.Windows.Forms.DockStyle.Left;
+            backwardButton.Image = (System.Drawing.Image)resources.GetObject("backwardButton.Image");
+            backwardButton.Location = new System.Drawing.Point(49, 3);
+            backwardButton.Name = "backwardButton";
+            backwardButton.Size = new System.Drawing.Size(22, 28);
+            backwardButton.TabIndex = 2;
+            toolTip.SetToolTip(backwardButton, "Return to the previous frame.");
+            backwardButton.UseVisualStyleBackColor = true;
+            backwardButton.Click += backwardButton_Click;
             // 
             // playButton
             // 
-            this.playButton.Dock = System.Windows.Forms.DockStyle.Left;
-            this.playButton.Image = global::Behaviac.Design.Properties.Resources.Play;
-            this.playButton.Location = new System.Drawing.Point(77, 3);
-            this.playButton.Name = "playButton";
-            this.playButton.Size = new System.Drawing.Size(22, 25);
-            this.playButton.TabIndex = 3;
-            this.toolTip.SetToolTip(this.playButton, "Continue/Break");
-            this.playButton.UseVisualStyleBackColor = true;
-            this.playButton.Click += new System.EventHandler(this.playButton_Click);
+            playButton.Dock = System.Windows.Forms.DockStyle.Left;
+            playButton.Image = Properties.Resources.Play;
+            playButton.Location = new System.Drawing.Point(77, 3);
+            playButton.Name = "playButton";
+            playButton.Size = new System.Drawing.Size(22, 28);
+            playButton.TabIndex = 3;
+            toolTip.SetToolTip(playButton, "Continue/Break");
+            playButton.UseVisualStyleBackColor = true;
+            playButton.Click += playButton_Click;
             // 
             // forwardButton
             // 
-            this.forwardButton.AutoSize = true;
-            this.forwardButton.Dock = System.Windows.Forms.DockStyle.Left;
-            this.forwardButton.Image = ((System.Drawing.Image)(resources.GetObject("forwardButton.Image")));
-            this.forwardButton.Location = new System.Drawing.Point(105, 3);
-            this.forwardButton.Name = "forwardButton";
-            this.forwardButton.Size = new System.Drawing.Size(22, 25);
-            this.forwardButton.TabIndex = 4;
-            this.toolTip.SetToolTip(this.forwardButton, "Go to the next frame.");
-            this.forwardButton.UseVisualStyleBackColor = true;
-            this.forwardButton.Click += new System.EventHandler(this.forwardButton_Click);
+            forwardButton.AutoSize = true;
+            forwardButton.Dock = System.Windows.Forms.DockStyle.Left;
+            forwardButton.Image = (System.Drawing.Image)resources.GetObject("forwardButton.Image");
+            forwardButton.Location = new System.Drawing.Point(105, 3);
+            forwardButton.Name = "forwardButton";
+            forwardButton.Size = new System.Drawing.Size(22, 28);
+            forwardButton.TabIndex = 4;
+            toolTip.SetToolTip(forwardButton, "Go to the next frame.");
+            forwardButton.UseVisualStyleBackColor = true;
+            forwardButton.Click += forwardButton_Click;
             // 
             // endButton
             // 
-            this.endButton.AutoSize = true;
-            this.endButton.Dock = System.Windows.Forms.DockStyle.Left;
-            this.endButton.Image = ((System.Drawing.Image)(resources.GetObject("endButton.Image")));
-            this.endButton.Location = new System.Drawing.Point(133, 3);
-            this.endButton.Name = "endButton";
-            this.endButton.Size = new System.Drawing.Size(22, 25);
-            this.endButton.TabIndex = 5;
-            this.toolTip.SetToolTip(this.endButton, "Go to the last frame.");
-            this.endButton.UseVisualStyleBackColor = true;
-            this.endButton.Click += new System.EventHandler(this.endButton_Click);
+            endButton.AutoSize = true;
+            endButton.Dock = System.Windows.Forms.DockStyle.Left;
+            endButton.Image = (System.Drawing.Image)resources.GetObject("endButton.Image");
+            endButton.Location = new System.Drawing.Point(133, 3);
+            endButton.Name = "endButton";
+            endButton.Size = new System.Drawing.Size(22, 28);
+            endButton.TabIndex = 5;
+            toolTip.SetToolTip(endButton, "Go to the last frame.");
+            endButton.UseVisualStyleBackColor = true;
+            endButton.Click += endButton_Click;
             // 
             // zoomOutButton
             // 
-            this.zoomOutButton.AutoSize = true;
-            this.zoomOutButton.Dock = System.Windows.Forms.DockStyle.Left;
-            this.zoomOutButton.Image = ((System.Drawing.Image)(resources.GetObject("zoomOutButton.Image")));
-            this.zoomOutButton.Location = new System.Drawing.Point(161, 3);
-            this.zoomOutButton.Name = "zoomOutButton";
-            this.zoomOutButton.Size = new System.Drawing.Size(22, 25);
-            this.zoomOutButton.TabIndex = 7;
-            this.toolTip.SetToolTip(this.zoomOutButton, "Zoom out");
-            this.zoomOutButton.UseVisualStyleBackColor = true;
-            this.zoomOutButton.Click += new System.EventHandler(this.zoomOutButton_Click);
+            zoomOutButton.AutoSize = true;
+            zoomOutButton.Dock = System.Windows.Forms.DockStyle.Left;
+            zoomOutButton.Image = (System.Drawing.Image)resources.GetObject("zoomOutButton.Image");
+            zoomOutButton.Location = new System.Drawing.Point(161, 3);
+            zoomOutButton.Name = "zoomOutButton";
+            zoomOutButton.Size = new System.Drawing.Size(22, 28);
+            zoomOutButton.TabIndex = 7;
+            toolTip.SetToolTip(zoomOutButton, "Zoom out");
+            zoomOutButton.UseVisualStyleBackColor = true;
+            zoomOutButton.Click += zoomOutButton_Click;
             // 
             // zoomInButton
             // 
-            this.zoomInButton.AutoSize = true;
-            this.zoomInButton.Dock = System.Windows.Forms.DockStyle.Left;
-            this.zoomInButton.Image = ((System.Drawing.Image)(resources.GetObject("zoomInButton.Image")));
-            this.zoomInButton.Location = new System.Drawing.Point(189, 3);
-            this.zoomInButton.Name = "zoomInButton";
-            this.zoomInButton.Size = new System.Drawing.Size(22, 25);
-            this.zoomInButton.TabIndex = 8;
-            this.toolTip.SetToolTip(this.zoomInButton, "Zoon in");
-            this.zoomInButton.UseVisualStyleBackColor = true;
-            this.zoomInButton.Click += new System.EventHandler(this.zoomInButton_Click);
+            zoomInButton.AutoSize = true;
+            zoomInButton.Dock = System.Windows.Forms.DockStyle.Left;
+            zoomInButton.Image = (System.Drawing.Image)resources.GetObject("zoomInButton.Image");
+            zoomInButton.Location = new System.Drawing.Point(189, 3);
+            zoomInButton.Name = "zoomInButton";
+            zoomInButton.Size = new System.Drawing.Size(22, 28);
+            zoomInButton.TabIndex = 8;
+            toolTip.SetToolTip(zoomInButton, "Zoon in");
+            zoomInButton.UseVisualStyleBackColor = true;
+            zoomInButton.Click += zoomInButton_Click;
             // 
             // comboBoxLogFilter
             // 
-            this.comboBoxLogFilter.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(56)))), ((int)(((byte)(56)))), ((int)(((byte)(56)))));
-            this.comboBoxLogFilter.FlatStyle = System.Windows.Forms.FlatStyle.Popup;
-            this.comboBoxLogFilter.ForeColor = System.Drawing.Color.LightGray;
-            this.comboBoxLogFilter.FormattingEnabled = true;
-            this.comboBoxLogFilter.Items.AddRange(new object[] {
-            "ALL",
-            "RED",
-            "ORANGE",
-            "YELLOW",
-            "GREEN",
-            "BLUE",
-            "INDIGO",
-            "PURPLE"});
-            this.comboBoxLogFilter.Location = new System.Drawing.Point(217, 3);
-            this.comboBoxLogFilter.Name = "comboBoxLogFilter";
-            this.comboBoxLogFilter.Size = new System.Drawing.Size(94, 25);
-            this.comboBoxLogFilter.TabIndex = 19;
-            this.toolTip.SetToolTip(this.comboBoxLogFilter, "Log filter");
-            this.comboBoxLogFilter.Visible = false;
-            this.comboBoxLogFilter.SelectedIndexChanged += new System.EventHandler(this.comboBoxLogFilter_SelectedIndexChanged);
-            this.comboBoxLogFilter.KeyDown += new System.Windows.Forms.KeyEventHandler(this.comboBoxLogFilter_KeyDown);
+            comboBoxLogFilter.BackColor = System.Drawing.Color.FromArgb(56, 56, 56);
+            comboBoxLogFilter.FlatStyle = System.Windows.Forms.FlatStyle.Popup;
+            comboBoxLogFilter.ForeColor = System.Drawing.Color.LightGray;
+            comboBoxLogFilter.FormattingEnabled = true;
+            comboBoxLogFilter.Items.AddRange(new object[] { "ALL", "RED", "ORANGE", "YELLOW", "GREEN", "BLUE", "INDIGO", "PURPLE" });
+            comboBoxLogFilter.Location = new System.Drawing.Point(217, 3);
+            comboBoxLogFilter.Name = "comboBoxLogFilter";
+            comboBoxLogFilter.Size = new System.Drawing.Size(94, 25);
+            comboBoxLogFilter.TabIndex = 19;
+            toolTip.SetToolTip(comboBoxLogFilter, "Log filter");
+            comboBoxLogFilter.Visible = false;
+            comboBoxLogFilter.SelectedIndexChanged += comboBoxLogFilter_SelectedIndexChanged;
+            comboBoxLogFilter.KeyDown += comboBoxLogFilter_KeyDown;
             // 
             // numericUpDownFPS
             // 
-            this.numericUpDownFPS.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(56)))), ((int)(((byte)(56)))), ((int)(((byte)(56)))));
-            this.numericUpDownFPS.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
-            this.numericUpDownFPS.Dock = System.Windows.Forms.DockStyle.Left;
-            this.numericUpDownFPS.ForeColor = System.Drawing.Color.LightGray;
-            this.numericUpDownFPS.Location = new System.Drawing.Point(317, 5);
-            this.numericUpDownFPS.Margin = new System.Windows.Forms.Padding(3, 5, 3, 3);
-            this.numericUpDownFPS.Maximum = new decimal(new int[] {
-            1000,
-            0,
-            0,
-            0});
-            this.numericUpDownFPS.Minimum = new decimal(new int[] {
-            1,
-            0,
-            0,
-            0});
-            this.numericUpDownFPS.Name = "numericUpDownFPS";
-            this.numericUpDownFPS.RightToLeft = System.Windows.Forms.RightToLeft.No;
-            this.numericUpDownFPS.Size = new System.Drawing.Size(75, 23);
-            this.numericUpDownFPS.TabIndex = 17;
-            this.toolTip.SetToolTip(this.numericUpDownFPS, "Simulating FPS");
-            this.numericUpDownFPS.Value = new decimal(new int[] {
-            60,
-            0,
-            0,
-            0});
+            numericUpDownFPS.BackColor = System.Drawing.Color.FromArgb(56, 56, 56);
+            numericUpDownFPS.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
+            numericUpDownFPS.Dock = System.Windows.Forms.DockStyle.Left;
+            numericUpDownFPS.ForeColor = System.Drawing.Color.LightGray;
+            numericUpDownFPS.Location = new System.Drawing.Point(317, 5);
+            numericUpDownFPS.Margin = new System.Windows.Forms.Padding(3, 5, 3, 3);
+            numericUpDownFPS.Maximum = new decimal(new int[] { 1000, 0, 0, 0 });
+            numericUpDownFPS.Minimum = new decimal(new int[] { 1, 0, 0, 0 });
+            numericUpDownFPS.Name = "numericUpDownFPS";
+            numericUpDownFPS.RightToLeft = System.Windows.Forms.RightToLeft.No;
+            numericUpDownFPS.Size = new System.Drawing.Size(75, 23);
+            numericUpDownFPS.TabIndex = 17;
+            toolTip.SetToolTip(numericUpDownFPS, "Simulating FPS");
+            numericUpDownFPS.Value = new decimal(new int[] { 60, 0, 0, 0 });
             // 
             // gotoLabel
             // 
-            this.gotoLabel.AutoSize = true;
-            this.gotoLabel.Dock = System.Windows.Forms.DockStyle.Left;
-            this.gotoLabel.Location = new System.Drawing.Point(405, 0);
-            this.gotoLabel.Margin = new System.Windows.Forms.Padding(10, 0, 3, 0);
-            this.gotoLabel.Name = "gotoLabel";
-            this.gotoLabel.Size = new System.Drawing.Size(48, 31);
-            this.gotoLabel.TabIndex = 13;
-            this.gotoLabel.Text = "Frame";
-            this.gotoLabel.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
+            gotoLabel.AutoSize = true;
+            gotoLabel.Dock = System.Windows.Forms.DockStyle.Left;
+            gotoLabel.Location = new System.Drawing.Point(405, 0);
+            gotoLabel.Margin = new System.Windows.Forms.Padding(10, 0, 3, 0);
+            gotoLabel.Name = "gotoLabel";
+            gotoLabel.Size = new System.Drawing.Size(48, 34);
+            gotoLabel.TabIndex = 13;
+            gotoLabel.Text = "Frame";
+            gotoLabel.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
             // 
             // gotoNumericUpDown
             // 
-            this.gotoNumericUpDown.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(56)))), ((int)(((byte)(56)))), ((int)(((byte)(56)))));
-            this.gotoNumericUpDown.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
-            this.gotoNumericUpDown.Dock = System.Windows.Forms.DockStyle.Left;
-            this.gotoNumericUpDown.ForeColor = System.Drawing.Color.LightGray;
-            this.gotoNumericUpDown.Location = new System.Drawing.Point(459, 5);
-            this.gotoNumericUpDown.Margin = new System.Windows.Forms.Padding(3, 5, 3, 3);
-            this.gotoNumericUpDown.Name = "gotoNumericUpDown";
-            this.gotoNumericUpDown.RightToLeft = System.Windows.Forms.RightToLeft.No;
-            this.gotoNumericUpDown.Size = new System.Drawing.Size(79, 23);
-            this.gotoNumericUpDown.TabIndex = 14;
-            this.toolTip.SetToolTip(this.gotoNumericUpDown, "Go to which frame?");
-            this.gotoNumericUpDown.ValueChanged += new System.EventHandler(this.gotoNumericUpDown_ValueChanged);
+            gotoNumericUpDown.BackColor = System.Drawing.Color.FromArgb(56, 56, 56);
+            gotoNumericUpDown.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
+            gotoNumericUpDown.Dock = System.Windows.Forms.DockStyle.Left;
+            gotoNumericUpDown.ForeColor = System.Drawing.Color.LightGray;
+            gotoNumericUpDown.Location = new System.Drawing.Point(459, 5);
+            gotoNumericUpDown.Margin = new System.Windows.Forms.Padding(3, 5, 3, 3);
+            gotoNumericUpDown.Name = "gotoNumericUpDown";
+            gotoNumericUpDown.RightToLeft = System.Windows.Forms.RightToLeft.No;
+            gotoNumericUpDown.Size = new System.Drawing.Size(79, 23);
+            gotoNumericUpDown.TabIndex = 14;
+            toolTip.SetToolTip(gotoNumericUpDown, "Go to which frame?");
+            gotoNumericUpDown.ValueChanged += gotoNumericUpDown_ValueChanged;
             // 
             // promptLabel
             // 
-            this.promptLabel.AutoSize = true;
-            this.promptLabel.Dock = System.Windows.Forms.DockStyle.Left;
-            this.promptLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 10.5F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.promptLabel.ForeColor = System.Drawing.Color.Gold;
-            this.promptLabel.Location = new System.Drawing.Point(551, 0);
-            this.promptLabel.Margin = new System.Windows.Forms.Padding(10, 0, 3, 0);
-            this.promptLabel.Name = "promptLabel";
-            this.promptLabel.Size = new System.Drawing.Size(127, 31);
-            this.promptLabel.TabIndex = 15;
-            this.promptLabel.Text = "break prompt";
-            this.promptLabel.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
-            this.promptLabel.Click += new System.EventHandler(this.promptLabel_Click);
+            promptLabel.AutoSize = true;
+            promptLabel.Dock = System.Windows.Forms.DockStyle.Left;
+            promptLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 10.5F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, 0);
+            promptLabel.ForeColor = System.Drawing.Color.Gold;
+            promptLabel.Location = new System.Drawing.Point(551, 0);
+            promptLabel.Margin = new System.Windows.Forms.Padding(10, 0, 3, 0);
+            promptLabel.Name = "promptLabel";
+            promptLabel.Size = new System.Drawing.Size(127, 34);
+            promptLabel.TabIndex = 15;
+            promptLabel.Text = "break prompt";
+            promptLabel.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
+            promptLabel.Click += promptLabel_Click;
             // 
             // panel1
             // 
-            this.panel1.AutoSize = true;
-            this.panel1.Controls.Add(this.trackBar);
-            this.panel1.Dock = System.Windows.Forms.DockStyle.Top;
-            this.panel1.Location = new System.Drawing.Point(0, 31);
-            this.panel1.Name = "panel1";
-            this.panel1.Size = new System.Drawing.Size(1114, 56);
-            this.panel1.TabIndex = 0;
+            panel1.AutoSize = true;
+            panel1.Controls.Add(trackBar);
+            panel1.Dock = System.Windows.Forms.DockStyle.Top;
+            panel1.Location = new System.Drawing.Point(0, 34);
+            panel1.Name = "panel1";
+            panel1.Size = new System.Drawing.Size(1114, 56);
+            panel1.TabIndex = 0;
             // 
             // trackBar
             // 
-            this.trackBar.BackColor = System.Drawing.SystemColors.Control;
-            this.trackBar.Dock = System.Windows.Forms.DockStyle.Top;
-            this.trackBar.LargeChange = 10;
-            this.trackBar.Location = new System.Drawing.Point(0, 0);
-            this.trackBar.Maximum = 100;
-            this.trackBar.Name = "trackBar";
-            this.trackBar.RightToLeft = System.Windows.Forms.RightToLeft.No;
-            this.trackBar.Size = new System.Drawing.Size(1114, 56);
-            this.trackBar.SmallChange = 5;
-            this.trackBar.TabIndex = 15;
-            this.trackBar.TickFrequency = 10;
-            this.trackBar.TickStyle = System.Windows.Forms.TickStyle.Both;
-            this.trackBar.ValueChanged += new System.EventHandler(this.trackBar_ValueChanged);
+            trackBar.BackColor = System.Drawing.SystemColors.Control;
+            trackBar.Dock = System.Windows.Forms.DockStyle.Top;
+            trackBar.LargeChange = 10;
+            trackBar.Location = new System.Drawing.Point(0, 0);
+            trackBar.Maximum = 100;
+            trackBar.Name = "trackBar";
+            trackBar.RightToLeft = System.Windows.Forms.RightToLeft.No;
+            trackBar.Size = new System.Drawing.Size(1114, 56);
+            trackBar.SmallChange = 5;
+            trackBar.TabIndex = 15;
+            trackBar.TickFrequency = 10;
+            trackBar.TickStyle = System.Windows.Forms.TickStyle.Both;
+            trackBar.ValueChanged += trackBar_ValueChanged;
             // 
             // startLabel
             // 
-            this.startLabel.AutoSize = true;
-            this.startLabel.Dock = System.Windows.Forms.DockStyle.Left;
-            this.startLabel.Location = new System.Drawing.Point(0, 87);
-            this.startLabel.Name = "startLabel";
-            this.startLabel.Padding = new System.Windows.Forms.Padding(8, 0, 0, 0);
-            this.startLabel.Size = new System.Drawing.Size(24, 17);
-            this.startLabel.TabIndex = 16;
-            this.startLabel.Text = "0";
+            startLabel.AutoSize = true;
+            startLabel.Dock = System.Windows.Forms.DockStyle.Left;
+            startLabel.Location = new System.Drawing.Point(0, 90);
+            startLabel.Name = "startLabel";
+            startLabel.Padding = new System.Windows.Forms.Padding(8, 0, 0, 0);
+            startLabel.Size = new System.Drawing.Size(24, 17);
+            startLabel.TabIndex = 16;
+            startLabel.Text = "0";
             // 
             // endLabel
             // 
-            this.endLabel.AutoSize = true;
-            this.endLabel.Dock = System.Windows.Forms.DockStyle.Right;
-            this.endLabel.Location = new System.Drawing.Point(1082, 87);
-            this.endLabel.Name = "endLabel";
-            this.endLabel.Size = new System.Drawing.Size(32, 17);
-            this.endLabel.TabIndex = 17;
-            this.endLabel.Text = "100";
+            endLabel.AutoSize = true;
+            endLabel.Dock = System.Windows.Forms.DockStyle.Right;
+            endLabel.Location = new System.Drawing.Point(1082, 90);
+            endLabel.Name = "endLabel";
+            endLabel.Size = new System.Drawing.Size(32, 17);
+            endLabel.TabIndex = 17;
+            endLabel.Text = "100";
             // 
             // effectTimer
             // 
-            this.effectTimer.Interval = 250;
-            this.effectTimer.Tick += new System.EventHandler(this.effectTimer_Tick);
+            effectTimer.Interval = 250;
+            effectTimer.Tick += effectTimer_Tick;
             // 
             // TimelineDock
             // 
-            this.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(56)))), ((int)(((byte)(56)))), ((int)(((byte)(56)))));
-            this.ClientSize = new System.Drawing.Size(1114, 117);
-            this.Controls.Add(this.endLabel);
-            this.Controls.Add(this.startLabel);
-            this.Controls.Add(this.panel1);
-            this.Controls.Add(this.flowLayoutPanel1);
-            this.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.ForeColor = System.Drawing.Color.LightGray;
-            this.Name = "TimelineDock";
-            this.ShowIcon = false;
-            this.TabText = "Timeline";
-            this.Text = "Timeline";
-            this.Load += new System.EventHandler(this.TimelineDock_Load);
-            this.flowLayoutPanel1.ResumeLayout(false);
-            this.flowLayoutPanel1.PerformLayout();
-            ((System.ComponentModel.ISupportInitialize)(this.numericUpDownFPS)).EndInit();
-            ((System.ComponentModel.ISupportInitialize)(this.gotoNumericUpDown)).EndInit();
-            this.panel1.ResumeLayout(false);
-            this.panel1.PerformLayout();
-            ((System.ComponentModel.ISupportInitialize)(this.trackBar)).EndInit();
-            this.ResumeLayout(false);
-            this.PerformLayout();
-
+            BackColor = System.Drawing.Color.FromArgb(56, 56, 56);
+            ClientSize = new System.Drawing.Size(1114, 117);
+            Controls.Add(endLabel);
+            Controls.Add(startLabel);
+            Controls.Add(panel1);
+            Controls.Add(flowLayoutPanel1);
+            Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, 0);
+            ForeColor = System.Drawing.Color.LightGray;
+            Name = "TimelineDock";
+            ShowIcon = false;
+            TabText = "Timeline";
+            Text = "Timeline";
+            Load += TimelineDock_Load;
+            flowLayoutPanel1.ResumeLayout(false);
+            flowLayoutPanel1.PerformLayout();
+            ((System.ComponentModel.ISupportInitialize)numericUpDownFPS).EndInit();
+            ((System.ComponentModel.ISupportInitialize)gotoNumericUpDown).EndInit();
+            panel1.ResumeLayout(false);
+            panel1.PerformLayout();
+            ((System.ComponentModel.ISupportInitialize)trackBar).EndInit();
+            ResumeLayout(false);
+            PerformLayout();
         }
 
         #endregion

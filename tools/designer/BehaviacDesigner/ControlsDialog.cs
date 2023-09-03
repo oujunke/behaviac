@@ -31,15 +31,13 @@ namespace Behaviac.Design
             {
                 this.checkBoxNext.Checked = !Settings.Default.ShowControlsOnStartUp;
             }
-
-            initWorkspaces();
         }
 
         private void ControlsDialog_Load(object sender, EventArgs e)
         {
             string appDir = Path.GetDirectoryName(Application.ExecutablePath);
             string controlFile = (Settings.Default.Language == (int)Language.English || System.Threading.Thread.CurrentThread.CurrentUICulture.Name != "zh-CN")
-                                 ? "..\\doc\\ControlHelp.html" : "..\\doc\\ControlHelp.zh-CN.html";
+                                 ? "doc\\ControlHelp.html" : "doc\\ControlHelp.zh-CN.html";
             controlFile = Path.Combine(appDir, controlFile);
             controlFile = Path.GetFullPath(controlFile);
 
@@ -47,74 +45,8 @@ namespace Behaviac.Design
             {
                 webBrowser.Url = new Uri(controlFile);
             }
+            Text = $"{webBrowser.Location}-{webBrowser.Size}----{Location}-{Size}";
         }
-
-        private Dictionary<string, string> _workspaces = new Dictionary<string,string>();
-
-        private void initWorkspaces()
-        {
-#if DEBUG
-            _workspaces.Add("C++ Unit Test", "../../../test/btunittest/BehaviacData/BehaviacUnitTestCpp.workspace.xml");
-            _workspaces.Add("C++ Ship Demo", "../../../example/spaceship/data/ships.workspace.xml");
-#endif
-            _workspaces.Add("C++ Tutorial_1", "../../../tutorials/tutorial_1/workspace/tutorial_1_cpp.workspace.xml");
-            _workspaces.Add("C++ Tutorial_1_1", "../../../tutorials/tutorial_1_1/workspace/tutorial_1_1_cpp.workspace.xml");
-            _workspaces.Add("C++ Tutorial_1_2", "../../../tutorials/tutorial_1_2/workspace/tutorial_1_2_cpp.workspace.xml");
-            _workspaces.Add("C++ Tutorial_2", "../../../tutorials/tutorial_2/workspace/tutorial_2_cpp.workspace.xml");
-            _workspaces.Add("C++ Tutorial_3", "../../../tutorials/tutorial_3/workspace/tutorial_3_cpp.workspace.xml");
-            _workspaces.Add("C++ Tutorial_4", "../../../tutorials/tutorial_4/workspace/tutorial_4_cpp.workspace.xml");
-            _workspaces.Add("C++ Tutorial_5", "../../../tutorials/tutorial_5/workspace/tutorial_5_cpp.workspace.xml");
-            _workspaces.Add("C++ Tutorial_6", "../../../tutorials/tutorial_6/workspace/tutorial_6_cpp.workspace.xml");
-            _workspaces.Add("C++ Tutorial_7", "../../../tutorials/tutorial_7/workspace/tutorial_7_cpp.workspace.xml");
-            _workspaces.Add("C++ Tutorial_8", "../../../tutorials/tutorial_8/workspace/tutorial_8_cpp.workspace.xml");
-            _workspaces.Add("C++ Tutorial_9", "../../../tutorials/tutorial_9/workspace/tutorial_9_cpp.workspace.xml");
-            _workspaces.Add("C++ Tutorial_10", "../../../tutorials/tutorial_10/workspace/tutorial_10_cpp.workspace.xml");
-            _workspaces.Add("C++ Tutorial_11", "../../../tutorials/tutorial_11/workspace/tutorial_11_cpp.workspace.xml");
-            _workspaces.Add("C++ Tutorial_12", "../../../tutorials/tutorial_12/workspace/tutorial_12_cpp.workspace.xml");
-            _workspaces.Add("C++ Tutorial_13", "../../../tutorials/tutorial_13/workspace/tutorial_13_cpp.workspace.xml");
-            _workspaces.Add("C++ Tutorial_14", "../../../tutorials/tutorial_14/workspace/tutorial_14_cpp.workspace.xml");
-
-            _workspaces.Add("C# Tutorial_1", "../../../tutorials/tutorial_1/workspace/tutorial_1_cs.workspace.xml");
-            _workspaces.Add("C# Tutorial_1_1", "../../../tutorials/tutorial_1_1/workspace/tutorial_1_1_cs.workspace.xml");
-            _workspaces.Add("C# Tutorial_1_2", "../../../tutorials/tutorial_1_2/workspace/tutorial_1_2_cs.workspace.xml");
-            _workspaces.Add("C# Tutorial_2", "../../../tutorials/tutorial_2/workspace/tutorial_2_cs.workspace.xml");
-            _workspaces.Add("C# Tutorial_3", "../../../tutorials/tutorial_3/workspace/tutorial_3_cs.workspace.xml");
-            _workspaces.Add("C# Tutorial_4", "../../../tutorials/tutorial_4/workspace/tutorial_4_cs.workspace.xml");
-            _workspaces.Add("C# Tutorial_5", "../../../tutorials/tutorial_5/workspace/tutorial_5_cs.workspace.xml");
-            _workspaces.Add("C# Tutorial_6", "../../../tutorials/tutorial_6/workspace/tutorial_6_cs.workspace.xml");
-            _workspaces.Add("C# Tutorial_7", "../../../tutorials/tutorial_7/workspace/tutorial_7_cs.workspace.xml");
-            _workspaces.Add("C# Tutorial_8", "../../../tutorials/tutorial_8/workspace/tutorial_8_cs.workspace.xml");
-            _workspaces.Add("C# Tutorial_9", "../../../tutorials/tutorial_9/workspace/tutorial_9_cs.workspace.xml");
-            _workspaces.Add("C# Tutorial_10", "../../../tutorials/tutorial_10/workspace/tutorial_10_cs.workspace.xml");
-            _workspaces.Add("C# Tutorial_12", "../../../tutorials/tutorial_12/workspace/tutorial_12_cs.workspace.xml");
-            _workspaces.Add("C# Tutorial_13", "../../../tutorials/tutorial_13/workspace/tutorial_13_cs.workspace.xml");
-            _workspaces.Add("C# Tutorial_14", "../../../tutorials/tutorial_14/workspace/tutorial_14_cs.workspace.xml");
-
-#if DEBUG
-            _workspaces.Add("Unity Unit Test", "../../../integration/unity/Assets/behaviac/workspace/behaviacunittest.workspace.xml");
-            _workspaces.Add("Unity Tank Demo", "../../../integration/BattleCityDemo/Assets/behaviac/workspace/BattleCity.workspace.xml");
-#endif
-            _workspaces.Add("Unity Tutorial_1", "../../../tutorials/tutorial_1/workspace/tutorial_1_unity.workspace.xml");
-
-            foreach (string ws in _workspaces.Keys)
-            {
-                workspacesComboBox.Items.Add(ws);
-            }
-        }
-
-        private void loadWorkspace(string wksFile)
-        {
-            try
-            {
-                wksFile = Path.Combine(Application.StartupPath, wksFile);
-                wksFile = Path.GetFullPath(wksFile);
-                MainWindow.Instance.BehaviorTreeList.OpenWorkspace(wksFile);
-            }
-            catch
-            {
-            }
-        }
-
         private void webBrowser_PreviewKeyDown(object sender, PreviewKeyDownEventArgs e)
         {
             if (e.KeyCode == Keys.Escape)
@@ -142,25 +74,6 @@ namespace Behaviac.Design
             {
                 //don't show me next time
                 Settings.Default.ShowControlsOnStartUp = !this.checkBoxNext.Checked;
-            }
-        }
-
-        private void overviewButton_Click(object sender, EventArgs e)
-        {
-            MainWindow.Instance.OpenOverViewURL();
-        }
-
-        private void tutorialsButton_Click(object sender, EventArgs e)
-        {
-            MainWindow.Instance.OpenTutorialsURL();
-        }
-
-        private void workspacesComboBox_SelectedIndexChanged(object sender, EventArgs e)
-        {
-            string ws = (string)workspacesComboBox.SelectedItem;
-            if (_workspaces.ContainsKey(ws))
-            {
-                loadWorkspace(_workspaces[ws]);
             }
         }
     }

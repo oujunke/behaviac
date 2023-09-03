@@ -57,7 +57,7 @@ namespace Behaviac.Design.Importers
             public List<Param> Params = new List<Param>();
         }
 
-        public static string ImportXML(string metaFile)
+        public static Assembly ImportXML(string metaFile)
         {
             try
             {
@@ -84,7 +84,7 @@ namespace Behaviac.Design.Importers
                 // Build all the cs file into a dll file.
                 if (needBuildDll)
                 {
-                    return buildDllNew(dllFilename, csDir);
+                    return buildDll(dllFilename, csDir);
                     //return buildDll(dllFilename, csDir);
                 }
             }
@@ -95,7 +95,7 @@ namespace Behaviac.Design.Importers
                 System.Windows.Forms.MessageBox.Show(errorInfo, Resources.LoadError, MessageBoxButtons.OK);
             }
 
-            return string.Empty;
+            return null;
         }
 
         private static string generateDllFilename(string csDir, string dllName)
@@ -153,79 +153,39 @@ namespace Behaviac.Design.Importers
             return dllFilename;
         }
 
-        private static string buildDll(string dllFilename, string csDir)
+        private static Assembly buildDll(string dllFilename, string csDir)
         {
-            string compileString = "/c {0}csc /optimize+ /target:library /r:\"{1}\" /out:\"{2}\" \"{3}\" > \"{4}\"";
-            string frameworkDir = RuntimeEnvironment.GetRuntimeDirectory();
-            string appDir = Path.GetDirectoryName(Application.ExecutablePath);
-            string referDll = Path.Combine(appDir, "BehaviacDesignerBase.dll");
-            string csFilename = Path.Combine(csDir, "*.cs");
-            string logFileName = Path.Combine(csDir, "XMLPluginCompile.txt");
-
-            ProcessStartInfo psi = new ProcessStartInfo();
-            psi.FileName = "cmd.exe";
-            psi.Arguments = String.Format(compileString, frameworkDir, referDll, dllFilename, csFilename, logFileName);
-            psi.WindowStyle = ProcessWindowStyle.Minimized;
-            psi.UseShellExecute = false;
-            psi.CreateNoWindow = true;
-
-            Process proc = Process.Start(psi);
-            proc.WaitForExit();
-
-            if (File.Exists(dllFilename))
+            var compilation = CSharpCompilation.Create("XMLPluginBehaviac").WithOptions(new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
+            var assembly = typeof(ImporterXML).Assembly;
+            foreach (var assemblyName in assembly.GetReferencedAssemblies())
             {
-                return dllFilename;
+                var tempAssembly = Assembly.Load(assemblyName);
+                compilation = compilation.AddReferences(MetadataReference.CreateFromFile(tempAssembly.Location));
             }
-
-            proc = Process.Start(logFileName);
-            proc.WaitForExit();
-
-            return string.Empty;
-        }
-
-        private static string buildDllNew(string dllFilename, string csDir)
-        {
-            var dllfile = new FileInfo(dllFilename);
-            /*var portableExecutableReferences= typeof(ImporterXML).Assembly.GetReferencedAssemblies().Select(a=> MetadataReference.CreateFromFile(Assembly.Load(a.FullName).Location)).Append(MetadataReference.CreateFromFile(typeof(ImporterXML).Assembly.Location)).ToArray();
-            Compilation compilation = CSharpCompilation.Create(dllfile.Name.Replace(".dll", ""),options: new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary))
-                .AddReferences(
-                    portableExecutableReferences
-                    );
-            */
-            Compilation compilation = CSharpCompilation.Create(dllfile.Name.Replace(".dll", ""), options: new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary)).AddReferences(
-                MetadataReference.CreateFromFile(typeof(object).Assembly.Location),
-                MetadataReference.CreateFromFile(typeof(JsonConvert).Assembly.Location),
-                MetadataReference.CreateFromFile(typeof(GeneratedCodeAttribute).Assembly.Location),
-                MetadataReference.CreateFromFile(coreDir.FullName + Path.DirectorySeparatorChar + "System.Runtime.dll"),
-                MetadataReference.CreateFromFile(coreDir.FullName + Path.DirectorySeparatorChar + "System.Dynamic.Runtime.dll"),
-                MetadataReference.CreateFromFile(coreDir.FullName + Path.DirectorySeparatorChar + "System.IO.dll"),
-                MetadataReference.CreateFromFile(coreDir.FullName + Path.DirectorySeparatorChar + "System.Linq.dll"),
-                MetadataReference.CreateFromFile(coreDir.FullName + Path.DirectorySeparatorChar + "System.ObjectModel.dll"),
-                MetadataReference.CreateFromFile(coreDir.FullName + Path.DirectorySeparatorChar + "System.Linq.Expressions.dll"),
-                MetadataReference.CreateFromFile(coreDir.FullName + Path.DirectorySeparatorChar + "System.Runtime.Extensions.dll"));
-            string logFileName = Path.Combine(csDir, "XMLPluginCompile.txt");
-            using var sw = new StreamWriter(logFileName);
-            foreach (var fileName in Directory.GetFiles(csDir, "*.cs"))
+            compilation = compilation.AddReferences(MetadataReference.CreateFromFile(typeof(object).Assembly.Location), MetadataReference.CreateFromFile(assembly.Location));
+            foreach (var cs in Directory.GetFiles(csDir, "*.cs"))
             {
-                SyntaxTree syntaxTree = CSharpSyntaxTree.ParseText(File.ReadAllText(fileName));
-                compilation = compilation.AddSyntaxTrees(syntaxTree);
+                compilation = compilation.AddSyntaxTrees(CSharpSyntaxTree.ParseText(File.ReadAllText(cs)));
             }
-            using (Stream stream = dllfile.Open(FileMode.OpenOrCreate))
+            EmitResult emitResult;
+            byte[] dllBytes;
+            using (var stream = new MemoryStream())
             {
-                EmitResult result = compilation.Emit(stream);
-                if (!result.Success)
-                {
-                    foreach (Diagnostic diagnostic in result.Diagnostics)
-                    {
-                        sw.WriteLine("{0}: {1}", diagnostic.Id, diagnostic.GetMessage());
-                    }
-                }
+                emitResult = compilation.Emit(stream);
+                dllBytes = stream.ToArray();
             }
-            if (File.Exists(dllFilename))
+            if (emitResult.Success)
             {
-                return dllFilename;
+                return Assembly.Load(dllBytes);
             }
-            return string.Empty;
+            else
+            {
+                string logFileName = Path.Combine(csDir, "XMLPluginCompile.txt");
+                File.WriteAllLines(logFileName, emitResult.Diagnostics.Select(d => d.ToString()));
+                var proc = Process.Start(logFileName);
+                proc.WaitForExit();
+                return null;
+            }
         }
         private static string GetAttribute(XmlNode node, string att)
         {

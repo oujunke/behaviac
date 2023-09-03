@@ -206,13 +206,11 @@ namespace Behaviac.Design
         {
             bool shouldSaveMeta = Workspace.PreLoadMeta(Workspace.Current);
 
-            string dllFilename = ImporterXML.ImportXML(metaFile);
+            Assembly assembly = ImporterXML.ImportXML(metaFile);
             bool bMerged = false;
 
-            if (!string.IsNullOrEmpty(dllFilename))
+            if (assembly!=null)
             {
-                Assembly assembly = Assembly.LoadFile(dllFilename);
-
                 Plugin.AddLoadedPlugin(assembly);
 
                 Plugin.RegisterTypeHandlers(assembly);
