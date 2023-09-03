@@ -95,7 +95,5 @@ namespace Behaviac.Design
         private System.Windows.Forms.WebBrowser webBrowser;
         private System.Windows.Forms.Button buttonClose;
         private System.Windows.Forms.CheckBox checkBoxNext;
-
-
     }
 }
