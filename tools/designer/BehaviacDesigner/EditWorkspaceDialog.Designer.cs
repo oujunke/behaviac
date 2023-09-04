@@ -63,280 +63,276 @@ namespace Behaviac.Design
         private void InitializeComponent()
         {
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(EditWorkspaceDialog));
-            this.doneButton = new System.Windows.Forms.Button();
-            this.cancelButton = new System.Windows.Forms.Button();
-            this.nameLabel = new System.Windows.Forms.Label();
-            this.nameTextBox = new System.Windows.Forms.TextBox();
-            this.XMLButton = new System.Windows.Forms.Button();
-            this.XMLTextBox = new System.Windows.Forms.TextBox();
-            this.workspaceButton = new System.Windows.Forms.Button();
-            this.workspaceTextBox = new System.Windows.Forms.TextBox();
-            this.locationLabel = new System.Windows.Forms.Label();
-            this.sourceTextBox = new System.Windows.Forms.TextBox();
-            this.sourceLabel = new System.Windows.Forms.Label();
-            this.sourceButton = new System.Windows.Forms.Button();
-            this.exportTextBox = new System.Windows.Forms.TextBox();
-            this.exportLabel = new System.Windows.Forms.Label();
-            this.exportButton = new System.Windows.Forms.Button();
-            this.typesExportTextBox = new System.Windows.Forms.TextBox();
-            this.generateLabel = new System.Windows.Forms.Label();
-            this.typesExportButton = new System.Windows.Forms.Button();
-            this.languageLabel = new System.Windows.Forms.Label();
-            this.languageComboBox = new System.Windows.Forms.ComboBox();
-            this.metaFileLabel = new System.Windows.Forms.Label();
-            this.useIntValueCheckBox = new System.Windows.Forms.CheckBox();
-            this.folderBrowserDialog = new System.Windows.Forms.FolderBrowserDialog();
-            this.includeTextBox = new System.Windows.Forms.TextBox();
-            this.includeLabel = new System.Windows.Forms.Label();
-            this.includeButton = new System.Windows.Forms.Button();
-            this.SuspendLayout();
+            doneButton = new System.Windows.Forms.Button();
+            cancelButton = new System.Windows.Forms.Button();
+            nameLabel = new System.Windows.Forms.Label();
+            nameTextBox = new System.Windows.Forms.TextBox();
+            XMLButton = new System.Windows.Forms.Button();
+            XMLTextBox = new System.Windows.Forms.TextBox();
+            workspaceButton = new System.Windows.Forms.Button();
+            workspaceTextBox = new System.Windows.Forms.TextBox();
+            locationLabel = new System.Windows.Forms.Label();
+            sourceTextBox = new System.Windows.Forms.TextBox();
+            sourceLabel = new System.Windows.Forms.Label();
+            sourceButton = new System.Windows.Forms.Button();
+            exportTextBox = new System.Windows.Forms.TextBox();
+            exportLabel = new System.Windows.Forms.Label();
+            exportButton = new System.Windows.Forms.Button();
+            typesExportTextBox = new System.Windows.Forms.TextBox();
+            generateLabel = new System.Windows.Forms.Label();
+            typesExportButton = new System.Windows.Forms.Button();
+            languageLabel = new System.Windows.Forms.Label();
+            languageComboBox = new System.Windows.Forms.ComboBox();
+            metaFileLabel = new System.Windows.Forms.Label();
+            useIntValueCheckBox = new System.Windows.Forms.CheckBox();
+            folderBrowserDialog = new System.Windows.Forms.FolderBrowserDialog();
+            includeTextBox = new System.Windows.Forms.TextBox();
+            includeLabel = new System.Windows.Forms.Label();
+            includeButton = new System.Windows.Forms.Button();
+            SuspendLayout();
             // 
             // doneButton
             // 
-            resources.ApplyResources(this.doneButton, "doneButton");
-            this.doneButton.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(65)))), ((int)(((byte)(65)))), ((int)(((byte)(65)))));
-            this.doneButton.DialogResult = System.Windows.Forms.DialogResult.OK;
-            this.doneButton.FlatAppearance.MouseDownBackColor = System.Drawing.Color.DarkGray;
-            this.doneButton.FlatAppearance.MouseOverBackColor = System.Drawing.Color.DarkGray;
-            this.doneButton.Name = "doneButton";
-            this.doneButton.UseVisualStyleBackColor = false;
-            this.doneButton.Click += new System.EventHandler(this.doneButton_Click);
+            resources.ApplyResources(doneButton, "doneButton");
+            doneButton.BackColor = System.Drawing.Color.FromArgb(65, 65, 65);
+            doneButton.DialogResult = System.Windows.Forms.DialogResult.OK;
+            doneButton.FlatAppearance.MouseDownBackColor = System.Drawing.Color.DarkGray;
+            doneButton.FlatAppearance.MouseOverBackColor = System.Drawing.Color.DarkGray;
+            doneButton.Name = "doneButton";
+            doneButton.UseVisualStyleBackColor = false;
+            doneButton.Click += doneButton_Click;
             // 
             // cancelButton
             // 
-            resources.ApplyResources(this.cancelButton, "cancelButton");
-            this.cancelButton.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(65)))), ((int)(((byte)(65)))), ((int)(((byte)(65)))));
-            this.cancelButton.DialogResult = System.Windows.Forms.DialogResult.Cancel;
-            this.cancelButton.FlatAppearance.MouseDownBackColor = System.Drawing.Color.DarkGray;
-            this.cancelButton.FlatAppearance.MouseOverBackColor = System.Drawing.Color.DarkGray;
-            this.cancelButton.Name = "cancelButton";
-            this.cancelButton.UseVisualStyleBackColor = false;
-            this.cancelButton.Click += new System.EventHandler(this.cancelButton_Click);
+            resources.ApplyResources(cancelButton, "cancelButton");
+            cancelButton.BackColor = System.Drawing.Color.FromArgb(65, 65, 65);
+            cancelButton.DialogResult = System.Windows.Forms.DialogResult.Cancel;
+            cancelButton.FlatAppearance.MouseDownBackColor = System.Drawing.Color.DarkGray;
+            cancelButton.FlatAppearance.MouseOverBackColor = System.Drawing.Color.DarkGray;
+            cancelButton.Name = "cancelButton";
+            cancelButton.UseVisualStyleBackColor = false;
+            cancelButton.Click += cancelButton_Click;
             // 
             // nameLabel
             // 
-            resources.ApplyResources(this.nameLabel, "nameLabel");
-            this.nameLabel.Name = "nameLabel";
+            resources.ApplyResources(nameLabel, "nameLabel");
+            nameLabel.Name = "nameLabel";
             // 
             // nameTextBox
             // 
-            resources.ApplyResources(this.nameTextBox, "nameTextBox");
-            this.nameTextBox.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(65)))), ((int)(((byte)(65)))), ((int)(((byte)(65)))));
-            this.nameTextBox.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
-            this.nameTextBox.ForeColor = System.Drawing.Color.LightGray;
-            this.nameTextBox.Name = "nameTextBox";
-            this.nameTextBox.TextChanged += new System.EventHandler(this.nameTextBox_TextChanged);
+            resources.ApplyResources(nameTextBox, "nameTextBox");
+            nameTextBox.BackColor = System.Drawing.Color.FromArgb(65, 65, 65);
+            nameTextBox.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
+            nameTextBox.ForeColor = System.Drawing.Color.LightGray;
+            nameTextBox.Name = "nameTextBox";
+            nameTextBox.TextChanged += nameTextBox_TextChanged;
             // 
             // XMLButton
             // 
-            resources.ApplyResources(this.XMLButton, "XMLButton");
-            this.XMLButton.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(65)))), ((int)(((byte)(65)))), ((int)(((byte)(65)))));
-            this.XMLButton.FlatAppearance.MouseDownBackColor = System.Drawing.Color.DarkGray;
-            this.XMLButton.FlatAppearance.MouseOverBackColor = System.Drawing.Color.DarkGray;
-            this.XMLButton.Name = "XMLButton";
-            this.XMLButton.UseVisualStyleBackColor = false;
-            this.XMLButton.Click += new System.EventHandler(this.XMLButton_Click);
+            resources.ApplyResources(XMLButton, "XMLButton");
+            XMLButton.BackColor = System.Drawing.Color.FromArgb(65, 65, 65);
+            XMLButton.FlatAppearance.MouseDownBackColor = System.Drawing.Color.DarkGray;
+            XMLButton.FlatAppearance.MouseOverBackColor = System.Drawing.Color.DarkGray;
+            XMLButton.Name = "XMLButton";
+            XMLButton.UseVisualStyleBackColor = false;
+            XMLButton.Click += XMLButton_Click;
             // 
             // XMLTextBox
             // 
-            resources.ApplyResources(this.XMLTextBox, "XMLTextBox");
-            this.XMLTextBox.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(65)))), ((int)(((byte)(65)))), ((int)(((byte)(65)))));
-            this.XMLTextBox.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
-            this.XMLTextBox.ForeColor = System.Drawing.Color.LightGray;
-            this.XMLTextBox.Name = "XMLTextBox";
+            resources.ApplyResources(XMLTextBox, "XMLTextBox");
+            XMLTextBox.BackColor = System.Drawing.Color.FromArgb(65, 65, 65);
+            XMLTextBox.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
+            XMLTextBox.ForeColor = System.Drawing.Color.LightGray;
+            XMLTextBox.Name = "XMLTextBox";
             // 
             // workspaceButton
             // 
-            resources.ApplyResources(this.workspaceButton, "workspaceButton");
-            this.workspaceButton.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(65)))), ((int)(((byte)(65)))), ((int)(((byte)(65)))));
-            this.workspaceButton.FlatAppearance.MouseDownBackColor = System.Drawing.Color.DarkGray;
-            this.workspaceButton.FlatAppearance.MouseOverBackColor = System.Drawing.Color.DarkGray;
-            this.workspaceButton.Name = "workspaceButton";
-            this.workspaceButton.UseVisualStyleBackColor = false;
-            this.workspaceButton.Click += new System.EventHandler(this.workspaceButton_Click);
+            resources.ApplyResources(workspaceButton, "workspaceButton");
+            workspaceButton.BackColor = System.Drawing.Color.FromArgb(65, 65, 65);
+            workspaceButton.FlatAppearance.MouseDownBackColor = System.Drawing.Color.DarkGray;
+            workspaceButton.FlatAppearance.MouseOverBackColor = System.Drawing.Color.DarkGray;
+            workspaceButton.Name = "workspaceButton";
+            workspaceButton.UseVisualStyleBackColor = false;
+            workspaceButton.Click += workspaceButton_Click;
             // 
             // workspaceTextBox
             // 
-            resources.ApplyResources(this.workspaceTextBox, "workspaceTextBox");
-            this.workspaceTextBox.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(65)))), ((int)(((byte)(65)))), ((int)(((byte)(65)))));
-            this.workspaceTextBox.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
-            this.workspaceTextBox.ForeColor = System.Drawing.Color.LightGray;
-            this.workspaceTextBox.Name = "workspaceTextBox";
+            resources.ApplyResources(workspaceTextBox, "workspaceTextBox");
+            workspaceTextBox.BackColor = System.Drawing.Color.FromArgb(65, 65, 65);
+            workspaceTextBox.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
+            workspaceTextBox.ForeColor = System.Drawing.Color.LightGray;
+            workspaceTextBox.Name = "workspaceTextBox";
             // 
             // locationLabel
             // 
-            resources.ApplyResources(this.locationLabel, "locationLabel");
-            this.locationLabel.Name = "locationLabel";
-            this.locationLabel.DoubleClick += new System.EventHandler(this.locationLabel_DoubleClick);
+            resources.ApplyResources(locationLabel, "locationLabel");
+            locationLabel.Name = "locationLabel";
+            locationLabel.DoubleClick += locationLabel_DoubleClick;
             // 
             // sourceTextBox
             // 
-            resources.ApplyResources(this.sourceTextBox, "sourceTextBox");
-            this.sourceTextBox.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(65)))), ((int)(((byte)(65)))), ((int)(((byte)(65)))));
-            this.sourceTextBox.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
-            this.sourceTextBox.ForeColor = System.Drawing.Color.LightGray;
-            this.sourceTextBox.Name = "sourceTextBox";
+            resources.ApplyResources(sourceTextBox, "sourceTextBox");
+            sourceTextBox.BackColor = System.Drawing.Color.FromArgb(65, 65, 65);
+            sourceTextBox.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
+            sourceTextBox.ForeColor = System.Drawing.Color.LightGray;
+            sourceTextBox.Name = "sourceTextBox";
             // 
             // sourceLabel
             // 
-            resources.ApplyResources(this.sourceLabel, "sourceLabel");
-            this.sourceLabel.Name = "sourceLabel";
-            this.sourceLabel.DoubleClick += new System.EventHandler(this.sourceLabel_DoubleClick);
+            resources.ApplyResources(sourceLabel, "sourceLabel");
+            sourceLabel.Name = "sourceLabel";
+            sourceLabel.DoubleClick += sourceLabel_DoubleClick;
             // 
             // sourceButton
             // 
-            resources.ApplyResources(this.sourceButton, "sourceButton");
-            this.sourceButton.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(65)))), ((int)(((byte)(65)))), ((int)(((byte)(65)))));
-            this.sourceButton.FlatAppearance.MouseDownBackColor = System.Drawing.Color.DarkGray;
-            this.sourceButton.FlatAppearance.MouseOverBackColor = System.Drawing.Color.DarkGray;
-            this.sourceButton.Name = "sourceButton";
-            this.sourceButton.UseVisualStyleBackColor = false;
-            this.sourceButton.Click += new System.EventHandler(this.buttonSource_Click);
+            resources.ApplyResources(sourceButton, "sourceButton");
+            sourceButton.BackColor = System.Drawing.Color.FromArgb(65, 65, 65);
+            sourceButton.FlatAppearance.MouseDownBackColor = System.Drawing.Color.DarkGray;
+            sourceButton.FlatAppearance.MouseOverBackColor = System.Drawing.Color.DarkGray;
+            sourceButton.Name = "sourceButton";
+            sourceButton.UseVisualStyleBackColor = false;
+            sourceButton.Click += buttonSource_Click;
             // 
             // exportTextBox
             // 
-            resources.ApplyResources(this.exportTextBox, "exportTextBox");
-            this.exportTextBox.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(65)))), ((int)(((byte)(65)))), ((int)(((byte)(65)))));
-            this.exportTextBox.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
-            this.exportTextBox.ForeColor = System.Drawing.Color.LightGray;
-            this.exportTextBox.Name = "exportTextBox";
+            resources.ApplyResources(exportTextBox, "exportTextBox");
+            exportTextBox.BackColor = System.Drawing.Color.FromArgb(65, 65, 65);
+            exportTextBox.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
+            exportTextBox.ForeColor = System.Drawing.Color.LightGray;
+            exportTextBox.Name = "exportTextBox";
             // 
             // exportLabel
             // 
-            resources.ApplyResources(this.exportLabel, "exportLabel");
-            this.exportLabel.Name = "exportLabel";
-            this.exportLabel.DoubleClick += new System.EventHandler(this.exportLabel_DoubleClick);
+            resources.ApplyResources(exportLabel, "exportLabel");
+            exportLabel.Name = "exportLabel";
+            exportLabel.DoubleClick += exportLabel_DoubleClick;
             // 
             // exportButton
             // 
-            resources.ApplyResources(this.exportButton, "exportButton");
-            this.exportButton.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(65)))), ((int)(((byte)(65)))), ((int)(((byte)(65)))));
-            this.exportButton.FlatAppearance.MouseDownBackColor = System.Drawing.Color.DarkGray;
-            this.exportButton.FlatAppearance.MouseOverBackColor = System.Drawing.Color.DarkGray;
-            this.exportButton.Name = "exportButton";
-            this.exportButton.UseVisualStyleBackColor = false;
-            this.exportButton.Click += new System.EventHandler(this.buttonExport_Click);
+            resources.ApplyResources(exportButton, "exportButton");
+            exportButton.BackColor = System.Drawing.Color.FromArgb(65, 65, 65);
+            exportButton.FlatAppearance.MouseDownBackColor = System.Drawing.Color.DarkGray;
+            exportButton.FlatAppearance.MouseOverBackColor = System.Drawing.Color.DarkGray;
+            exportButton.Name = "exportButton";
+            exportButton.UseVisualStyleBackColor = false;
+            exportButton.Click += buttonExport_Click;
             // 
             // typesExportTextBox
             // 
-            resources.ApplyResources(this.typesExportTextBox, "typesExportTextBox");
-            this.typesExportTextBox.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(65)))), ((int)(((byte)(65)))), ((int)(((byte)(65)))));
-            this.typesExportTextBox.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
-            this.typesExportTextBox.ForeColor = System.Drawing.Color.LightGray;
-            this.typesExportTextBox.Name = "typesExportTextBox";
-            this.typesExportTextBox.SizeChanged += new System.EventHandler(this.typesExportTextBox_SizeChanged);
+            resources.ApplyResources(typesExportTextBox, "typesExportTextBox");
+            typesExportTextBox.BackColor = System.Drawing.Color.FromArgb(65, 65, 65);
+            typesExportTextBox.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
+            typesExportTextBox.ForeColor = System.Drawing.Color.LightGray;
+            typesExportTextBox.Name = "typesExportTextBox";
             // 
             // generateLabel
             // 
-            resources.ApplyResources(this.generateLabel, "generateLabel");
-            this.generateLabel.Name = "generateLabel";
-            this.generateLabel.DoubleClick += new System.EventHandler(this.generateLabel_DoubleClick);
+            resources.ApplyResources(generateLabel, "generateLabel");
+            generateLabel.Name = "generateLabel";
+            generateLabel.DoubleClick += generateLabel_DoubleClick;
             // 
             // typesExportButton
             // 
-            resources.ApplyResources(this.typesExportButton, "typesExportButton");
-            this.typesExportButton.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(65)))), ((int)(((byte)(65)))), ((int)(((byte)(65)))));
-            this.typesExportButton.FlatAppearance.MouseDownBackColor = System.Drawing.Color.DarkGray;
-            this.typesExportButton.FlatAppearance.MouseOverBackColor = System.Drawing.Color.DarkGray;
-            this.typesExportButton.Name = "typesExportButton";
-            this.typesExportButton.UseVisualStyleBackColor = false;
-            this.typesExportButton.Click += new System.EventHandler(this.typesExportButton_Click);
+            resources.ApplyResources(typesExportButton, "typesExportButton");
+            typesExportButton.BackColor = System.Drawing.Color.FromArgb(65, 65, 65);
+            typesExportButton.FlatAppearance.MouseDownBackColor = System.Drawing.Color.DarkGray;
+            typesExportButton.FlatAppearance.MouseOverBackColor = System.Drawing.Color.DarkGray;
+            typesExportButton.Name = "typesExportButton";
+            typesExportButton.UseVisualStyleBackColor = false;
+            typesExportButton.Click += typesExportButton_Click;
             // 
             // languageLabel
             // 
-            resources.ApplyResources(this.languageLabel, "languageLabel");
-            this.languageLabel.Name = "languageLabel";
+            resources.ApplyResources(languageLabel, "languageLabel");
+            languageLabel.Name = "languageLabel";
             // 
             // languageComboBox
             // 
-            resources.ApplyResources(this.languageComboBox, "languageComboBox");
-            this.languageComboBox.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(65)))), ((int)(((byte)(65)))), ((int)(((byte)(65)))));
-            this.languageComboBox.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
-            this.languageComboBox.ForeColor = System.Drawing.Color.LightGray;
-            this.languageComboBox.FormattingEnabled = true;
-            this.languageComboBox.Items.AddRange(new object[] {
-            resources.GetString("languageComboBox.Items"),
-            resources.GetString("languageComboBox.Items1")});
-            this.languageComboBox.Name = "languageComboBox";
+            resources.ApplyResources(languageComboBox, "languageComboBox");
+            languageComboBox.BackColor = System.Drawing.Color.FromArgb(65, 65, 65);
+            languageComboBox.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+            languageComboBox.ForeColor = System.Drawing.Color.LightGray;
+            languageComboBox.FormattingEnabled = true;
+            languageComboBox.Items.AddRange(new object[] { resources.GetString("languageComboBox.Items"), resources.GetString("languageComboBox.Items1") });
+            languageComboBox.Name = "languageComboBox";
             // 
             // metaFileLabel
             // 
-            resources.ApplyResources(this.metaFileLabel, "metaFileLabel");
-            this.metaFileLabel.Name = "metaFileLabel";
-            this.metaFileLabel.DoubleClick += new System.EventHandler(this.metaFileLabel_DoubleClick);
+            resources.ApplyResources(metaFileLabel, "metaFileLabel");
+            metaFileLabel.Name = "metaFileLabel";
+            metaFileLabel.DoubleClick += metaFileLabel_DoubleClick;
             // 
             // useIntValueCheckBox
             // 
-            resources.ApplyResources(this.useIntValueCheckBox, "useIntValueCheckBox");
-            this.useIntValueCheckBox.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(56)))), ((int)(((byte)(56)))), ((int)(((byte)(56)))));
-            this.useIntValueCheckBox.Name = "useIntValueCheckBox";
-            this.useIntValueCheckBox.UseVisualStyleBackColor = false;
-            this.useIntValueCheckBox.CheckedChanged += new System.EventHandler(this.useIntValueCheckBox_CheckedChanged);
-            this.useIntValueCheckBox.MouseEnter += new System.EventHandler(this.useIntValueCheckBox_MouseEnter);
-            this.useIntValueCheckBox.MouseLeave += new System.EventHandler(this.useIntValueCheckBox_MouseLeave);
+            resources.ApplyResources(useIntValueCheckBox, "useIntValueCheckBox");
+            useIntValueCheckBox.BackColor = System.Drawing.Color.FromArgb(56, 56, 56);
+            useIntValueCheckBox.Name = "useIntValueCheckBox";
+            useIntValueCheckBox.UseVisualStyleBackColor = false;
+            useIntValueCheckBox.CheckedChanged += useIntValueCheckBox_CheckedChanged;
+            useIntValueCheckBox.MouseEnter += useIntValueCheckBox_MouseEnter;
+            useIntValueCheckBox.MouseLeave += useIntValueCheckBox_MouseLeave;
             // 
             // includeTextBox
             // 
-            resources.ApplyResources(this.includeTextBox, "includeTextBox");
-            this.includeTextBox.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(65)))), ((int)(((byte)(65)))), ((int)(((byte)(65)))));
-            this.includeTextBox.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
-            this.includeTextBox.ForeColor = System.Drawing.Color.LightGray;
-            this.includeTextBox.Name = "includeTextBox";
+            resources.ApplyResources(includeTextBox, "includeTextBox");
+            includeTextBox.BackColor = System.Drawing.Color.FromArgb(65, 65, 65);
+            includeTextBox.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
+            includeTextBox.ForeColor = System.Drawing.Color.LightGray;
+            includeTextBox.Name = "includeTextBox";
             // 
             // includeLabel
             // 
-            resources.ApplyResources(this.includeLabel, "includeLabel");
-            this.includeLabel.Name = "includeLabel";
+            resources.ApplyResources(includeLabel, "includeLabel");
+            includeLabel.Name = "includeLabel";
             // 
             // includeButton
             // 
-            resources.ApplyResources(this.includeButton, "includeButton");
-            this.includeButton.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(65)))), ((int)(((byte)(65)))), ((int)(((byte)(65)))));
-            this.includeButton.FlatAppearance.MouseDownBackColor = System.Drawing.Color.DarkGray;
-            this.includeButton.FlatAppearance.MouseOverBackColor = System.Drawing.Color.DarkGray;
-            this.includeButton.Name = "includeButton";
-            this.includeButton.UseVisualStyleBackColor = false;
+            resources.ApplyResources(includeButton, "includeButton");
+            includeButton.BackColor = System.Drawing.Color.FromArgb(65, 65, 65);
+            includeButton.FlatAppearance.MouseDownBackColor = System.Drawing.Color.DarkGray;
+            includeButton.FlatAppearance.MouseOverBackColor = System.Drawing.Color.DarkGray;
+            includeButton.Name = "includeButton";
+            includeButton.UseVisualStyleBackColor = false;
             // 
             // EditWorkspaceDialog
             // 
-            this.AcceptButton = this.doneButton;
+            AcceptButton = doneButton;
             resources.ApplyResources(this, "$this");
-            this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(56)))), ((int)(((byte)(56)))), ((int)(((byte)(56)))));
-            this.CancelButton = this.cancelButton;
-            this.Controls.Add(this.includeTextBox);
-            this.Controls.Add(this.includeLabel);
-            this.Controls.Add(this.includeButton);
-            this.Controls.Add(this.useIntValueCheckBox);
-            this.Controls.Add(this.metaFileLabel);
-            this.Controls.Add(this.languageComboBox);
-            this.Controls.Add(this.languageLabel);
-            this.Controls.Add(this.typesExportTextBox);
-            this.Controls.Add(this.generateLabel);
-            this.Controls.Add(this.typesExportButton);
-            this.Controls.Add(this.exportTextBox);
-            this.Controls.Add(this.exportLabel);
-            this.Controls.Add(this.exportButton);
-            this.Controls.Add(this.sourceTextBox);
-            this.Controls.Add(this.sourceLabel);
-            this.Controls.Add(this.sourceButton);
-            this.Controls.Add(this.workspaceTextBox);
-            this.Controls.Add(this.locationLabel);
-            this.Controls.Add(this.workspaceButton);
-            this.Controls.Add(this.XMLTextBox);
-            this.Controls.Add(this.XMLButton);
-            this.Controls.Add(this.nameTextBox);
-            this.Controls.Add(this.nameLabel);
-            this.Controls.Add(this.cancelButton);
-            this.Controls.Add(this.doneButton);
-            this.ForeColor = System.Drawing.Color.LightGray;
-            this.MaximizeBox = false;
-            this.MinimizeBox = false;
-            this.Name = "EditWorkspaceDialog";
-            this.ShowInTaskbar = false;
-            this.ResumeLayout(false);
-            this.PerformLayout();
-
+            AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
+            BackColor = System.Drawing.Color.FromArgb(56, 56, 56);
+            CancelButton = cancelButton;
+            Controls.Add(includeTextBox);
+            Controls.Add(includeLabel);
+            Controls.Add(includeButton);
+            Controls.Add(useIntValueCheckBox);
+            Controls.Add(metaFileLabel);
+            Controls.Add(languageComboBox);
+            Controls.Add(languageLabel);
+            Controls.Add(typesExportTextBox);
+            Controls.Add(generateLabel);
+            Controls.Add(typesExportButton);
+            Controls.Add(exportTextBox);
+            Controls.Add(exportLabel);
+            Controls.Add(exportButton);
+            Controls.Add(sourceTextBox);
+            Controls.Add(sourceLabel);
+            Controls.Add(sourceButton);
+            Controls.Add(workspaceTextBox);
+            Controls.Add(locationLabel);
+            Controls.Add(workspaceButton);
+            Controls.Add(XMLTextBox);
+            Controls.Add(XMLButton);
+            Controls.Add(nameTextBox);
+            Controls.Add(nameLabel);
+            Controls.Add(cancelButton);
+            Controls.Add(doneButton);
+            ForeColor = System.Drawing.Color.LightGray;
+            MaximizeBox = false;
+            MinimizeBox = false;
+            Name = "EditWorkspaceDialog";
+            ShowInTaskbar = false;
+            ResumeLayout(false);
+            PerformLayout();
         }
 
         #endregion

@@ -61,7 +61,7 @@ namespace Behaviac.Design
 
             setMetaVisible(false);
 
-            this.MaximumSize = new System.Drawing.Size(int.MaxValue, 272);
+            this.MaximumSize = new System.Drawing.Size(int.MaxValue, 400);
         }
 
         private string _filename = string.Empty;
@@ -219,7 +219,7 @@ namespace Behaviac.Design
 
             string driveStr2 = Path.GetPathRoot(exportFolder);
             //Debug.Check(driveStr2 == driveStr0);
-            if (driveStr2!= driveStr0)
+            if (driveStr2 != driveStr0)
             {
                 MessageBox.Show(Resources.WorkspaceExportRootWarning, Resources.Warning, MessageBoxButtons.OK);
                 return;
@@ -367,7 +367,7 @@ namespace Behaviac.Design
                 return;
             }
 
-            using(OpenFileDialog openFileDialog = new OpenFileDialog())
+            using (OpenFileDialog openFileDialog = new OpenFileDialog())
             {
                 openFileDialog.Title = Resources.SetMetaFile;
                 openFileDialog.Filter = "*.xml|*.xml";
@@ -507,7 +507,7 @@ namespace Behaviac.Design
                 {
                     XmlDocument xmlDoc = new XmlDocument();
                     Encoding utf8WithoutBom = new UTF8Encoding(false);
-                    using(StreamReader fileStream = new StreamReader(metaPath, utf8WithoutBom))
+                    using (StreamReader fileStream = new StreamReader(metaPath, utf8WithoutBom))
                     {
                         xmlDoc.Load(fileStream);
                     }
@@ -601,9 +601,7 @@ namespace Behaviac.Design
 
         private void typesExportTextBox_SizeChanged(object sender, EventArgs e)
         {
-            string str= $"{typesExportTextBox.Location}-{typesExportTextBox.Size}";
-            Text = str;
-            Debugger.Log(2,"Test", str);
+            
         }
     }
 }

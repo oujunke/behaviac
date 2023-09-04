@@ -5031,4 +5031,10 @@
   <data name="$this.Text" xml:space="preserve">
     <value>新建工作区</value>
   </data>
+  <data name="includeButton.Text" xml:space="preserve">
+    <value>浏览...</value>
+  </data>
+  <data name="includeLabel.Text" xml:space="preserve">
+    <value>包含目录:</value>
+  </data>
 </root>
